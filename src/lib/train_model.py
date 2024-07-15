@@ -99,7 +99,7 @@ class TrainModel:
         """
         This function loads in the state dict of a model if provided.
         """
-        if self.model_path != 'None':
+        if self.model_path != None:
             try:
                 state_dict = torch.load(self.transfer_learning_path)
                 self.model.load_state_dict(state_dict)

@@ -12,6 +12,7 @@ executing==2.0.1
 filelock @ file:///work/perseverance-python-buildout/croot/filelock_1701733993137/work
 fonttools @ file:///home/conda/feedstock_root/build_artifacts/fonttools_1712344557282/work
 h5py @ file:///home/conda/feedstock_root/build_artifacts/h5py_1712763577458/work
+hdf5plugin @ file:///home/conda/feedstock_root/build_artifacts/hdf5plugin_1707465575654/work
 idna @ file:///work/perseverance-python-buildout/croot/idna_1698845632828/work
 imagecodecs @ file:///work/perseverance-python-buildout/croot/imagecodecs_1698851963060/work
 imageio @ file:///home/conda/feedstock_root/build_artifacts/imageio_1707730027807/work

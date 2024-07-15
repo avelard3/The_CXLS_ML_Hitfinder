@@ -1,5 +1,5 @@
 import argparse
-from hitfinderLib import *
+from lib import *
 import torch
 import datetime
 from queue import Queue

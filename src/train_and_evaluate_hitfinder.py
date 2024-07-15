@@ -1,5 +1,5 @@
 import argparse
-from hitfinderLib import *
+from lib import *
 import torch
 import datetime
 from queue import Queue
@@ -31,7 +31,7 @@ def arguments(parser) -> argparse.ArgumentParser:
     parser.add_argument('-pe', '--photon_energy', type=str, help='Attribute name for the photon energy parameter.')
     parser.add_argument('-pk', '--peaks', type=str, help='Attribute name for is there are peaks present.')
     
-    parser.add_argument('-tl', '--transfer_learn', type=str, default='None', help='Flie path to state dict file for transfer learning.' )
+    parser.add_argument('-tl', '--transfer_learn', type=str, default=None, help='Flie path to state dict file for transfer learning.' )
 
     
     try:
@@ -86,6 +86,8 @@ def main() -> None:
     master_file = None
     
     transfer_learning_state_dict = args.transfer_learn
+    if transfer_learning_state_dict == 'None' or transfer_learning_state_dict == 'none':
+        transfer_learning_state_dict = None
     
     transform = False
     
