@@ -1,6 +1,0 @@
-.git
-.gitignore
-*__pycache__*
-*.pyc
-*tmp*
-images/*.h5
