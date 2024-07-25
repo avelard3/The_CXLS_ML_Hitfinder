@@ -61,11 +61,7 @@ class Data(Dataset):
         """
         If the transfom flag is true, this function creates the global variable for the transform for image data. 
         """
-        self.transforms = v2.Compose([
-            v2.toPILImage(),
-            v2.Resize(conf.eiger_4m_image_size),
-            v2.ToTensor(),
-        ])
+        pass
             
         
         

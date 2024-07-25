@@ -100,7 +100,6 @@ def main() -> None:
     path_manager = load_data_paths.PathsSingleEvent(h5_file_list, attributes, master_file)
     path_manager.read_file_paths()
     h5_file_path_queue = path_manager.get_file_path_queue()
-    queue_size = h5_file_path_queue.qsize()
     
     cfg = {
         'batch size': batch_size,
