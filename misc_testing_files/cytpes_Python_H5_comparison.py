@@ -21,9 +21,9 @@ def read_h5_dataset(filename, dataset_name):
         return array
 
 def C_read_h5_dataset(filename, dataset_name, lib):
-    print('reading file from C')
+    print('Reading file from C')
     # Define the argument and return types for the read_h5_dataset function
-    lib.read_h5_dataset.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.POINTER(ctypes.c_int)]
+    lib.read_h5_dataset.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.POINTER(ctypes.c_int), ctypes.POINTER(ctypes.c_int)]
     lib.read_h5_dataset.restype = ctypes.POINTER(ctypes.c_double)
 
     # Define the free_data function
@@ -34,8 +34,10 @@ def C_read_h5_dataset(filename, dataset_name, lib):
     dataset_name_bytes = dataset_name.encode('utf-8')
     
     data_size = ctypes.c_int()
-    print('calling C function')
-    data_ptr = lib.read_h5_dataset(filename_bytes, dataset_name_bytes, ctypes.byref(data_size))
+    dims_out = (ctypes.c_int * 3)()
+    
+    print('Calling C function')
+    data_ptr = lib.read_h5_dataset(filename_bytes, dataset_name_bytes, ctypes.byref(data_size), dims_out)
 
     if not data_ptr:
         raise ValueError("Failed to read dataset")
@@ -60,6 +62,7 @@ def free_c_array(lib, data_ptr):
 def main():
     print('starting comparison...')
     filename = '/scratch/sbotha/2024-hitfinder-data/real-data/pk7kev3_11_2768_data_000001.h5'
+    # filename='/scratch/eseveret/hitfinder_data/dataset_2/images/peaks_water_overlay/01/overlay_img_6keV_clen01_26975.h5'
     dataset = 'entry/data/data'
     
     tic()
