@@ -1,76 +1,80 @@
 #include <iostream>
+#include <H5Cpp.h>
 #include <vector>
-#include <hdf5.h>
+#include <cstring>
 
 extern "C" {
-    double* read_h5_dataset(const char* filename, const char* dataset_name, int* data_size, int* dims_out) {
-        // File identifier
-        hid_t file_id, dataset_id, space_id;
-        herr_t status;
-        hsize_t dims[3];
-        int ndims;
-        double* data = nullptr;
 
-        // Open the file
-        file_id = H5Fopen(filename, H5F_ACC_RDONLY, H5P_DEFAULT);
-        if (file_id < 0) {
-            std::cerr << "Could not open file: " << filename << std::endl;
-            return nullptr;
-        }
+struct DatasetInfo {
+    unsigned int* data;
+    int data_size;
+    int dims[3];
+    int ndims;
+};
+
+DatasetInfo* read_h5_dataset(const char* filename, const char* dataset_name) {
+    DatasetInfo* info = new DatasetInfo;
+    std::memset(info, 0, sizeof(DatasetInfo));
+
+    try {
+        // Open the HDF5 file
+        H5::H5File file(filename, H5F_ACC_RDONLY);
+        std::cout << "File opened successfully." << std::endl;
 
         // Open the dataset
-        dataset_id = H5Dopen2(file_id, dataset_name, H5P_DEFAULT);
-        if (dataset_id < 0) {
-            std::cerr << "Could not open dataset: " << dataset_name << std::endl;
-            H5Fclose(file_id);
-            return nullptr;
-        }
+        H5::DataSet dataset = file.openDataSet(dataset_name);
+        std::cout << "Dataset opened successfully." << std::endl;
 
-        // Get the dataspace
-        space_id = H5Dget_space(dataset_id);
-        ndims = H5Sget_simple_extent_ndims(space_id);
-        if (ndims != 3) {
-            std::cerr << "Unexpected number of dimensions: " << ndims << std::endl;
-            H5Sclose(space_id);
-            H5Dclose(dataset_id);
-            H5Fclose(file_id);
-            return nullptr;
-        }
-        H5Sget_simple_extent_dims(space_id, dims, nullptr);
+        // Get the dataspace of the dataset
+        H5::DataSpace dataspace = dataset.getSpace();
+        std::cout << "Dataspace obtained successfully." << std::endl;
 
-        // Allocate memory for the data
-        *data_size = dims[0] * dims[1] * dims[2];
-        data = new double[*data_size];
-        if (data == nullptr) {
-            std::cerr << "Memory allocation failed" << std::endl;
-            H5Sclose(space_id);
-            H5Dclose(dataset_id);
-            H5Fclose(file_id);
-            return nullptr;
-        }
+        // Get the dimensions of the dataset
+        hsize_t dims[3] = {1, 1, 1};
+        info->ndims = dataspace.getSimpleExtentDims(dims, NULL);
+        std::cout << "Number of dimensions: " << info->ndims << std::endl;
+        std::cout << "Dimensions: [" << dims[0] << ", " << dims[1] << ", " << dims[2] << "]" << std::endl;
 
-        // Copy the dimensions out
-        dims_out[0] = static_cast<int>(dims[0]);
-        dims_out[1] = static_cast<int>(dims[1]);
-        dims_out[2] = static_cast<int>(dims[2]);
+        // Allocate buffer for the data
+        info->data_size = dims[0] * dims[1] * dims[2];
+        info->data = new unsigned int[info->data_size];
+        std::cout << "Memory allocated successfully." << std::endl;
 
         // Read the data
-        status = H5Dread(dataset_id, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, data);
-        if (status < 0) {
-            std::cerr << "Could not read data" << std::endl;
-            delete[] data;
-            data = nullptr;
+        dataset.read(info->data, H5::PredType::NATIVE_UINT);
+        std::cout << "Data read successfully." << std::endl;
+
+        // Copy the dimensions
+        for (int i = 0; i < info->ndims; ++i) {
+            info->dims[i] = static_cast<int>(dims[i]);
+        }
+        if (info->ndims == 2) {
+            info->dims[2] = 1;  // Set third dimension to 1 for 2D datasets
         }
 
-        // Close/release resources
-        H5Sclose(space_id);
-        H5Dclose(dataset_id);
-        H5Fclose(file_id);
-
-        return data;
+    } catch (H5::FileIException &error) {
+        std::cerr << "File error: " << error.getCDetailMsg() << std::endl;
+        delete[] info->data;
+        delete info;
+        return NULL;
+    } catch (H5::DataSetIException &error) {
+        std::cerr << "Dataset error: " << error.getCDetailMsg() << std::endl;
+        delete[] info->data;
+        delete info;
+        return NULL;
+    } catch (H5::DataSpaceIException &error) {
+        std::cerr << "Dataspace error: " << error.getCDetailMsg() << std::endl;
+        delete[] info->data;
+        delete info;
+        return NULL;
     }
 
-    void free_data(double* data) {
-        delete[] data;
-    }
+    return info;
 }
+
+void free_dataset_info(DatasetInfo* info) {
+    delete[] info->data;
+    delete info;
+}
+
+} // extern "C"

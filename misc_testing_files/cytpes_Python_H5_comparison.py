@@ -65,8 +65,8 @@ def free_c_array(lib, data_ptr):
 
 def main():
     print('starting comparison...')
-    filename = '/scratch/sbotha/2024-hitfinder-data/real-data/pk7kev3_11_2768_data_000001.h5'
-    # filename='/scratch/eseveret/hitfinder_data/dataset_2/images/peaks_water_overlay/01/overlay_img_6keV_clen01_26975.h5'
+    # filename = '/scratch/sbotha/2024-hitfinder-data/real-data/pk7kev3_11_2768_data_000001.h5'
+    filename='/scratch/eseveret/hitfinder_data/dataset_2/images/peaks_water_overlay/01/overlay_img_6keV_clen01_26975.h5'
     dataset = 'entry/data/data'
     
     tic()

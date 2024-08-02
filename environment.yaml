@@ -1,0 +1,21 @@
+name: hitfinder_sol_env
+channels:
+  - pytorch
+  - nvidia
+  - conda-forge
+  - defaults
+dependencies:
+  - pytorch=2.2.2
+  - torchvision=0.17.2
+  - torchaudio=2.2.2
+  - pytorch-cuda=11.8
+  - scikit-image=0.22.0
+  - ca-certificates=2024.6.2
+  - certifi=2024.6.2
+  - openssl=3.3.1
+  - matplotlib=3.8.4
+  - pandas=2.2.2
+  - scikit-learn=1.4.2
+  - h5py=3.11.0
+  - hdf5plugin=4.4.0
+prefix: /home/eseveret/.conda/envs/hitfinder_sol_env
