@@ -20,14 +20,17 @@ def read_h5_dataset(filename, dataset_name):
         array = np.array(data)
         return array
 
+import ctypes
+import numpy as np
+
 def C_read_h5_dataset(filename, dataset_name, lib):
     print('Reading file from C')
     # Define the argument and return types for the read_h5_dataset function
     lib.read_h5_dataset.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.POINTER(ctypes.c_int), ctypes.POINTER(ctypes.c_int)]
-    lib.read_h5_dataset.restype = ctypes.POINTER(ctypes.c_double)
+    lib.read_h5_dataset.restype = ctypes.POINTER(ctypes.c_uint)  # Update to match unsigned int
 
     # Define the free_data function
-    lib.free_data.argtypes = [ctypes.POINTER(ctypes.c_double)]
+    lib.free_data.argtypes = [ctypes.POINTER(ctypes.c_uint)]  # Update to match unsigned int
     lib.free_data.restype = None
     
     filename_bytes = filename.encode('utf-8')
@@ -43,7 +46,7 @@ def C_read_h5_dataset(filename, dataset_name, lib):
         raise ValueError("Failed to read dataset")
 
     # Convert the data to a numpy array
-    print('converting data to numpy array')
+    print('Converting data to numpy array')
     array = np.ctypeslib.as_array(data_ptr, shape=(data_size.value,))
     
     # Copy the data to ensure it is owned by Python
@@ -52,8 +55,9 @@ def C_read_h5_dataset(filename, dataset_name, lib):
     # Free the data allocated by the C library
     lib.free_data(data_ptr)
     
-    print('done reading file from C')
+    print('Done reading file from C')
     return array
+
 
 def free_c_array(lib, data_ptr):
     print('freeing C array')

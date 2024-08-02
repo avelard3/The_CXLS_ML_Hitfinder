@@ -2,13 +2,15 @@
 #include <stdlib.h>
 #include <hdf5.h>
 
+void process_chunk(const unsigned int* data_chunk, size_t chunk_size);
+
 unsigned int* read_h5_dataset(const char* filename, const char* dataset_name, int* data_size, int* dims_out) {
     // File identifier
-    hid_t file_id, dataset_id, space_id, dtype_id;
+    hid_t file_id, dataset_id, space_id, mem_space_id;
     herr_t status;
-    hsize_t dims[3];
+    hsize_t dims[3] = {1, 1, 1};  // Initialize to handle up to 3 dimensions
     int ndims;
-    int* data = NULL;
+    unsigned int* data = NULL;
 
     // Open the file
     file_id = H5Fopen(filename, H5F_ACC_RDONLY, H5P_DEFAULT);
@@ -30,7 +32,7 @@ unsigned int* read_h5_dataset(const char* filename, const char* dataset_name, in
     // Get the dataspace
     space_id = H5Dget_space(dataset_id);
     ndims = H5Sget_simple_extent_ndims(space_id);
-    if (ndims != 3) {
+    if (ndims < 2 || ndims > 3) {
         fprintf(stderr, "Unexpected number of dimensions: %d\n", ndims);
         fflush(stdout);
         H5Sclose(space_id);
@@ -41,21 +43,33 @@ unsigned int* read_h5_dataset(const char* filename, const char* dataset_name, in
     H5Sget_simple_extent_dims(space_id, dims, NULL);
 
     // Print the dimensions
-    printf("Dimensions: %llu x %llu x %llu\n", (unsigned long long)dims[0], (unsigned long long)dims[1], (unsigned long long)dims[2]);
+    printf("Dimensions: ");
+    for (int i = 0; i < ndims; i++) {
+        printf("%llu", (unsigned long long)dims[i]);
+        if (i < ndims - 1) {
+            printf(" x ");
+        }
+    }
+    printf("\n");
     fflush(stdout);
 
     // Sanity check for dimensions
-    if (dims[0] <= 0 || dims[1] <= 0 || dims[2] <= 0) {
-        fprintf(stderr, "Invalid dimensions: %llu x %llu x %llu\n", (unsigned long long)dims[0], (unsigned long long)dims[1], (unsigned long long)dims[2]);
-        fflush(stdout);
-        H5Sclose(space_id);
-        H5Dclose(dataset_id);
-        H5Fclose(file_id);
-        return NULL;
+    for (int i = 0; i < ndims; i++) {
+        if (dims[i] <= 0) {
+            fprintf(stderr, "Invalid dimension at index %d: %llu\n", i, (unsigned long long)dims[i]);
+            fflush(stdout);
+            H5Sclose(space_id);
+            H5Dclose(dataset_id);
+            H5Fclose(file_id);
+            return NULL;
+        }
     }
 
     // Calculate data size and check for overflow
-    unsigned long long total_elements = dims[0] * dims[1] * dims[2];
+    unsigned long long total_elements = dims[0] * dims[1];
+    if (ndims == 3) {
+        total_elements *= dims[2];
+    }
     if (total_elements > SIZE_MAX / sizeof(unsigned int)) {
         fprintf(stderr, "Data size overflow\n");
         fflush(stdout);
@@ -66,14 +80,16 @@ unsigned int* read_h5_dataset(const char* filename, const char* dataset_name, in
     }
 
     *data_size = (int) total_elements;
-    printf("Allocating memory for %d elements\n", *data_size);
+    printf("Total elements: %d\n", *data_size);
     fflush(stdout);
-    
-    data = (unsigned int*) malloc(*data_size * sizeof(unsigned int));
-    printf("Data variable assigned\n");
-    fflush(stdout);
-    printf("Data is %p\n", data);
-    fflush(stdout);
+
+    // Initialize chunk reading
+    hsize_t chunk_dims[3] = {dims[0], dims[1], 1};  // Read one slice at a time for 3D, whole dataset for 2D
+    if (ndims == 2) {
+        chunk_dims[2] = 1;  // Set third dimension to 1 for 2D datasets
+    }
+
+    data = (unsigned int*) malloc(chunk_dims[0] * chunk_dims[1] * chunk_dims[2] * sizeof(unsigned int));
     if (data == NULL) {
         fprintf(stderr, "Memory allocation failed\n");
         fflush(stdout);
@@ -82,111 +98,61 @@ unsigned int* read_h5_dataset(const char* filename, const char* dataset_name, in
         H5Fclose(file_id);
         return NULL;
     }
-    printf("Data is not NULL\n");
-    fflush(stdout);
-    // Copy the dimensions out
-    dims_out[0] = (int)dims[0];
-    dims_out[1] = (int)dims[1];
-    dims_out[2] = (int)dims[2];
 
-    // Print the data size
+    // Copy the dimensions out
+    for (int i = 0; i < ndims; i++) {
+        dims_out[i] = (int)dims[i];
+    }
+    if (ndims == 2) {
+        dims_out[2] = 1;  // Set the third dimension to 1 for consistency
+    }
     printf("Data size: %d elements\n", *data_size);
     fflush(stdout);
 
-    if (file_id < 0) {
-        fprintf(stderr, "Invalid file identifier\n");
-        fflush(stdout);
-        return NULL;
-    }
-    if (dataset_id < 0) {
-        fprintf(stderr, "Invalid dataset identifier\n");
-        fflush(stdout);
-        return NULL;
-    }
-    if (space_id < 0) {
-        fprintf(stderr, "Invalid dataspace identifier\n");
-        fflush(stdout);
-        return NULL;
-    }
+    // Read data in chunks
+    hsize_t offset[3] = {0, 0, 0};
+    hsize_t count[3] = {chunk_dims[0], chunk_dims[1], 1};  // Read one slice at a time for 3D, whole dataset for 2D
 
-    // Validate memory allocation
-    if (data == NULL) {
-        fprintf(stderr, "Memory allocation failed\n");
-        fflush(stdout);
-        H5Sclose(space_id);
-        H5Dclose(dataset_id);
-        H5Fclose(file_id);
-        return NULL;
-    }
+    mem_space_id = H5Screate_simple(ndims, chunk_dims, NULL);
 
-    // // Validate memory space
-    // if (mem_space_id < 0) {
-    //     fprintf(stderr, "Invalid memory space identifier\n");
-    //     fflush(stdout);
-    //     free(data);
-    //     H5Sclose(space_id);
-    //     H5Dclose(dataset_id);
-    //     H5Fclose(file_id);
-    //     return NULL;
-    // }
+    for (hsize_t i = 0; i < dims[2]; ++i) {
+        offset[2] = i;
+        H5Sselect_hyperslab(space_id, H5S_SELECT_SET, offset, NULL, count, NULL);
+        status = H5Dread(dataset_id, H5T_NATIVE_UINT32, mem_space_id, space_id, H5P_DEFAULT, data);
+        if (status < 0) {
+            fprintf(stderr, "Could not read data chunk at index %llu\n", (unsigned long long)i);
+            fflush(stdout);
+            free(data);
+            H5Sclose(mem_space_id);
+            H5Sclose(space_id);
+            H5Dclose(dataset_id);
+            H5Fclose(file_id);
+            return NULL;
+        }
 
-    printf("All preconditions for H5Dread are good\n");
-    fflush(stdout);
-
-// Double-check the HDF5 datatype
-// dtype_id = H5Dget_type(dataset_id);
-// if (H5Tequal(dtype_id, H5T_NATIVE_DOUBLE) <= 0) {
-//     fprintf(stderr, "Dataset type is not double\n");
-//     fflush(stdout);
-//     H5Tclose(dtype_id);
-//     free(data);
-//     H5Sclose(space_id);
-//     H5Dclose(dataset_id);
-//     H5Fclose(file_id);
-//     return NULL;
-// }
-// H5Tclose(dtype_id);
-
-printf("HDF5 dataset type verified as double\n");
-fflush(stdout);
-
-// Double-check the dataspace
-if (H5Sget_simple_extent_dims(space_id, dims, NULL) < 0) {
-    fprintf(stderr, "Failed to get dataspace dimensions\n");
-    fflush(stdout);
-    free(data);
-    H5Sclose(space_id);
-    H5Dclose(dataset_id);
-    H5Fclose(file_id);
-    return NULL;
-}
-
-printf("Dataspace dimensions verified\n");
-fflush(stdout);
-
-
-    // Read the data
-    printf("Reading data...\n");
-    fflush(stdout);
-    status = H5Dread(dataset_id, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, data);
-    printf("Data read\n");
-    fflush(stdout);
-    if (status < 0) {
-        fprintf(stderr, "Could not read data\n");
-        fflush(stdout);
-        free(data);
-        data = NULL;
-    } else {
-        printf("Data read successfully\n");
-        fflush(stdout);
+        // Process the data chunk
+        process_chunk(data, chunk_dims[0] * chunk_dims[1] * chunk_dims[2]);
     }
 
     // Close/release resources
+    printf("Closing/releasing resources\n");
+    fflush(stdout);
+    H5Sclose(mem_space_id);
     H5Sclose(space_id);
     H5Dclose(dataset_id);
     H5Fclose(file_id);
+    printf("Resources released\n");
+    fflush(stdout);
 
     return data;
+}
+
+// Dummy function to process chunks, replace with actual processing
+void process_chunk(const unsigned int* data_chunk, size_t chunk_size) {
+    // Example processing function for data chunks
+    for (size_t i = 0; i < chunk_size; ++i) {
+        // Perform processing on data_chunk[i]
+    }
 }
 
 void free_data(unsigned int* data) {
