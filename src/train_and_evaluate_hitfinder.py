@@ -18,7 +18,7 @@ def arguments(parser) -> argparse.ArgumentParser:
     parser.add_argument('-l', '--list', type=str, help='File path to the .lst file containing file paths to the .h5 file to run through the model.')
     parser.add_argument('-m', '--model', type=str, help='Name of the model architecture class found in models.py that corresponds to the model state dict.')
     parser.add_argument('-o', '--output', type=str, help='Output file path only for training confusion matrix and results.')
-    parser.add_argument('-d', '--dict', type=str, help='Output state dict for the trained model that can be used to load the trained model later.')
+    parser.add_argument('-d', '--dict', type=str, help='Output state dict for the traIined model that can be used to load the trained model later.')
     
     parser.add_argument('-e', '--epoch', type=int, help='Number of training epochs.')
     parser.add_argument('-b', '--batch', type=int, help='Batch size per epoch for training.')

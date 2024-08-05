@@ -153,6 +153,7 @@ class TrainModel:
                 inputs = inputs.to(self.device, dtype=torch.float32)
                 attributes = {key: value.to(self.device).float() for key, value in attributes.items()}
 
+
                 self.optimizer.zero_grad()
                 
                 with autocast(enabled=False):
