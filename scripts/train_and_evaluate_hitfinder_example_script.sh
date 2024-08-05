@@ -1,79 +1,54 @@
 #!/bin/bash
 
-#SBATCH -N 1
+#SBATCH -N 1 
 #SBATCH -c 12
 #SBATCH -t 0-01:00:00
 #SBATCH --mem=64G
 #SBATCH -G a100:1
 #SBATCH -p general
 #SBATCH -q public 
-#SBATCH -o /scratch/eseveret/cxls_hitfinder_joblogs/slurm.%j.out
-#SBATCH -e /scratch/eseveret/cxls_hitfinder_joblogs/slurm.%j.err
+#SBATCH -o /scratch/avelard3/cxls_hitfinder_joblogs/slurm.%j.out
+#SBATCH -e /scratch/avelard3/cxls_hitfinder_joblogs/slurm.%j.err
 #SBATCH --mail-type=END
-#SBATCH --mail-user="eseveret@asu.edu"
+#SBATCH --mail-user="avelard3@asu.edu"
 #SBATCH --export=NONE
 
-# Load necessary modules
 module purge
 module load mamba/latest
 module load cuda-12.5.0-gcc-12.1.0 
 
-# Activate the conda environment
 source activate hitfinder_sol_env
 
-# the file path string to the main python script to run the hitfunder model
-absoloute_path=
-# the main python script name string to run the hitfunder model
-script_name=
+absoloute_path='/scratch/avelard3/The_CXLS_ML_Hitfinder/src/'
+script_name='train_and_evaluate_hitfinder.py'
 
-# the file path string to the input lst file containing the file paths to the data to run through the hitfinder model
-path_to_input_lst_file=
-# the name string of the input lst file containing the file paths to the data to run through the hitfinder model
-lst_file_name=
+path_to_input_lst_file='/scratch/eseveret/hitfinder_data/dataset_2/split_data/'
+lst_file_name='part_at'
 
-# the string name of the model class to use for the hitfinder model
-model_class=
-# the file path string to the output lst files to save the hitfinder model results
-path_to_training_results=
+model_class='Binary_Classification_With_Parameters'
+path_to_training_results='/home/avelard3/hitfinder_output_files/train_model_output'
 
-# the file path string to the model state dict file to use for the hitfinder model, or None if not using transfer learning
-model_class_state_dict=
+model_class_state_dict='hitfinder_model_7.pt'
 
-# the name string of the model state dict file to use for the hitfinder model
-trained_model_state_dict=
-# the file path string to the output lst files to save the hitfinder model results
-path_to_trained_model_state_dict_output=
+trained_model_state_dict='transform_test.pt'
+path_to_trained_model_state_dict_output='/home/avelard3/hitfinder_models/'
 
-# integer value of the number of epochs to use for the hitfinder model
-num_epochs=
-# integer value of the batch size to use for the hitfinder model
-batch_size=
-# the string name of the optimizer to use for the hitfinder model
-optimizer=
-# the string name of the scheduler to use for the hitfinder model
-scheduler=
-# the string name of the criterion to use for the hitfinder model
-criterion=
-# float value of the learning rate to use for the hitfinder model
-learning_rate=
+num_epochs=20
+batch_size=10
+optimizer='Adam'
+scheduler='ReduceLROnPlateau'
+criterion='BCEWithLogitsLoss'
+learning_rate=0.0001
 
-# the string name of the camera length parameter to use for the hitfinder model, this can be a single string if from attribute manager, or a path if not using attribute manager or using master file
-camera_length_parameter=
-# the string name of the photon energy parameter to use for the hitfinder model, this can be a single string if from attribute manager, or a path if not using attribute manager or using master file
-photon_energy_parameter=
-# the string name of the hit parameter to use for the hitfinder model, this can be a single string if from attribute manager, or a path if not using attribute manager or using master file
-hit_parameter=
+camera_length_parameter='clen'
+photon_energy_parameter='photon_energy'
+hit_parameter='peak'
 
-# the string name of the transfer learning model state dict file to use for the hitfinder model, or None if not using transfer learning
 transfer_learning=None
+apply_transform=True
 
-# creates the transfer learning string if not None
 if [ "$transfer_learning" != "None" ]; then
     transfer_learning="${path_to_trained_model_state_dict_output}${model_class_state_dict}"
 fi
 
-
-
-# Run the Python script with arguments
-python ${absoloute_path}${script_name} -l ${path_to_input_lst_file}${lst_file_name} -m ${model_class} -o ${path_to_training_results} -d ${path_to_trained_model_state_dict_output}${trained_model_state_dict} -e ${num_epochs} -b ${batch_size} -op ${optimizer} -s ${scheduler} -c ${criterion} -lr ${learning_rate} -cl ${camera_length_parameter} -pe ${photon_energy_parameter} -pk ${hit_parameter} -tl ${transfer_learning}
-
+python ${absoloute_path}${script_name} -l ${path_to_input_lst_file}${lst_file_name} -m ${model_class} -o ${path_to_training_results} -d ${path_to_trained_model_state_dict_output}${trained_model_state_dict} -e ${num_epochs} -b ${batch_size} -op ${optimizer} -s ${scheduler} -c ${criterion} -lr ${learning_rate} -cl ${camera_length_parameter} -pe ${photon_energy_parameter} -pk ${hit_parameter} -tl ${transfer_learning} -at ${apply_transform}

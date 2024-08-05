@@ -32,6 +32,7 @@ def arguments(parser) -> argparse.ArgumentParser:
     parser.add_argument('-pk', '--peaks', type=str, help='Attribute name for is there are peaks present.')
     
     parser.add_argument('-tl', '--transfer_learn', type=str, default=None, help='Flie path to state dict file for transfer learning.' )
+    parser.add_argument('-at', '--apply_transform', type=bool, default = False, help = 'Apply transform to images (true or false)')
 
     
     try:
@@ -89,7 +90,7 @@ def main() -> None:
     if transfer_learning_state_dict == 'None' or transfer_learning_state_dict == 'none':
         transfer_learning_state_dict = None
     
-    transform = False
+    transform = args.apply_transform
     
     attributes = {
         'camera length': camera_length,
@@ -125,8 +126,9 @@ def main() -> None:
         h5_file_paths = path_manager.get_h5_file_paths()
         
         data_manager = prep_loaded_data.Data(h5_tensor_list, h5_attribute_list, h5_file_paths, transform)
-        data_manager.split_training_data(batch_size)
-        train_loader, test_loader = data_manager.get_training_data_loaders()
+        split_data_manager = prep_loaded_data.SplitData(data_manager, batch_size)
+        split_data_manager.split_training_data()
+        train_loader, test_loader = split_data_manager.get_training_data_loaders()
         
         training_manager.assign_new_data(train_loader, test_loader)
 

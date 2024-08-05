@@ -1,7 +1,8 @@
 import torch
 from torch.utils.data import DataLoader, Dataset
-from torchvision.transforms import v2
+from torchvision import transforms
 from . import conf
+import sys
 
 
 class Data(Dataset):
@@ -48,11 +49,15 @@ class Data(Dataset):
         Returns:
             tuple: A tuple containing the image data and the metadata at the given index.
         """
+        
+        sys.stdout.flush()
         try:
             if self.use_transform:
                 image = self.transforms(self.image_data[idx])
+                sys.stdout.flush()
                 return image, self.meta_data[idx], self.file_paths[idx]
             else:
+                sys.stdout.flush()
                 return self.data[idx]
         except Exception as e:
             print(f"An unexpected error occurred while getting item at index {idx}: {e}")
@@ -61,23 +66,30 @@ class Data(Dataset):
         """
         If the transfom flag is true, this function creates the global variable for the transform for image data. 
         """
-        self.transforms = v2.Compose([
-            v2.toPILImage(),
-            v2.Resize(conf.eiger_4m_image_size),
-            v2.ToTensor(),
+        self.transforms = transforms.Compose([
+            transforms.Resize(300)
         ])
-            
+
         
+class SplitData():
+    def __init__(self, hitfinder_dataset, batch_size: int):
+        # Global variables that are inputs
+        self._hitfinder_dataset = hitfinder_dataset
+        self._batch_size = batch_size
         
-    def split_training_data(self, batch_size: int) -> None:
+        #Other global variables
+        self._train_loader = None
+        self._test_loader = None
+        
+    def split_training_data(self) -> None:
         """
         Split the data into training and testing datasets and create data loaders for them.
 
         Args:
-            batch_size (int): The size of the batches to be used by the data loaders.
+            _batch_size (int): The size of the batches to be used by the data loaders.
         """
         try:
-            num_items = len(self.data)
+            num_items = len(self._hitfinder_dataset)  
             if num_items == 0:
                 raise ValueError("The dataset is empty.")
             
@@ -85,14 +97,14 @@ class Data(Dataset):
             num_test = num_items - num_train
 
             try:
-                train_dataset, test_dataset = torch.utils.data.random_split(self.data, [num_train, num_test])
+                train_dataset, test_dataset = torch.utils.data.random_split(self._hitfinder_dataset, [num_train, num_test])
             except Exception as e:
                 print(f"An error occurred while splitting the dataset: {e}")
                 return
 
             try:
-                self.train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, pin_memory=True)
-                self.test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=True, pin_memory=True)
+                self._train_loader = DataLoader(train_dataset, batch_size=self._batch_size, shuffle=True, pin_memory=True)
+                self._test_loader = DataLoader(test_dataset, batch_size=self._batch_size, shuffle=True, pin_memory=True)
             except Exception as e:
                 print(f"An error occurred while creating data loaders: {e}")
                 return
@@ -112,23 +124,23 @@ class Data(Dataset):
         Returns:
             tuple: A tuple containing the training and testing data loaders.
         """
-        return self.train_loader, self.test_loader
+        return self._train_loader, self._test_loader
     
-    def inference_data_loader(self, batch_size) -> None: 
+    def inference_data_loader(self) -> None: 
         """
         Puts the inference data into a dataloader for batch processing.
 
         Args:
-            batch_size (int): The size of the batches to be used by the data loaders.
+            _batch_size (int): The size of the batches to be used by the data loaders.
         """
         print('Making data loader...')
         try:
-            num_items = len(self.data)
+            num_items = len(self._hitfinder_dataset)
             if num_items == 0:
                 raise ValueError("The dataset is empty.")
             
             try:
-                self.inference_loader = DataLoader(self.data, batch_size=batch_size, shuffle=False, pin_memory=True)
+                self.inference_loader = DataLoader(self._hitfinder_dataset, batch_size=self._batch_size, shuffle=False, pin_memory=True)
                 print('Data loader created.')
             except Exception as e:
                 print(f"An error occurred while creating data loaders: {e}")
