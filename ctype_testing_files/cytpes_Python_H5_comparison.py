@@ -126,7 +126,8 @@ def main():
     free_resources()
     
     # Using h5py
-    print('Using h5py with no th reading...')
+    print('Using h5py with no threading...')
+    tic()
     python_np_array = read_h5_dataset(filename, dataset_name)
     print("Time taken with h5py (sequential):")
     print(f'Shape of python_np_array: {python_np_array.shape}')
@@ -139,11 +140,10 @@ def main():
         try:
             python_np_array_threaded = future.result()
             print("Time taken with h5py (threading):")
-            toc()
             print(f'Shape of python_np_array_threaded: {python_np_array_threaded.shape}')
             print(f'First 10 elements of python_np_array_threaded: {python_np_array_threaded.flat[:10]}')
         except Exception as e:
             print(f"Error in Python reading: {e}")
-
+    toc()
 if __name__ == "__main__":
     main()
