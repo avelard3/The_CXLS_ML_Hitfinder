@@ -31,7 +31,7 @@ def arguments(parser) -> argparse.ArgumentParser:
     parser.add_argument('-pe', '--photon_energy', type=str, help='Attribute name for the photon energy parameter.')
     parser.add_argument('-pk', '--peaks', type=str, help='Attribute name for is there are peaks present.')
     
-    parser.add_argument('-tl', '--transfer_learn', type=str, default=None, help='Flie path to state dict file for transfer learning.' )
+    parser.add_argument('-tl', '--transfer_learn', type=str, default=None, help='File path to state dict file for transfer learning.' )
     parser.add_argument('-at', '--apply_transform', type=bool, default = False, help = 'Apply transform to images (true or false)')
 
     
@@ -66,6 +66,7 @@ def main() -> None:
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(f'This model will be training on: {device}')
     
+    # Setting up variables from argument parser
     args = arguments(parser)
     h5_file_list = args.list
     model_arch = args.model
@@ -86,11 +87,13 @@ def main() -> None:
     #temperary holding
     master_file = None
     
+    # Transfer learning (yes or no)
+    # FIXME: There should be a way to get bool to work for this?
     transfer_learning_state_dict = args.transfer_learn
     if transfer_learning_state_dict == 'None' or transfer_learning_state_dict == 'none':
         transfer_learning_state_dict = None
     
-    transform = args.apply_transform
+    transform = args.apply_transform # Parameter for Data class
     
     attributes = {
         'camera length': camera_length,
@@ -98,6 +101,7 @@ def main() -> None:
         'peak': peaks
     }
     
+    # Create a queue for files to keep from overwhelming the computer (so you can just iterate one by one)
     path_manager = load_data_paths.PathsSingleEvent(h5_file_list, attributes, master_file)
     path_manager.read_file_paths()
     h5_file_path_queue = path_manager.get_file_path_queue()
@@ -117,6 +121,9 @@ def main() -> None:
     training_manager.make_training_instances()
     training_manager.load_model_state_dict()
 
+    # Iterate through h5 files to split data and do manager/loader
+    # FIXME: I don't understand anything
+
     while not h5_file_path_queue.empty():
         path_manager.process_files()
 
@@ -125,18 +132,20 @@ def main() -> None:
         h5_file_paths = path_manager.get_h5_file_paths()
         
         data_manager = prep_loaded_data.Data(h5_tensor_list, h5_attribute_list, h5_file_paths, transform)
-        split_data_manager = prep_loaded_data.SplitData(data_manager, batch_size)
-        split_data_manager.split_training_data()
-        train_loader, test_loader = split_data_manager.get_training_data_loaders()
+        create_data_loader = prep_loaded_data.CreateDataLoader(data_manager, batch_size)
+        create_data_loader.split_training_data()
+        train_loader, test_loader = create_data_loader.get_training_data_loaders()
         
         training_manager.assign_new_data(train_loader, test_loader)
 
         training_manager.epoch_loop()
         training_manager.plot_loss_accuracy(training_results)
         
+    # Saving model
     training_manager.save_model(model_dict_save_path)
     trained_model = training_manager.get_model()
     
+    # Checking and reporting accuracy of model
     evaluation_manager = evaluate_model.ModelEvaluation(cfg, attributes, trained_model, test_loader)
     evaluation_manager.run_testing_set()
     evaluation_manager.make_classification_report()

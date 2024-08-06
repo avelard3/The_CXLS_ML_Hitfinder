@@ -15,7 +15,7 @@ class Data(Dataset):
             classification_data (list): List of classification data, that being list of pytorch tensors.
             attribute_data (list): List of attribute data, that being list of metadata dictionaries.
             h5_file_path (list): List of h5 file paths.
-            multievent (str): String boolean value if the input .h5 files are multievent or not.
+            use_transform (bool): Whether you want the transforms to be applied to the images to create more data or not
         """
         self.train_loader = None
         self.test_loader = None
@@ -27,6 +27,8 @@ class Data(Dataset):
         
         self.use_transform = use_transform
         self.transforms = None
+        
+        # If transforms will be used, then it creates the pytorch object that will be used to transform future data
         if self.use_transform:
             self.make_transform()
         
@@ -51,6 +53,8 @@ class Data(Dataset):
         """
         
         sys.stdout.flush()
+        
+        # Check if a transform needs to be applied and apply it
         try:
             if self.use_transform:
                 image = self.transforms(self.image_data[idx])
@@ -65,19 +69,21 @@ class Data(Dataset):
     def make_transform(self) -> None:
         """
         If the transfom flag is true, this function creates the global variable for the transform for image data. 
+        This part doesn't interact with the actual data; it just stores pytorch object data for a future transform.
         """
+                
         self.transforms = transforms.Compose([
-            transforms.Resize(300)
+            transforms.Resize(300) #Resize transform doesn't work for hitfinder, but transforms in general do work
         ])
 
         
-class SplitData():
-    def __init__(self, hitfinder_dataset, batch_size: int):
+class CreateDataLoader():
+    def __init__(self, hitfinder_dataset: Data, batch_size: int) -> None:
         # Global variables that are inputs
         self._hitfinder_dataset = hitfinder_dataset
         self._batch_size = batch_size
         
-        #Other global variables
+        # Other global variables
         self._train_loader = None
         self._test_loader = None
         

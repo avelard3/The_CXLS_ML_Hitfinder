@@ -67,13 +67,14 @@ hit_parameter=
 # the string name of the transfer learning model state dict file to use for the hitfinder model, or None if not using transfer learning
 transfer_learning=None
 
+# Should the transform defined in prep_loaded_data class Data, be applied
+apply_transform=True
+
 # creates the transfer learning string if not None
 if [ "$transfer_learning" != "None" ]; then
     transfer_learning="${path_to_trained_model_state_dict_output}${model_class_state_dict}"
 fi
 
-
-
 # Run the Python script with arguments
-python ${absoloute_path}${script_name} -l ${path_to_input_lst_file}${lst_file_name} -m ${model_class} -o ${path_to_training_results} -d ${path_to_trained_model_state_dict_output}${trained_model_state_dict} -e ${num_epochs} -b ${batch_size} -op ${optimizer} -s ${scheduler} -c ${criterion} -lr ${learning_rate} -cl ${camera_length_parameter} -pe ${photon_energy_parameter} -pk ${hit_parameter} -tl ${transfer_learning}
+python ${absoloute_path}${script_name} -l ${path_to_input_lst_file}${lst_file_name} -m ${model_class} -o ${path_to_training_results} -d ${path_to_trained_model_state_dict_output}${trained_model_state_dict} -e ${num_epochs} -b ${batch_size} -op ${optimizer} -s ${scheduler} -c ${criterion} -lr ${learning_rate} -cl ${camera_length_parameter} -pe ${photon_energy_parameter} -pk ${hit_parameter} -tl ${transfer_learning} -at ${apply_transform}
 
