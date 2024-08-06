@@ -72,7 +72,7 @@ DatasetInfo* read_h5_dataset(const char* filename, const char* dataset_name) {
     return info;
 }
 
-void free_dataset_info(DatasetInfo* info) {
+void free_data(DatasetInfo* info) {
     delete[] info->data;
     delete info;
 }
