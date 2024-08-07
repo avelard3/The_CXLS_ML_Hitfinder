@@ -62,18 +62,6 @@ def toc():
     print(f"Elapsed time: {elapsed_time} seconds")
     return elapsed_time
 
-def read_h5_dataset(filename, dataset_name):
-    with h5py.File(filename, 'r') as file:
-        data = file[dataset_name][:]
-        array = np.array(data)
-        return array
-
-def read_h5_dataset_threading(filename, dataset_name):
-    with h5py.File(filename, 'r') as file:
-        data = file[dataset_name][:]
-        array = np.array(data)
-    return array
-
 def read_dataset_threading(filename, dataset_name, dims):
     all_data = np.zeros((dims[0], dims[1], dims[2]), dtype=np.uint32)
 
@@ -90,6 +78,12 @@ def read_dataset_threading(filename, dataset_name, dims):
         concurrent.futures.wait(futures)
     
     return all_data
+
+def read_h5_dataset(filename, dataset_name):
+    with h5py.File(filename, 'r') as file:
+        data = file[dataset_name][:]
+        array = np.array(data)
+        return array
 
 def main():
     # filename = '/scratch/eseveret/hitfinder_data/dataset_2/images/peaks_water_overlay/01/overlay_img_6keV_clen01_26975.h5'
@@ -115,6 +109,8 @@ def main():
     print("Time taken with ctypes (sequential):")
     toc()
 
+    free_resources()
+
     # print('Using Ctypes with threading...')
     # tic()
     # all_data_threaded = read_dataset_threading(filename, dataset_name, dims)
@@ -123,7 +119,7 @@ def main():
     # print("Time taken with ctypes (threading):")
     # toc()
 
-    free_resources()
+    # free_resources()
     
     # Using h5py
     print('Using h5py with no threading...')
@@ -133,10 +129,11 @@ def main():
     print(f'Shape of python_np_array: {python_np_array.shape}')
     print(f'First 10 elements of python_np_array: {python_np_array.flat[:10]}')
     toc()
-    # Using h5py with ThreadPoolExecutor
+
+    print('Using h5py with ThreadPoolExecutor...')
     tic()
     with concurrent.futures.ThreadPoolExecutor() as executor:
-        future = executor.submit(read_h5_dataset_threading, filename, dataset_name)
+        future = executor.submit(read_h5_dataset, filename, dataset_name)
         try:
             python_np_array_threaded = future.result()
             print("Time taken with h5py (threading):")
@@ -145,5 +142,6 @@ def main():
         except Exception as e:
             print(f"Error in Python reading: {e}")
     toc()
+
 if __name__ == "__main__":
     main()
