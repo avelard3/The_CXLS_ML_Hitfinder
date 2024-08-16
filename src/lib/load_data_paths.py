@@ -86,7 +86,14 @@ class Paths(ABC):
             print(f'Reading file {file_path}')
             self._open_h5_file = h5.File(file_path, 'r')
             
-            numpy_array = np.array(self._open_h5_file['entry/data/data']).astype(np.float32)
+            # File path inside h5 file: check if .cxi or .h5
+            if self._open_h5_file.endswith('.cxi'):
+                print("Reading .cxi file")
+                numpy_array = np.array(self._open_h5_file['entry_1/data_1/data']).astype(np.float32)
+            else:
+                print("Assuming reading .h5 file")
+                numpy_array = np.array(self._open_h5_file['entry/data/data']).astype(np.float32)
+                
             if numpy_array.shape[-2:] != conf.eiger_4m_image_size:
                 numpy_array = SpecialCaseFunctions.reshape_input_data(numpy_array)                      
             self._loaded_h5_tensor = torch.tensor(numpy_array)
