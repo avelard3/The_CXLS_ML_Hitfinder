@@ -5,7 +5,9 @@ import numpy.linalg as npla
 import matplotlib.pyplot as plt
 import h5py as h5
 import matplotlib.colors as colors
-# For cropping/padding
+
+# from lib import utils
+# from . import conf
 
 
 class ScatteringMatrix():
@@ -87,6 +89,7 @@ class ScatteringMatrix():
         # Perform the calculation for each set of vectors
         # Because of adding the dimensions and ones to everything, this operation works.
         self._v_vec = fs_expanded * n_fs_indices_expanded + ss_expanded * n_ss_indices_expanded + t_expanded  # Shape (num_panels, size_of_vector = 3, n_fs, n_ss)
+        self._v_vec = np.array(self._v_vec)
         self._q_vec = ((2*np.pi)/self._wavelength) * ((self._v_vec/npla.norm(self._v_vec)) - b_vec_expanded) 
 
         print("shape of qvec", self._q_vec.shape)
@@ -108,13 +111,13 @@ class ScatteringMatrix():
         self._pixel_length_x = 1e-4
         self._pixel_length_y = 1e-4
 
-        self._max_x = np.max(self._t_vec_arr[:,0]) + (self._n_ss_int * self._pixel_length_x)
-        self._max_y = np.max(self._t_vec_arr[:,1]) + (self._n_fs_int * self._pixel_length_y)
-        self._min_x = np.min(self._t_vec_arr[:,0]) - (self._n_ss_int * self._pixel_length_x)
-        self._min_y = np.min(self._t_vec_arr[:,1]) - (self._n_fs_int * self._pixel_length_y)
+        self._max_x = np.max(self._v_vec[:,0,:,:]) 
+        self._max_y = np.max(self._v_vec[:,1,:,:])
+        self._min_x = np.min(self._v_vec[:,0,:,:]) 
+        self._min_y = np.min(self._v_vec[:,1,:,:]) 
 
         self._final_array_x_len = int(np.ceil((self._max_x - self._min_x)/self._pixel_length_x))
-        self._final_array_y_len = int(np.ceil((self._max_y - self._min_y)/self._pixel_length_y))
+        self._final_array_y_len = int(np.ceil((self._max_y - self._min_y)/self._pixel_length_y)) +1 
         
         print("self._final_array_x_len", ((self._final_array_x_len)))
         print("self._final_array_y_len", ((self._final_array_y_len)))
@@ -127,7 +130,6 @@ class ScatteringMatrix():
         self._all_data_array = np.array(self._open_h5_file['entry_1/data_1/data']).astype(np.float32)
         self._num_trials_in_data = self._all_data_array.shape[0]
         
-        #*
         self._final_array = np.zeros((self._num_trials_in_data ,self._final_array_y_len, self._final_array_x_len)) # shape (num_trials_in_data (ex 82), fs * num_panels, x or ss)
         
         print("_all_data_array.shape", self._all_data_array.shape)
@@ -136,50 +138,82 @@ class ScatteringMatrix():
         #This is conditional on size and shape of data file
         
         # Splitting array in fs and then ss
+        
+        #* og, see x1
+        # Changing (2,3,4,0,1) into (2,3,4,1,0), makes things worse (see x2)
+        # Changing order of splitting fs and ss changes NOTHING (see x3)
         self._all_data_array_split_fs = np.array(np.array_split(self._all_data_array, self._all_data_array.shape[2]/self._n_fs_int, axis = 2)) # shape (self._all_data_array.shape[2]/self._n_fs_int , num_trials_in_data (ex 82) , self._all_data_array[1] , self._n_fs_int)
         print("_all_data_array_split_fs.shape", self._all_data_array_split_fs.shape) 
 
         self._all_data_array_split_ss = np.array(np.array_split(self._all_data_array_split_fs, self._all_data_array.shape[1]/self._n_ss_int, axis = 2)) # shape (self._all_data_array.shape[1]/self._n_ss_int , self._all_data_array.shape[2]/self._n_fs_int , num_trials_in_data (ex 82), self._n_ss_int, self._n_fs_int)
         print("_all_data_array_split_ss.shape", self._all_data_array_split_ss.shape) 
-        
+
         
         self._all_data_array_split = np.transpose(self._all_data_array_split_ss, (2,3,4,0,1))
 
-        # If things don't come together correctly this is likely the problem:
-        self._all_data_array_reshape = np.reshape(self._all_data_array_split, (self._num_trials_in_data, self._n_fs_int, self._n_ss_int, self._all_data_array_split.shape[3] * self._all_data_array_split.shape[4])) # shape (num_trials_in_data (ex 82), y or fs per panel, x or ss per panel, num_panels but calc diff way for check)
-        print("self._all_data_array_reshape.shape",self._all_data_array_reshape.shape)
 
-        #!
-        # not sure if i should do self._min_x or self._t_vec_arr[0,0]
-        # trying - _t_vec_arr[0,0] without np.abs: NOPE
-        # trying + _t_vec_arr[0,0] without np.abs:
-        # i am starting to think that this is just fine and there's a problem with something else
+        self._all_data_array_reshape = np.reshape(self._all_data_array_split, (self._num_trials_in_data, self._n_fs_int, self._n_ss_int, self._all_data_array_split.shape[3] * self._all_data_array_split.shape[4])) # shape (num_trials_in_data (ex 82), y or fs per panel, x or ss per panel, num_panels but calc diff way for check)
+
         
-        # i_ns = (self._t_vec_arr[:,0]/self._pixel_length_x) + (self._final_array_x_len)/2 
-        # j_ns = (self._t_vec_arr[:,1]/self._pixel_length_y) + (self._final_array_y_len)/2
         
-        # i_ns = np.abs((self._t_vec_arr[:,0] + (self._final_array_x_len)/2)/self._pixel_length_x)
-        # j_ns = np.abs((self._t_vec_arr[:,1] + (self._final_array_y_len)/2)/self._pixel_length_y)
+        print("self._all_data_array_reshape.shape",self._all_data_array_reshape.shape)
         
-        # i_ns = np.abs((self._t_vec_arr[:,0] - self._t_vec_arr[0,0])/self._pixel_length_x)
-        # j_ns = np.abs((self._t_vec_arr[:,1] - self._t_vec_arr[0,1])/self._pixel_length_y)
         
-        #this is correct based on graph
-        i_ns = (self._t_vec_arr[:,0] + ((self._max_x - self._min_x)/2))/self._pixel_length_x
-        j_ns = (self._t_vec_arr[:,1] + ((self._max_y - self._min_y)/2))/self._pixel_length_y
+        # Find the tv_vec for each panel
+        #tv vec is the lowest, leftmost v_vector (and what we previously were assuming the t-vec was)
         
+        xv_vec = self._v_vec[:,0,:,:]
+        yv_vec = self._v_vec[:,1,:,:]
+        print("xv_vec.shape", xv_vec.shape)
+        print("yv_vec.shape", yv_vec.shape)
+        
+        
+        xv_min = np.min(xv_vec, axis = 1)
+        yv_min = np.min(yv_vec, axis = 2)
+        print("xv_min.shape", xv_min.shape)
+        print("yv_min.shape", yv_min.shape)
+        
+        # We first get the global minimums across b and c for each a
+        min_xv_over_yv = np.min(xv_min, axis=1)  # Shape (a,)
+        min_yv_over_xv = np.min(yv_min, axis=1)  # Shape (a,)
+
+        # Combine them into a single array of shape (a, 2)
+        tv_vec = np.column_stack((min_xv_over_yv, min_yv_over_xv))
+        print("tv_vec. shape", tv_vec.shape)
+        print("tv vector", tv_vec)
+
+
+
+        i_ns = (tv_vec[:,0] + ((self._max_x - self._min_x)/2))/self._pixel_length_x 
+        j_ns = (tv_vec[:,1] + ((self._max_y - self._min_y)/2))/self._pixel_length_y
+        print("ins output", i_ns)
+        print("jns output", j_ns)        
+        print("size of vvec", self._v_vec.shape)
         print("size of tvec array", self._t_vec_arr.shape)
+        print("i_ns shape", i_ns.shape)
+        print("j_ns shape", j_ns.shape)
+        print("tv_vec shape", tv_vec.shape)
 
 
         plt.scatter(i_ns,j_ns)
         plt.show()
-        plt.savefig("/scratch/avelard3/cxls_hitfinder_joblogs/tvec_dot_real_space_try3.png")
+        plt.savefig("/scratch/avelard3/cxls_hitfinder_joblogs/tvec_dot_real_space_try4.png")
         
         for num in range(self._num_panels):
-            print(f"({int(np.floor(i_ns[num]))}, {int(np.floor(j_ns[num]))}) - ({int(np.floor(i_ns[num])) + self._n_ss_int}, {int(np.floor(j_ns[num])) + self._n_fs_int})")
-            print(f"from tvec: ({self._t_vec_arr[num,0]}, {self._t_vec_arr[num,1]})")
+            print(f"({int(np.ceil(i_ns[num]))}, {int(np.ceil(j_ns[num]))}) - ({int(np.ceil(i_ns[num])) + self._n_ss_int}, {int(np.ceil(j_ns[num])) + self._n_fs_int})")
             
-            self._final_array[:, int(np.floor(j_ns[num])) : int(np.floor(j_ns[num] + self._n_fs_int)), int(np.floor(i_ns[num])) : int(np.floor(i_ns[num] + self._n_ss_int))] = self._all_data_array_reshape[:, :, :, num]
+            self._final_array[:, int(np.ceil(j_ns[num])) : int(np.ceil(j_ns[num] + self._n_fs_int)), int(np.ceil(i_ns[num])) : int(np.ceil(i_ns[num] + self._n_ss_int))] = self._all_data_array_reshape[:, :, :, num]
+            
+            
+            
+        # self._final_size_array = SpecialCaseFunctions.pad_input_data(self._final_array)
+        # smaller_array = self._final_size_array[1,:,:]
+        # fig, ax = plt.subplots()
+        # heatmap = ax.imshow(smaller_array, norm=colors.SymLogNorm(linthresh=100, linscale=1, base=10), cmap='viridis')
+
+        # cbar = plt.colorbar(heatmap, ax=ax)
+        # plt.show()
+        # plt.savefig("/scratch/avelard3/cxls_hitfinder_joblogs/y1test_data_piecetogether.png")
         
         
     # checking and graphing outputs
@@ -218,15 +252,10 @@ class ScatteringMatrix():
 
         cbar = plt.colorbar(heatmap, ax=ax)
         plt.show()
-        plt.savefig("/scratch/avelard3/cxls_hitfinder_joblogs/x2test_data_piecetogether_bw.png")
+        plt.savefig("/scratch/avelard3/cxls_hitfinder_joblogs/x5test_data_piecetogether.png")
         
-        #1test has crazy sizzag
-        #z2 has good heatmap but bad results
-        #z3 better heatmap
-        #z4 is worse
-        # now im changing how the panels are put together. 
-        #x1: self._all_data_array_split = np.transpose(self._all_data_array_split_ss, (2,3,4,1,0)) instead of (2,3,4,0,1)
-        #   x1 has different intensities than z3, but panels are still overlapping, so i'm changing it back to (2,3,4,0,1) for now (and then accidentally overwrote it)
+        #z3 and x1 are significant
+        
         
 
 
