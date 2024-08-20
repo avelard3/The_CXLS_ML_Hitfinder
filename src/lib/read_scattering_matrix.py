@@ -6,9 +6,6 @@ import matplotlib.pyplot as plt
 import h5py as h5
 import matplotlib.colors as colors
 
-# from lib import utils
-# from . import conf
-
 
 class ScatteringMatrix():
     def  __init__(self, file_name:str, file_path:str) -> None:
@@ -19,7 +16,7 @@ class ScatteringMatrix():
         self.calculate_q_vec()
         self.create_new_array()
         self.insert_data_into_new_matrix()
-        self.graph_first_data_piecetogether()
+        self.graph_padded_data()
         
 
     def read_geom_file(self):
@@ -37,46 +34,44 @@ class ScatteringMatrix():
 
         # Size of detector panel from geom file
 
-        n_fs_list = [entry['n_fs'] for entry in data] # number of pixels in fast-scan direction
-        self._n_fs_int = n_fs_list[0]
-        n_ss_list = [entry['n_ss'] for entry in data] # number of pixels in slow-scan direction
-        self._n_ss_int = n_ss_list[0]
+        n_fs_list = [entry['n_fs'] for entry in data] # should all be equivalent #FIXME add breakpoint if not equivalent
+        self._n_fs_int = n_fs_list[0]  # number of pixels in fast-scan direction
+        
+        n_ss_list = [entry['n_ss'] for entry in data] # should all be equivalent
+        self._n_ss_int = n_ss_list[0] # number of pixels in slow-scan direction
 
         file.close()
 
     def calculate_q_vec(self):
         # Vector definitions all based on reborn documentation for detectors
 
-        self._b_vec = np.array([0.0, 0.0, 1.0]) # Default that reborn uses
-
         # reborn finds photon wavelength  by dividing hc / photon_energy, where hc is the constant h * constant c from scipy constants
-        # default photon_energy = 1.602e-15 according to reborn
-        # also, in an example from reborn, wavelength = 1.5e-10
-        # FIXME: currently setting lambda = 1.5e-10, since reborn used it as a fair number to be used in an examples
+        # default photon_energy = 1.602e-15 according to reborn, but in example reborn used wavelength = 1.5e-10 #FIXME
+        # Likely unimportant because qvec isn't used in anything currently
+        self._b_vec = np.array([0.0, 0.0, 1.0]) # Default that reborn uses
         self._wavelength = 1.5e-10 
         self._t_vec_arr = np.array(self._t_vec)
         self._ss_vec_arr = np.array(self._ss_vec)
         self._fs_vec_arr = np.array(self._fs_vec)
 
-        orig_array_shape = self._fs_vec_arr.shape
-
+        orig_array_shape = self._fs_vec_arr.shape # FIXME: add a break point if t,fs,ss are different sizes
         self._num_panels = orig_array_shape[0]
         self._vector_length = orig_array_shape[1]
-        # FIXME: add a break point if they're different sizes
+        
+        # The following is made more complicated due to the fact that we're not using for loops
+        
+        # Everything that it multiplied should have the shape (num_panels, vector_length, n_fs_int, n_ss_int)
+        
+        # Creating a correctly sized array of n_fs and n_ss where the index is equal to the value stored at that index
+        # (so you can iterate through all the positions in a n_fs by n_ss panel)
         n_fs_indices = np.arange(self._n_fs_int).reshape(1,1,-1,1) # Shape (1, 1, n_fs, 1)
         n_ss_indices = np.arange(self._n_ss_int).reshape(1,1,1,-1) # Shape(1, 1, 1, n_ss)
-
         n_fs_indices_expanded = np.tile(n_fs_indices, (self._num_panels, self._vector_length, 1, self._n_ss_int)) # Shape (num_panels, vector_length, n_fs, n_ss)
         n_ss_indices_expanded = np.tile(n_ss_indices, (self._num_panels, self._vector_length, self._n_fs_int, 1)) # Shape (num_panels, vector_length, n_fs, n_ss)
 
 
         # Expand dimensions of fs, ss, and t to align with n_fs_indices and n_ss_indices
-        # Expanding to shape (num_panels, size_of_vector = 3, n_fs, n_ss)
-        # And t_vec, ss_vec, fs_vec have the size and number of vectors (as well as the value of the vectors)
-        # The arrays need to be expanded to test in each panel, and each pixel of that panel, with 3 values defining the vector
-        b_vec_expanded = self._b_vec.reshape(1,-1,1,1)
-        b_vec_expanded = np.tile(b_vec_expanded, (self._num_panels, 1, self._n_fs_int, self._n_ss_int)) # Shape (num_panels, vector_length, n_fs, n_ss)
-        
+        # The arrays need to be expanded to find the vector in each panel, and each pixel of that panel, with 3 values defining the vector
         fs_expanded = self._fs_vec_arr[:, :, np.newaxis, np.newaxis]
         fs_expanded = np.tile(fs_expanded, (1, 1, self._n_fs_int, self._n_ss_int))  # Shape (num_panels, vector_length, n_fs, n_ss)
 
@@ -85,37 +80,38 @@ class ScatteringMatrix():
 
         t_expanded = self._t_vec_arr[:, :, np.newaxis, np.newaxis]  
         t_expanded = np.tile(t_expanded, (1, 1, self._n_fs_int, self._n_ss_int)) # Shape (num_panels, vector_length, n_fs, n_ss)
+        
+        # The b vector also needs to be the correct size for multiplication:
+        b_vec_expanded = self._b_vec.reshape(1,-1,1,1)
+        b_vec_expanded = np.tile(b_vec_expanded, (self._num_panels, 1, self._n_fs_int, self._n_ss_int)) # Shape (num_panels, vector_length, n_fs, n_ss)
 
-        # Perform the calculation for each set of vectors
-        # Because of adding the dimensions and ones to everything, this operation works.
+        # Perform the calculation for each set of vectors to find the v vector point to each individual pixel on each individual panel
+
         self._v_vec = fs_expanded * n_fs_indices_expanded + ss_expanded * n_ss_indices_expanded + t_expanded  # Shape (num_panels, size_of_vector = 3, n_fs, n_ss)
         self._v_vec = np.array(self._v_vec)
+        
+        # q vector is graphing it in real space like the reborn documentation shows, but I don't think qvec is important
         self._q_vec = ((2*np.pi)/self._wavelength) * ((self._v_vec/npla.norm(self._v_vec)) - b_vec_expanded) 
 
         print("shape of qvec", self._q_vec.shape)
 
 
     def create_new_array(self):
-        # For graphing heatmap of lengths of q_vec to check q_vec
+        # Calculate the dimensions in real space and pixel space to determine the necessary size array to hold all the panels from the detector
 
+        # Find the average length of a pixel in real space "units"
         ss_ecul_norm = npla.norm(self._ss_vec, axis=1)
         fs_eucl_norm = npla.norm(self._fs_vec, axis=1)
+        self._pixel_length_x = np.mean(ss_ecul_norm)
+        self._pixel_length_y = np.mean(fs_eucl_norm)
 
-
-        # Finding size of array in x and y direction
-        # self._pixel_length_x = np.mean(ss_ecul_norm)
-        # self._pixel_length_y = np.mean(fs_eucl_norm)
-        # print("pixel x",self._pixel_length_x)
-        # print("pixel y", self._pixel_length_y)
-        
-        self._pixel_length_x = 1e-4
-        self._pixel_length_y = 1e-4
-
+        # Find the max and min of x and y values of the v vectors in real space to find the range of real space that all the panels take up
         self._max_x = np.max(self._v_vec[:,0,:,:]) 
         self._max_y = np.max(self._v_vec[:,1,:,:])
         self._min_x = np.min(self._v_vec[:,0,:,:]) 
         self._min_y = np.min(self._v_vec[:,1,:,:]) 
 
+        # Find the range in the x and y direction of the panels and convert it into pixels 
         self._final_array_x_len = int(np.ceil((self._max_x - self._min_x)/self._pixel_length_x))
         self._final_array_y_len = int(np.ceil((self._max_y - self._min_y)/self._pixel_length_y)) +1 
         
@@ -130,104 +126,64 @@ class ScatteringMatrix():
         self._all_data_array = np.array(self._open_h5_file['entry_1/data_1/data']).astype(np.float32)
         self._num_trials_in_data = self._all_data_array.shape[0]
         
+        # Create the final array for the pixel data using the dimensions from create_new_array
         self._final_array = np.zeros((self._num_trials_in_data ,self._final_array_y_len, self._final_array_x_len)) # shape (num_trials_in_data (ex 82), fs * num_panels, x or ss)
         
         print("_all_data_array.shape", self._all_data_array.shape)
         
-        # Maybe add an if statement to correlate which dimension or axis goes with fs or ss
+        # FIXME add an if statement to correlate which dimension or axis goes with fs or ss
         #This is conditional on size and shape of data file
         
         # Splitting array in fs and then ss
-        
-        #* og, see x1
-        # Changing (2,3,4,0,1) into (2,3,4,1,0), makes things worse (see x2)
-        # Changing order of splitting fs and ss changes NOTHING (see x3)
         self._all_data_array_split_fs = np.array(np.array_split(self._all_data_array, self._all_data_array.shape[2]/self._n_fs_int, axis = 2)) # shape (self._all_data_array.shape[2]/self._n_fs_int , num_trials_in_data (ex 82) , self._all_data_array[1] , self._n_fs_int)
-        print("_all_data_array_split_fs.shape", self._all_data_array_split_fs.shape) 
-
         self._all_data_array_split_ss = np.array(np.array_split(self._all_data_array_split_fs, self._all_data_array.shape[1]/self._n_ss_int, axis = 2)) # shape (self._all_data_array.shape[1]/self._n_ss_int , self._all_data_array.shape[2]/self._n_fs_int , num_trials_in_data (ex 82), self._n_ss_int, self._n_fs_int)
-        print("_all_data_array_split_ss.shape", self._all_data_array_split_ss.shape) 
 
-        
+        # Reorganiznig array to be (num_trials_in_data, n_ss, n_fs, result of division ss, result of division fs)
         self._all_data_array_split = np.transpose(self._all_data_array_split_ss, (2,3,4,0,1))
 
-
+        # Reshape data to be (num_trials, fs, ss, num_panels) again
+        # The final result is each panel has it's own index with the corresponding data for the pixel and trial number
         self._all_data_array_reshape = np.reshape(self._all_data_array_split, (self._num_trials_in_data, self._n_fs_int, self._n_ss_int, self._all_data_array_split.shape[3] * self._all_data_array_split.shape[4])) # shape (num_trials_in_data (ex 82), y or fs per panel, x or ss per panel, num_panels but calc diff way for check)
 
-        
-        
-        print("self._all_data_array_reshape.shape",self._all_data_array_reshape.shape)
-        
-        
-        # Find the tv_vec for each panel
-        #tv vec is the lowest, leftmost v_vector (and what we previously were assuming the t-vec was)
+        # Find the tv_vec for each panel; tv vec is the lowest, leftmost v_vector (and what we previously were assuming the t-vec was)
         
         xv_vec = self._v_vec[:,0,:,:]
         yv_vec = self._v_vec[:,1,:,:]
-        print("xv_vec.shape", xv_vec.shape)
-        print("yv_vec.shape", yv_vec.shape)
-        
-        
+
         xv_min = np.min(xv_vec, axis = 1)
         yv_min = np.min(yv_vec, axis = 2)
-        print("xv_min.shape", xv_min.shape)
-        print("yv_min.shape", yv_min.shape)
-        
-        # We first get the global minimums across b and c for each a
-        min_xv_over_yv = np.min(xv_min, axis=1)  # Shape (a,)
-        min_yv_over_xv = np.min(yv_min, axis=1)  # Shape (a,)
 
-        # Combine them into a single array of shape (a, 2)
+        # Get the global minimums across xv and yv for each panel
+        min_xv_over_yv = np.min(xv_min, axis=1)  # Shape (panels,)
+        min_yv_over_xv = np.min(yv_min, axis=1)  # Shape (panels,)
+
+        # Combine them into a single array of shape (panels, 2)
         tv_vec = np.column_stack((min_xv_over_yv, min_yv_over_xv))
-        print("tv_vec. shape", tv_vec.shape)
-        print("tv vector", tv_vec)
 
-
-
+        # i_ns and j_ns are the bottom leftmost pixel of each panel in pixel space. where i is the leftmost pixel in a panel (x) and j is the bottom (y)
         i_ns = (tv_vec[:,0] + ((self._max_x - self._min_x)/2))/self._pixel_length_x 
         j_ns = (tv_vec[:,1] + ((self._max_y - self._min_y)/2))/self._pixel_length_y
-        print("ins output", i_ns)
-        print("jns output", j_ns)        
-        print("size of vvec", self._v_vec.shape)
-        print("size of tvec array", self._t_vec_arr.shape)
-        print("i_ns shape", i_ns.shape)
-        print("j_ns shape", j_ns.shape)
-        print("tv_vec shape", tv_vec.shape)
 
-
-        plt.scatter(i_ns,j_ns)
-        plt.show()
-        plt.savefig("/scratch/avelard3/cxls_hitfinder_joblogs/tvec_dot_real_space_try4.png")
-        
+        # for each panel, for y to y+fs and x to x+ss of the final pixel data array, add all the data from the particular panel 
         for num in range(self._num_panels):
-            print(f"({int(np.ceil(i_ns[num]))}, {int(np.ceil(j_ns[num]))}) - ({int(np.ceil(i_ns[num])) + self._n_ss_int}, {int(np.ceil(j_ns[num])) + self._n_fs_int})")
-            
+            # print(f"({int(np.ceil(i_ns[num]))}, {int(np.ceil(j_ns[num]))}) - ({int(np.ceil(i_ns[num])) + self._n_ss_int}, {int(np.ceil(j_ns[num])) + self._n_fs_int})")
             self._final_array[:, int(np.ceil(j_ns[num])) : int(np.ceil(j_ns[num] + self._n_fs_int)), int(np.ceil(i_ns[num])) : int(np.ceil(i_ns[num] + self._n_ss_int))] = self._all_data_array_reshape[:, :, :, num]
-            
-            
-            
-        # self._final_size_array = SpecialCaseFunctions.pad_input_data(self._final_array)
-        # smaller_array = self._final_size_array[1,:,:]
-        # fig, ax = plt.subplots()
-        # heatmap = ax.imshow(smaller_array, norm=colors.SymLogNorm(linthresh=100, linscale=1, base=10), cmap='viridis')
 
-        # cbar = plt.colorbar(heatmap, ax=ax)
-        # plt.show()
-        # plt.savefig("/scratch/avelard3/cxls_hitfinder_joblogs/y1test_data_piecetogether.png")
+    # Checking and graphing outputs
+    
+    def graph_padded_data(self):
         
+        reshaped = ReshapeData(self._final_array)
+        self._final_size_array = reshaped.result_array
         
-    # checking and graphing outputs
+        smaller_array = self._final_size_array[1,:,:]
+        fig, ax = plt.subplots()
+        heatmap = ax.imshow(smaller_array, norm=colors.SymLogNorm(linthresh=100, linscale=1, base=10), cmap='viridis')
 
-    def graph_relative_t_vec(self, path_and_name_to_save):
-        # Creating a graph of where the t vector points relative to other vectors
-        for i in range(self._num_panels):
-            test= self._t_vec_arr[i,:]
-            x,y=test[:2]
-            plt.scatter(x,y)
-            
+        cbar = plt.colorbar(heatmap, ax=ax)
         plt.show()
-        plt.savefig(__path__)
-
+        plt.savefig("/scratch/avelard3/cxls_hitfinder_joblogs/zfinal_data_array_padded.png")
+        print("Created padded graph")
 
     def graph_heatmap_lengths(self, path_and_name_to_save):
         # Display heatmap
@@ -252,126 +208,75 @@ class ScatteringMatrix():
 
         cbar = plt.colorbar(heatmap, ax=ax)
         plt.show()
-        plt.savefig("/scratch/avelard3/cxls_hitfinder_joblogs/x5test_data_piecetogether.png")
+        plt.savefig("/scratch/avelard3/cxls_hitfinder_joblogs/zfinal_data_array.png")
+        print("Created graph of all panels")
+   
+# Methods for padding annd cropping data (the class is defined below but its called in ScatteringMatrix graph_padded_data())     
+class ReshapeData():
+    def __init__(self,data_array: np.ndarray):
+        """
+        This class reshapes the input data array to the correct dimensions for the model.
         
-        #z3 and x1 are significant
-        
-        
+        Args:
+            data_array (np.ndarray): The input data array to be reshaped.
 
+        """
+        eiger_4m_image_size = (2163, 2069)
+        self._crop_height, self._crop_width = eiger_4m_image_size
+        
+        self._batch_size, self._height, self._width  = data_array.shape
+        
+        self.data_array = data_array
+        
+        new_data_array = data_array
+        if self._crop_height < self._height or self._crop_width < self._width:
+            self.result_array = self.crop_input_data(self.data_array)
+        elif self._crop_height > self._height or self._crop_width > self._width:
+            self.result_array = self.pad_input_data(self.data_array)
+        else:
+            self.result_array = self.data_array
+
+           
+    
+    def crop_input_data(self, data_array: np.ndarray) -> np.ndarray:
+
+        # Calculate the center of the images
+        center_y, center_x = self._height // 2, self._width // 2
+        
+        # Calculate the start and end indices for the crop
+        start_y = center_y - self._crop_height // 2
+        end_y = start_y + self._crop_height
+        start_x = center_x - self._crop_width // 2
+        end_x = start_x + self._crop_width
+
+        #? Do we need to worry about odd numbers (when %2 != 0)
+        
+        data_array = data_array[:, start_y:end_y, start_x:end_x]
+        
+        print(f'Cropped input data array from {self._height}, {self._width} to {self._crop_width}, {self._crop_height}.')
+        
+        return data_array
+    
+    def pad_input_data(self, data_array: np.ndarray) -> np.ndarray:
+        
+        desired_height, desired_width = self._crop_height, self._crop_width        
+        batch_size, current_height, current_width  = self._batch_size, self._height, self._width
+
+        # Calculate padding needed for each dimension
+        pad_height = (desired_height - current_height) // 2
+        pad_width = (desired_width - current_width) // 2
+
+        # Handle odd differences in desired vs. current size
+        pad_height_extra = (desired_height - current_height) % 2
+        pad_width_extra = (desired_width - current_width) % 2
+
+        
+        data_array = np.pad(data_array, pad_width=((0,0), (pad_width, pad_width + pad_width_extra), (pad_height, pad_height + pad_height_extra)), mode='constant', constant_values=0) 
+        
+        print(f'Padded input data array from {self._height}, {self._width} to {self._crop_width}, {self._crop_height}.') 
+        data_array = np.array(data_array)
+        return data_array
 
 
 if __name__ == "__main__":
     ScatteringMatrix("epix10k_geometry.json", "/scratch/avelard3/The_CXLS_ML_Hitfinder/src/geom_data/")
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# All the different versions of testing if the matrix thing works
-
-
-# ##################################################################################################################################################################################################################################################################
-# # The OG
-# # Format the x and y list of values to create the right size aray
-# # np.arange creates an array thats the length of n_fs or n_ss with the value at each index equal to that index
-# # np.reshape the ones allow numpy to broadcast on the two other inputs that aren't defined by n_fs or n_ss
-# n_fs_indices = np.arange(n_fs_int).reshape(-1,1,1) # Shape (n_fs, 1, 1)
-# n_ss_indices = np.arange(n_ss_int).reshape(1,-1,1) # Shape(1, n_ss, 1)
-
-
-# # Expand dimensions of fs, ss, and t to align with n_fs_indices and n_ss_indices
-# # Expanding to shape (num_panels, n_fs, n_ss, size_of_vector = 3)
-# # And t_vec, ss_vec, fs_vec have the size and number of vectors (as well as the value of the vectors)
-# # The arrays need to be expanded to test in each panel, and each pixel of that panel, with 3 values defining the vector
-# fs_expanded = fs_vec_arr[:, np.newaxis, np.newaxis, :]  # Shape (num_panels, 1, 1, size_of_vector = 3)
-# fs_expanded = np.tile(fs_expanded, (1, n_fs_int, n_ss_int, 1))  # Shape (num_panels, n_fs, n_ss, size_of_vector = 3)
-
-# ss_expanded = ss_vec_arr[:, np.newaxis, np.newaxis, :]  # Shape (num_panels, 1, 1, size_of_vector = 3)
-# ss_expanded = np.tile(ss_expanded, (1, n_fs_int, n_ss_int, 1))  # Shape (num_panels, n_fs, n_ss, size_of_vector = 3)
-
-# t_expanded = t_vec_arr[:, np.newaxis, np.newaxis, :]  # Shape (num_panels, 1, 1, size_of_vector = 3)
-# t_expanded = np.tile(t_expanded, (1, n_fs_int, n_ss_int, 1))  # Shape (num_panels, n_fs, n_ss, size_of_vector = 3)
-
-# # Perform the calculation for each set of vectors
-# # Because of adding the dimensions and ones to everything, this operation works.
-# v_vec = fs_expanded * n_fs_indices + ss_expanded * n_ss_indices + t_expanded  # Shape (num_panels, n_fs, n_ss, size_of_vector = 3)
-
-# q_vec = ((2*np.pi)/wavelength) * ((v_vec/npla.norm(v_vec)) - b_vec) # FIXME: lambda and b vector are completely made up
-
-# #?################################################################################################################################################################################################################################################################
-# # JUST SWITCHING THE ORDER OF EXPANDED BC ERIC IS PICKY
-# # but I think this is going to be wrong because the order of n_fs_indices and n_ss_indices is wrong
-# n_fs_indices_v0 = np.arange(n_fs_int).reshape(1,-1,1) # Shape (n_fs, 1, 1)
-# n_ss_indices_v0 = np.arange(n_ss_int).reshape(1,1,-1) # Shape(1, n_ss, 1)
-
-# #! I don't understand why b_vec needs to be redefined all of the sudden.... I mean I do, but I don't
-# b_vec_expanded_v0 = b_vec.reshape(1,-1,1,1)
-# b_vec_expanded_v0 = np.tile(b_vec_expanded_v0, (num_panels, 1, n_fs_int, n_ss_int))
-
-
-# # Expand dimensions of fs, ss, and t to align with n_fs_indices and n_ss_indices
-# # Expanding to shape (num_panels, n_fs, n_ss, size_of_vector = 3)
-# # And t_vec, ss_vec, fs_vec have the size and number of vectors (as well as the value of the vectors)
-# # The arrays need to be expanded to test in each panel, and each pixel of that panel, with 3 values defining the vector
-# fs_expanded_v0 = fs_vec_arr[:, :, np.newaxis, np.newaxis]  # Shape (num_panels, 1, 1, size_of_vector = 3)
-# fs_expanded_v0 = np.tile(fs_expanded_v0, (1, 1, n_fs_int, n_ss_int))  # Shape (num_panels, n_fs, n_ss, size_of_vector = 3)
-
-# ss_expanded_v0 = ss_vec_arr[:, :, np.newaxis, np.newaxis]  # Shape (num_panels, 1, 1, size_of_vector = 3)
-# ss_expanded_v0 = np.tile(ss_expanded_v0, (1, 1, n_fs_int, n_ss_int))  # Shape (num_panels, n_fs, n_ss, size_of_vector = 3)
-
-# t_expanded_v0 = t_vec_arr[:, :, np.newaxis, np.newaxis]  # Shape (num_panels, 1, 1, size_of_vector = 3)
-# t_expanded_v0 = np.tile(t_expanded_v0, (1, 1, n_fs_int, n_ss_int))  # Shape (num_panels, n_fs, n_ss, size_of_vector = 3)
-
-# # Perform the calculation for each set of vectors
-# # Because of adding the dimensions and ones to everything, this operation works.
-# v_vec_v0 = fs_expanded_v0 * n_fs_indices_v0 + ss_expanded_v0 * n_ss_indices_v0 + t_expanded_v0  # Shape (num_panels, n_fs, n_ss, size_of_vector = 3)
-
-# q_vec_v0 = ((2*np.pi)/wavelength) * ((v_vec_v0/npla.norm(v_vec_v0)) - b_vec_expanded_v0) # FIXME: lambda and b vector are completely made up
-
-
-
-
-# #*################################################################################################################################################################################################################################################################
-# # EXPAND N_FS_INDICES AND N_SS_INDICES, and I made everything in the vector shape eric wanted
-
-
-
-
-# #!################################################################################################################################################################################################################################################################
-# # Doing this with a for loop, even though it's "bad" 
-# #? Making vector_length = 1 and hope that append will insert it in the correct spot
-# #this needs to be in the format of (num_panel, vector, n_fs, n_ss)
-# result = np.empty((num_panels, vector_length, n_fs_int, n_ss_int))
-# for p in range(num_panels):
-#     for fs in range(n_fs_int):
-#         for ss in range(n_ss_int):
-#             equation = fs_vec_arr[p]*fs + ss_vec_arr[p]*ss + t_vec_arr[p]
-#             equation = np.array(equation)
-#             result[p, :, fs, ss] = equation
-
-
-# print(result.shape)            
-# v_vec_for_loop = result
-
-# v_diff_long = v_vec_v2 - v_vec_for_loop
-
-# print("FORLOOP difference (want this to be zero) (before q, this is v):", np.count_nonzero(v_diff_long))
-
-
