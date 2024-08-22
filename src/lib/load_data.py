@@ -51,17 +51,13 @@ class Data(Dataset):
         Returns:
             tuple: A tuple containing the image data and the metadata at the given index.
         """
-        
-        sys.stdout.flush()
-        
+                
         # Check if a transform needs to be applied and apply it
         try:
             if self.use_transform:
                 image = self.transforms(self.image_data[idx])
-                sys.stdout.flush()
                 return image, self.meta_data[idx], self.file_paths[idx]
             else:
-                sys.stdout.flush()
                 return self.data[idx]
         except Exception as e:
             print(f"An unexpected error occurred while getting item at index {idx}: {e}")

@@ -117,7 +117,7 @@ class TrainModel:
             except Exception as e:
                 print(f"An unexpected error occurred: {e}")
         else:
-            print(f'There is no model state dict to load into: {self.model.__class__.__name__}')
+            print(f'There is nno model state dict to load into: {self.model.__class__.__name__}')
     
     def epoch_loop(self) -> None: 
         """

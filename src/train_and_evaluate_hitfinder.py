@@ -102,7 +102,7 @@ def main() -> None:
     }
     
     # Create a queue for files to keep from overwhelming the computer (so you can just iterate one by one)
-    path_manager = load_data_paths.PathsSingleEvent(h5_file_list, attributes, master_file)
+    path_manager = load_paths.PathsSingleEvent(h5_file_list, attributes, master_file)
     path_manager.read_file_paths()
     h5_file_path_queue = path_manager.get_file_path_queue()
     
@@ -131,8 +131,8 @@ def main() -> None:
         h5_attribute_list = path_manager.get_h5_attribute_list()
         h5_file_paths = path_manager.get_h5_file_paths()
         
-        data_manager = prep_loaded_data.Data(h5_tensor_list, h5_attribute_list, h5_file_paths, transform)
-        create_data_loader = prep_loaded_data.CreateDataLoader(data_manager, batch_size)
+        data_manager = load_data.Data(h5_tensor_list, h5_attribute_list, h5_file_paths, transform)
+        create_data_loader = load_data.CreateDataLoader(data_manager, batch_size)
         create_data_loader.split_training_data()
         train_loader, test_loader = create_data_loader.get_training_data_loaders()
         
@@ -146,7 +146,7 @@ def main() -> None:
     trained_model = training_manager.get_model()
     
     # Checking and reporting accuracy of model
-    evaluation_manager = evaluate_model.ModelEvaluation(cfg, attributes, trained_model, test_loader)
+    evaluation_manager = evaluate_model.ModelEvaluation(cfg, attributes, trained_model, test_loader) #error here said that test_loader doesn't have a value i think
     evaluation_manager.run_testing_set()
     evaluation_manager.make_classification_report()
     evaluation_manager.plot_confusion_matrix(training_results)

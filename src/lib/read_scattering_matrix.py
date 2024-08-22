@@ -8,15 +8,15 @@ import matplotlib.colors as colors
 
 
 class ScatteringMatrix():
-    def  __init__(self, file_name:str, file_path:str) -> None:
+    def  __init__(self, file_name:str, file_path:str, data_file_path_name:np.array) -> None:
         self._current_geom_file =  file_name
         self._current_geom_file_path = file_path
 
         self.read_geom_file()
         self.calculate_q_vec()
         self.create_new_array()
-        self.insert_data_into_new_matrix()
-        self.graph_padded_data()
+        self.insert_data_into_new_matrix(data_file_path_name)
+        self.graph_first_data_piecetogether()
         
 
     def read_geom_file(self):
@@ -119,11 +119,8 @@ class ScatteringMatrix():
         print("self._final_array_y_len", ((self._final_array_y_len)))
 
 
-    def insert_data_into_new_matrix(self):
-        # FIXME: Temporary reading cxi files because I dont want to deal with other classes
-        self._open_h5_file = h5.File('/scratch/sbotha/2024-hitfinder-data/epix10k2M-data/mfxly0020-r0130_294.cxi', 'r')
-        
-        self._all_data_array = np.array(self._open_h5_file['entry_1/data_1/data']).astype(np.float32)
+    def insert_data_into_new_matrix(self, all_data_array: np.array):        
+        self._all_data_array = all_data_array
         self._num_trials_in_data = self._all_data_array.shape[0]
         
         # Create the final array for the pixel data using the dimensions from create_new_array
@@ -210,6 +207,11 @@ class ScatteringMatrix():
         plt.show()
         plt.savefig("/scratch/avelard3/cxls_hitfinder_joblogs/zfinal_data_array.png")
         print("Created graph of all panels")
+
+
+
+
+
    
 # Methods for padding annd cropping data (the class is defined below but its called in ScatteringMatrix graph_padded_data())     
 class ReshapeData():
@@ -279,4 +281,7 @@ class ReshapeData():
 
 
 if __name__ == "__main__":
-    ScatteringMatrix("epix10k_geometry.json", "/scratch/avelard3/The_CXLS_ML_Hitfinder/src/geom_data/")
+    open_h5_file = h5.File('/scratch/sbotha/2024-hitfinder-data/epix10k2M-data/mfxly0020-r0130_294.cxi', 'r')
+        
+    all_data_array = np.array(open_h5_file['entry_1/data_1/data']).astype(np.float32)
+    ScatteringMatrix("epix10k_geometry.json", "/scratch/avelard3/The_CXLS_ML_Hitfinder/src/geom_data/", all_data_array)

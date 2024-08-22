@@ -92,9 +92,9 @@ def main():
     
     # path_manager = data_path_manager.Paths(h5_file_list, attributes, multievent, master_file)
     if multievent == 'True' or multievent == 'true':
-        path_manager = load_data_paths.PathsMultiEvent(h5_file_list,  attributes,  master_file)
+        path_manager = load_paths.PathsMultiEvent(h5_file_list,  attributes,  master_file)
     else:
-        path_manager = load_data_paths.PathsSingleEvent(h5_file_list, attributes, master_file)
+        path_manager = load_paths.PathsSingleEvent(h5_file_list, attributes, master_file)
     
     path_manager.read_file_paths()
     h5_file_path_queue = path_manager.get_file_path_queue()
@@ -113,7 +113,7 @@ def main():
         h5_attribute_list = path_manager.get_h5_attribute_list()
         events = path_manager.get_event_count()
         
-        data_manager = prep_loaded_data.Data(h5_tensor_list, h5_attribute_list, h5_file_paths, transform)
+        data_manager = load_data.Data(h5_tensor_list, h5_attribute_list, h5_file_paths, transform)
         data_manager.inference_data_loader(batch_size)
         data_loader = data_manager.get_inference_data_loader()
         

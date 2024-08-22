@@ -9,6 +9,7 @@ from abc import ABC, abstractmethod
 
 from .utils import SpecialCaseFunctions
 from . import conf
+from . import read_scattering_matrix
 
 class Paths(ABC):
     
@@ -43,7 +44,9 @@ class Paths(ABC):
         Due to the size of the multievent files, the queue is used to process the files concurrently and load each file as its own dataloader.
         """
         try:
-            with open(self._list_path, 'r') as file:
+            # chatgpt said that we can't do open, we have to do h5py.File when it comes to cxi files
+            # with open(self._list_path, 'r') as file:
+            with h5.File(self._list_path, 'r') as file:
                 for line in file:
                     if line.strip() == '' or line.strip() == '\n': 
                         continue
@@ -87,15 +90,22 @@ class Paths(ABC):
             self._open_h5_file = h5.File(file_path, 'r')
             
             # File path inside h5 file: check if .cxi or .h5
+            # Add variable/input maybe in python and bash script for where the geometry data should be found
+            
+            # somewhere in hear its complaining about unsqueeze
             if self._open_h5_file.endswith('.cxi'):
                 print("Reading .cxi file")
-                numpy_array = np.array(self._open_h5_file['entry_1/data_1/data']).astype(np.float32)
+                inside_data_file_path = 'entry_1/data_1/data'
+                unorganized_numpy_array = np.array(self._open_h5_file[inside_data_file_path]).astype(np.float32)
+                multi_panel_matrix = read_scattering_matrix.ScatteringMatrix("epix10k_geometry.json", "/scratch/avelard3/The_CXLS_ML_Hitfinder/src/geom_data/", unorganized_numpy_array)
+                numpy_array = multi_panel_matrix._final_array
             else:
                 print("Assuming reading .h5 file")
                 numpy_array = np.array(self._open_h5_file['entry/data/data']).astype(np.float32)
-                
+            
             if numpy_array.shape[-2:] != conf.eiger_4m_image_size:
                 numpy_array = SpecialCaseFunctions.reshape_input_data(numpy_array)                      
+
             self._loaded_h5_tensor = torch.tensor(numpy_array)
             
             self.read_metadata_attributes()
