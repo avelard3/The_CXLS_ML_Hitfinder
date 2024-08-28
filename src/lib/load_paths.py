@@ -45,8 +45,8 @@ class Paths(ABC):
         """
         try:
             # chatgpt said that we can't do open, we have to do h5py.File when it comes to cxi files
-            # with open(self._list_path, 'r') as file:
-            with h5.File(self._list_path, 'r') as file:
+            with open(self._list_path, 'r') as file:
+
                 for line in file:
                     if line.strip() == '' or line.strip() == '\n': 
                         continue
@@ -93,23 +93,30 @@ class Paths(ABC):
             # Add variable/input maybe in python and bash script for where the geometry data should be found
             
             # somewhere in hear its complaining about unsqueeze
-            if self._open_h5_file.endswith('.cxi'):
+            if file_path.endswith('.cxi'):
                 print("Reading .cxi file")
-                inside_data_file_path = 'entry_1/data_1/data'
-                unorganized_numpy_array = np.array(self._open_h5_file[inside_data_file_path]).astype(np.float32)
+
+                unorganized_numpy_array = np.array(self._open_h5_file['entry_1/data_1/data']).astype(np.float32)
                 multi_panel_matrix = read_scattering_matrix.ScatteringMatrix("epix10k_geometry.json", "/scratch/avelard3/The_CXLS_ML_Hitfinder/src/geom_data/", unorganized_numpy_array)
+                print("multi_panel_matrix = read_scattering_matrix.ScatteringMatrix")
                 numpy_array = multi_panel_matrix._final_array
+                print("numpy_array = multi_panel_matrix._final_array")
             else:
                 print("Assuming reading .h5 file")
                 numpy_array = np.array(self._open_h5_file['entry/data/data']).astype(np.float32)
             
             if numpy_array.shape[-2:] != conf.eiger_4m_image_size:
-                numpy_array = SpecialCaseFunctions.reshape_input_data(numpy_array)                      
-
+                print("before reshape")
+                # Getting stuck here 11:47 8/22
+                numpy_array = SpecialCaseFunctions.reshape_input_data(numpy_array)    
+                print("after shape")                  
+            print("before load_h5_tensor")
             self._loaded_h5_tensor = torch.tensor(numpy_array)
-            
+            print("before read metadata attributes")
             self.read_metadata_attributes()
+            print("before closing h5 file")
             self._open_h5_file.close()
+            print("end of load h5 data try")
                     
         except OSError:
             print(f"Error: An I/O error occurred while opening file {file_path}")
@@ -134,15 +141,16 @@ class Paths(ABC):
 
         if self._master_file is not None:
             self.load_master_file()
-                
-        try:
+        try:  
+            print(f'------------------------------------------{self._open_h5_file.attrs.keys()}')
             if len(self._open_h5_file.attrs.keys()) != 0:
+                print("---------------------------------------------------------------------------")
                 self.read_attribute_manager()
         except:
             pass
-        
         try:
             if len(self._attribute_holding) == 0:
+                print("&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&")
                 self.read_attributes_from_file()
     
         except KeyError:

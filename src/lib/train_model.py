@@ -148,38 +148,56 @@ class TrainModel:
         self.model.train()
         
         try:
+            print("0")
+            # so theres an issue right below here
+            # so problem is in train_loader and maybe test_loader
+            print("train_loader !!!!!!!!!!!!!!!!!!!", self.train_loader)
             for inputs, attributes, _ in self.train_loader:
                 # inputs = inputs.unsqueeze(1).to(self.device, dtype=torch.float32)
+                print("0.5")
                 inputs = inputs.to(self.device, dtype=torch.float32)
+                print("1")
                 attributes = {key: value.to(self.device).float() for key, value in attributes.items()}
+                print("2")
 
 
                 self.optimizer.zero_grad()
-                
+                print("3")
                 with autocast(enabled=False):
                     score = self.model(inputs, attributes[self.camera_length], attributes[self.photon_energy])
+                    print("4")
                     truth = attributes[self.peak].reshape(-1, 1).float().to(self.device)
+                    print("5")
                     loss = self.criterion(score, truth)
-
+                    print("6")
+                print("6.5")
                 self.scaler.scale(loss).backward()
+                print("7")
                 self.scaler.step(self.optimizer)
+                print("8")
                 self.scaler.update()
-
+                print("9")
                 running_loss_train += loss.item()
-
+                print("10")
                 predictions = (torch.sigmoid(score) > 0.5).long()
-
+                print("11")
                 accuracy_train += (predictions == truth).float().sum()
+                print("12")
                 total_predictions += torch.numel(truth)
-            
+                print("13")
+            print("14")
             loss_train = running_loss_train / len(self.train_loader)  
-            
+            print("15")
             self.plot_train_loss[epoch] = loss_train
+            print("16")
             print(f'Train loss: {loss_train}')
-
+            print("17")
             accuracy_train /= total_predictions
+            print("18")
             self.plot_train_accuracy[epoch] = accuracy_train
+            print("19")
             print(f'Train accuracy: {accuracy_train}')
+            print("20")
 
         except RuntimeError as e:
             print(f"RuntimeError during training: {e}")  
@@ -200,6 +218,7 @@ class TrainModel:
         
         self.model.eval()
         try:
+            print("test_loader !!!!!!!!!!!!!!!!!!!", self.test_loader)
             with torch.no_grad():
                 for inputs, attributes, _ in self.test_loader:
                     # inputs = inputs.unsqueeze(1).to(self.device, dtype=torch.float32)

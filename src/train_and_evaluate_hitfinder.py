@@ -33,7 +33,8 @@ def arguments(parser) -> argparse.ArgumentParser:
     
     parser.add_argument('-tl', '--transfer_learn', type=str, default=None, help='File path to state dict file for transfer learning.' )
     parser.add_argument('-at', '--apply_transform', type=bool, default = False, help = 'Apply transform to images (true or false)')
-
+    parser.add_argument('-me', '--multievent', type=str, help='True or false value for if the input .h5 files are multievent or not.')
+    parser.add_argument('-mf', '--master_file', type=str, default=None, help='File path to the master file containing the .lst files.')
     
     try:
         args = parser.parse_args()
@@ -84,16 +85,25 @@ def main() -> None:
     photon_energy = args.photon_energy
     peaks = args.peaks
     
-    #temperary holding
-    master_file = None
+    transfer_learning_state_dict = args.transfer_learn
+    transform = args.apply_transform # Parameter for Data class
+    multievent = args.multievent
+    master_file = args.master_file
     
+    #temperary holding
+    
+    if master_file == 'None' or master_file == 'none':
+        master_file = None
+        
+        
     # Transfer learning (yes or no)
     # FIXME: There should be a way to get bool to work for this?
-    transfer_learning_state_dict = args.transfer_learn
+    
     if transfer_learning_state_dict == 'None' or transfer_learning_state_dict == 'none':
         transfer_learning_state_dict = None
     
-    transform = args.apply_transform # Parameter for Data class
+    
+    print("train and evaluate .py line 102", transform)
     
     attributes = {
         'camera length': camera_length,
@@ -102,7 +112,11 @@ def main() -> None:
     }
     
     # Create a queue for files to keep from overwhelming the computer (so you can just iterate one by one)
-    path_manager = load_paths.PathsSingleEvent(h5_file_list, attributes, master_file)
+    if multievent == 'True' or multievent == 'true':
+        path_manager = load_paths.PathsMultiEvent(h5_file_list,  attributes,  master_file)
+    else:
+        path_manager = load_paths.PathsSingleEvent(h5_file_list, attributes, master_file)
+        
     path_manager.read_file_paths()
     h5_file_path_queue = path_manager.get_file_path_queue()
     
@@ -130,7 +144,7 @@ def main() -> None:
         h5_tensor_list = path_manager.get_h5_tensor_list()
         h5_attribute_list = path_manager.get_h5_attribute_list()
         h5_file_paths = path_manager.get_h5_file_paths()
-        
+        print("train and evaluate .py line 144", transform)
         data_manager = load_data.Data(h5_tensor_list, h5_attribute_list, h5_file_paths, transform)
         create_data_loader = load_data.CreateDataLoader(data_manager, batch_size)
         create_data_loader.split_training_data()
