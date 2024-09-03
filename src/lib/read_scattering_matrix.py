@@ -16,7 +16,7 @@ class ScatteringMatrix():
         self.calculate_q_vec()
         self.create_new_array()
         self.insert_data_into_new_matrix(data_file_path_name)
-        self.graph_heatmap_with_vectors()
+        self.graph_first_data_piecetogether()
         
 
     def read_geom_file(self):
@@ -41,8 +41,7 @@ class ScatteringMatrix():
         self._n_ss_int = n_ss_list[0] # number of pixels in slow-scan direction
 
         file.close()
-
-    def calculate_q_vec(self):
+        
         # Vector definitions all based on reborn documentation for detectors
 
         # reborn finds photon wavelength  by dividing hc / photon_energy, where hc is the constant h * constant c from scipy constants
@@ -51,12 +50,17 @@ class ScatteringMatrix():
         self._b_vec = np.array([0.0, 0.0, 1.0]) # Default that reborn uses
         self._wavelength = 1.5e-10 
         self._t_vec_arr = np.array(self._t_vec)
-        self._ss_vec_arr = np.abs(np.array(self._ss_vec))
-        self._fs_vec_arr = np.abs(np.array(self._fs_vec))
+        self._ss_vec_arr = (np.array(self._ss_vec))
+        self._fs_vec_arr = (np.array(self._fs_vec))
 
         orig_array_shape = self._fs_vec_arr.shape # FIXME: add a break point if t,fs,ss are different sizes
         self._num_panels = orig_array_shape[0]
         self._vector_length = orig_array_shape[1]
+        
+        
+
+    def calculate_q_vec(self):
+
         
         # The following is made more complicated due to the fact that we're not using for loops
         
@@ -64,6 +68,7 @@ class ScatteringMatrix():
         
         # Creating a correctly sized array of n_fs and n_ss where the index is equal to the value stored at that index
         # (so you can iterate through all the positions in a n_fs by n_ss panel)
+        
         n_fs_indices = np.arange(self._n_fs_int).reshape(1,1,-1,1) # Shape (1, 1, n_fs, 1)
         n_ss_indices = np.arange(self._n_ss_int).reshape(1,1,1,-1) # Shape(1, 1, 1, n_ss)
         n_fs_indices_expanded = np.tile(n_fs_indices, (self._num_panels, self._vector_length, 1, self._n_ss_int)) # Shape (num_panels, vector_length, n_fs, n_ss)
@@ -88,7 +93,7 @@ class ScatteringMatrix():
         # Perform the calculation for each set of vectors to find the v vector point to each individual pixel on each individual panel
 
         self._v_vec = fs_expanded * n_fs_indices_expanded + ss_expanded * n_ss_indices_expanded + t_expanded  # Shape (num_panels, size_of_vector = 3, n_fs, n_ss)
-        self._v_vec = np.array(self._v_vec)
+        self._v_vec = (np.array(self._v_vec))
         
         # q vector is graphing it in real space like the reborn documentation shows, but I don't think qvec is important
         self._q_vec = ((2*np.pi)/self._wavelength) * ((self._v_vec/npla.norm(self._v_vec)) - b_vec_expanded) 
@@ -204,7 +209,7 @@ class ScatteringMatrix():
 
         cbar = plt.colorbar(heatmap, ax=ax)
         plt.show()
-        plt.savefig("/scratch/avelard3/cxls_hitfinder_joblogs/zfinal_data_array.png")
+        plt.savefig("/scratch/avelard3/cxls_hitfinder_joblogs/zfinal_data_array931240.png")
         print("Created graph of all panels")
 
     def graph_relative_t_vec(self, path_and_name_to_save):
