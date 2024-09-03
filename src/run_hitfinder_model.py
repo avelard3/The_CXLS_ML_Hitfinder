@@ -50,6 +50,7 @@ def main():
     This main function is the flow of logic for running a trained model. Here parameter arugments are assigned to variables.
     Classes for data management and using the model are declared and the relavent functions for the process are called following declaration in blocks. 
     """
+    #tic
     now = datetime.datetime.now()
     formatted_date_time = now.strftime("%m%d%y-%H:%M")
     print(f'Starting hitfinder model: {formatted_date_time}')
@@ -95,7 +96,8 @@ def main():
         path_manager = load_paths.PathsMultiEvent(h5_file_list,  attributes,  master_file)
     else:
         path_manager = load_paths.PathsSingleEvent(h5_file_list, attributes, master_file)
-    
+    #toc
+    #tic
     path_manager.read_file_paths()
     h5_file_path_queue = path_manager.get_file_path_queue()
     
@@ -104,24 +106,39 @@ def main():
     process_data = run_model.RunModel(cfg, attributes)
     process_data.make_model_instance()
     process_data.load_model()
-    
+    #toc
     while not h5_file_path_queue.empty():
-        path_manager.process_files()
-        
+        #tic
+        path_manager.process_files() #problem child
+        #toc
+        #tic
         h5_file_paths = path_manager.get_h5_file_paths()
+        #toc
+        #tic
         h5_tensor_list = path_manager.get_h5_tensor_list()
+        #toc
+        #tic
         h5_attribute_list = path_manager.get_h5_attribute_list()
+        #toc
+        #tic
         events = path_manager.get_event_count()
-        
+        #toc
+        #tic
         data_manager = load_data.Data(h5_tensor_list, h5_attribute_list, h5_file_paths, transform)
+        #toc
+        #tic
         data_manager.inference_data_loader(batch_size)
+        #toc
+        #tic
         data_loader = data_manager.get_inference_data_loader()
-        
+        #toc
+        #tic
         process_data.classify_data(data_loader) 
+        #toc
         
-        
+    #tic    
     process_data.create_model_output_lst_files()
     process_data.output_verification(queue_size, events)
-
+    #toc
 if __name__ == '__main__':
     main()

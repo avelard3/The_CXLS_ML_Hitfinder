@@ -16,7 +16,7 @@ class ScatteringMatrix():
         self.calculate_q_vec()
         self.create_new_array()
         self.insert_data_into_new_matrix(data_file_path_name)
-        self.graph_first_data_piecetogether()
+        self.graph_heatmap_with_vectors()
         
 
     def read_geom_file(self):
@@ -51,8 +51,8 @@ class ScatteringMatrix():
         self._b_vec = np.array([0.0, 0.0, 1.0]) # Default that reborn uses
         self._wavelength = 1.5e-10 
         self._t_vec_arr = np.array(self._t_vec)
-        self._ss_vec_arr = np.array(self._ss_vec)
-        self._fs_vec_arr = np.array(self._fs_vec)
+        self._ss_vec_arr = np.abs(np.array(self._ss_vec))
+        self._fs_vec_arr = np.abs(np.array(self._fs_vec))
 
         orig_array_shape = self._fs_vec_arr.shape # FIXME: add a break point if t,fs,ss are different sizes
         self._num_panels = orig_array_shape[0]
@@ -112,7 +112,7 @@ class ScatteringMatrix():
         self._min_y = np.min(self._v_vec[:,1,:,:]) 
 
         # Find the range in the x and y direction of the panels and convert it into pixels 
-        self._final_array_x_len = int(np.ceil((self._max_x - self._min_x)/self._pixel_length_x))
+        self._final_array_x_len = int(np.ceil((self._max_x - self._min_x)/self._pixel_length_x)) +1
         self._final_array_y_len = int(np.ceil((self._max_y - self._min_y)/self._pixel_length_y)) +1 
         
         print("self._final_array_x_len", ((self._final_array_x_len)))
@@ -155,19 +155,18 @@ class ScatteringMatrix():
         min_yv_over_xv = np.min(yv_min, axis=1)  # Shape (panels,)
 
         # Combine them into a single array of shape (panels, 2)
-        tv_vec = np.column_stack((min_xv_over_yv, min_yv_over_xv))
+        self._tv_vec = np.column_stack((min_xv_over_yv, min_yv_over_xv))
 
         # i_ns and j_ns are the bottom leftmost pixel of each panel in pixel space. where i is the leftmost pixel in a panel (x) and j is the bottom (y)
-        i_ns = (tv_vec[:,0] + ((self._max_x - self._min_x)/2))/self._pixel_length_x 
-        j_ns = (tv_vec[:,1] + ((self._max_y - self._min_y)/2))/self._pixel_length_y
+        self._i_ns = (self._tv_vec[:,0] + ((self._max_x - self._min_x)/2))/self._pixel_length_x 
+        self._j_ns = (self._tv_vec[:,1] + ((self._max_y - self._min_y)/2))/self._pixel_length_y
 
         # for each panel, for y to y+fs and x to x+ss of the final pixel data array, add all the data from the particular panel 
         for num in range(self._num_panels):
             # print(f"({int(np.ceil(i_ns[num]))}, {int(np.ceil(j_ns[num]))}) - ({int(np.ceil(i_ns[num])) + self._n_ss_int}, {int(np.ceil(j_ns[num])) + self._n_fs_int})")
-            self._final_array[:, int(np.ceil(j_ns[num])) : int(np.ceil(j_ns[num] + self._n_fs_int)), int(np.ceil(i_ns[num])) : int(np.ceil(i_ns[num] + self._n_ss_int))] = self._all_data_array_reshape[:, :, :, num]
+            self._final_array[:, int(np.ceil(self._j_ns[num])) : int(np.ceil(self._j_ns[num] + self._n_fs_int)), int(np.ceil(self._i_ns[num])) : int(np.ceil(self._i_ns[num] + self._n_ss_int))] = self._all_data_array_reshape[:, :, :, num]
 
     # Checking and graphing outputs
-    
     def graph_padded_data(self):
         
         reshaped = ReshapeData(self._final_array)
@@ -201,17 +200,73 @@ class ScatteringMatrix():
     def graph_first_data_piecetogether(self):
         smaller_array = self._final_array[1,:,:]
         fig, ax = plt.subplots()
-        heatmap = ax.imshow(smaller_array, norm=colors.SymLogNorm(linthresh=100, linscale=1, base=10), cmap='viridis')
+        heatmap = ax.imshow(smaller_array, norm=colors.SymLogNorm(linthresh=100, linscale=1, base=10), cmap='viridis', origin = 'lower')
 
         cbar = plt.colorbar(heatmap, ax=ax)
         plt.show()
         plt.savefig("/scratch/avelard3/cxls_hitfinder_joblogs/zfinal_data_array.png")
         print("Created graph of all panels")
 
+    def graph_relative_t_vec(self, path_and_name_to_save):
+        # Creating a graph of where the t vector points relative to other vectors
+        for i in range(self._num_panels):
+            test= self._t_vec_arr[i,:]
+            x,y=test[:2]
+            plt.scatter(x,y)
+            
+        plt.show()
+        plt.savefig(__path__)
+        
+    def graph_heatmap_with_vectors(self):
+        smaller_array = self._final_array[1,:,:]
+        fig, ax = plt.subplots()
+        heatmap = ax.imshow(smaller_array, norm=colors.SymLogNorm(linthresh=100, linscale=1, base=10), cmap='viridis', origin = 'lower')
 
+        cbar = plt.colorbar(heatmap, ax=ax)
+        
+        print("Graphed panels")
+        
+        for i in range(self._num_panels):
+            x = self._i_ns[i]
+            y = self._j_ns[i]
+            plt.scatter(x,y, color = 'yellow')
+            print("yellow")
 
+            
+        for i in range(self._num_panels):
+            x = (self._t_vec_arr[i,0] + ((self._max_x - self._min_x)/2))/self._pixel_length_x 
+            y = (self._t_vec_arr[i,1] + ((self._max_y - self._min_y)/2))/self._pixel_length_y
+            plt.scatter(x,y, color = 'green')
+            print("green")
+        
+        
+        for i in range(self._num_panels):
+            x = ((self._t_vec_arr[i,0] + 100*self._ss_vec_arr[i,0]) + ((self._max_x - self._min_x)/2))/self._pixel_length_x 
+            y = ((self._t_vec_arr[i,1] + 100*self._ss_vec_arr[i,1]) + ((self._max_y - self._min_y)/2))/self._pixel_length_y
+            plt.scatter(x,y, color = 'red')
+            print("red")
+        
+        for i in range(self._num_panels):
+            x = ((self._t_vec_arr[i,0] + 100*self._fs_vec_arr[i,0]) + ((self._max_x - self._min_x)/2))/self._pixel_length_x 
+            y = ((self._t_vec_arr[i,1] + 100*self._fs_vec_arr[i,1]) + ((self._max_y - self._min_y)/2))/self._pixel_length_y
+            plt.scatter(x,y, color = 'blue')
+            print("blue")
+        
+        # for i in range(self._num_panels):
+        #     x = self._i_ns[i] + 50
+        #     y = self._j_ns[i]
+        #     plt.scatter(x,y, color = 'cyan')
+        #     print("cyan")
+        
+        # for i in range(self._num_panels):
+        #     x = self._i_ns[i]
+        #     y = self._j_ns[i] + 50
+        #     plt.scatter(x,y, color = 'magenta')
+        #     print("magenta")
 
-
+        print("graphed t vec")
+        plt.show()
+        plt.savefig("/scratch/avelard3/cxls_hitfinder_joblogs/zt00_data_array.png")
    
 # Methods for padding annd cropping data (the class is defined below but its called in ScatteringMatrix graph_padded_data())     
 class ReshapeData():
@@ -284,4 +339,4 @@ if __name__ == "__main__":
     open_h5_file = h5.File('/scratch/sbotha/2024-hitfinder-data/epix10k2M-data/mfxly0020-r0130_294.cxi', 'r')
         
     all_data_array = np.array(open_h5_file['entry_1/data_1/data']).astype(np.float32)
-    ScatteringMatrix("epix10k_geometry.json", "/scratch/avelard3/The_CXLS_ML_Hitfinder/src/geom_data/", all_data_array)
+    ScatteringMatrix("epix10k_geometry.json", "/scratch/avelard3/big_files/geom_data/", all_data_array)
