@@ -3,6 +3,7 @@ import numpy as np
 import h5py
 import concurrent.futures
 import time
+from functools import cache
 
 # Define the DatasetInfo structure
 class DatasetInfo(ctypes.Structure):
@@ -28,6 +29,7 @@ lib.read_layer.restype = ctypes.POINTER(ctypes.c_uint)
 lib.free_resources.argtypes = []
 lib.free_resources.restype = None
 
+@cache
 def open_dataset(filename, dataset_name):
     dims_out = (ctypes.c_int * 3)()
     ndims = lib.open_dataset(filename.encode('utf-8'), dataset_name.encode('utf-8'), dims_out)
@@ -35,6 +37,7 @@ def open_dataset(filename, dataset_name):
         raise ValueError("Failed to open dataset")
     return ndims, [dims_out[i] for i in range(3)]
 
+@cache
 def read_layer(layer_index):
     layer_size = ctypes.c_int()
     data_ptr = lib.read_layer(layer_index, ctypes.byref(layer_size))
@@ -50,6 +53,7 @@ def read_layer(layer_index):
     
     return array
 
+@cache
 def free_resources():
     lib.free_resources()
 
@@ -62,6 +66,7 @@ def toc():
     print(f"Elapsed time: {elapsed_time} seconds")
     return elapsed_time
 
+@cache
 def read_dataset_threading(filename, dataset_name, dims):
     all_data = np.zeros((dims[0], dims[1], dims[2]), dtype=np.uint32)
 
@@ -79,6 +84,7 @@ def read_dataset_threading(filename, dataset_name, dims):
     
     return all_data
 
+@cache
 def read_h5_dataset(filename, dataset_name):
     with h5py.File(filename, 'r') as file:
         data = file[dataset_name][:]
