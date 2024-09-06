@@ -17,6 +17,7 @@ class ScatteringMatrix():
         self.create_new_array()
         self.insert_data_into_new_matrix(data_file_path_name)
         self.graph_first_data_piecetogether()
+        self.graph_heatmap_with_vectors()
         
 
     def read_geom_file(self):
@@ -117,8 +118,8 @@ class ScatteringMatrix():
         self._min_y = np.min(self._v_vec[:,1,:,:]) 
 
         # Find the range in the x and y direction of the panels and convert it into pixels 
-        self._final_array_x_len = int(np.ceil((self._max_x - self._min_x)/self._pixel_length_x)) +1
-        self._final_array_y_len = int(np.ceil((self._max_y - self._min_y)/self._pixel_length_y)) +1 
+        self._final_array_x_len = int(np.ceil((self._max_x - self._min_x)/self._pixel_length_x)) +2
+        self._final_array_y_len = int(np.ceil((self._max_y - self._min_y)/self._pixel_length_y)) +2 
         
         print("self._final_array_x_len", ((self._final_array_x_len)))
         print("self._final_array_y_len", ((self._final_array_y_len)))
@@ -148,29 +149,72 @@ class ScatteringMatrix():
         self._all_data_array_reshape = np.reshape(self._all_data_array_split, (self._num_trials_in_data, self._n_fs_int, self._n_ss_int, self._all_data_array_split.shape[3] * self._all_data_array_split.shape[4])) # shape (num_trials_in_data (ex 82), y or fs per panel, x or ss per panel, num_panels but calc diff way for check)
 
         # Find the tv_vec for each panel; tv vec is the lowest, leftmost v_vector (and what we previously were assuming the t-vec was)
+        # Need to change the fs and ss vectors into pixels so it can be rearranged. 
+        # Can I do the same thing as the 64 reshaping, but for each pixel
         
-        xv_vec = self._v_vec[:,0,:,:]
-        yv_vec = self._v_vec[:,1,:,:]
+        # xv_vec = self._v_vec[:,0,:,:]
+        # yv_vec = self._v_vec[:,1,:,:]
 
-        xv_min = np.min(xv_vec, axis = 1)
-        yv_min = np.min(yv_vec, axis = 2)
+        # xv_min = np.min(xv_vec, axis = 1)
+        # yv_min = np.min(yv_vec, axis = 2)
 
-        # Get the global minimums across xv and yv for each panel
-        min_xv_over_yv = np.min(xv_min, axis=1)  # Shape (panels,)
-        min_yv_over_xv = np.min(yv_min, axis=1)  # Shape (panels,)
+        # # Get the global minimums across xv and yv for each panel
+        # min_xv_over_yv = np.min(xv_min, axis=1)  # Shape (panels,)
+        # min_yv_over_xv = np.min(yv_min, axis=1)  # Shape (panels,)
 
-        # Combine them into a single array of shape (panels, 2)
-        self._tv_vec = np.column_stack((min_xv_over_yv, min_yv_over_xv))
+        # # Combine them into a single array of shape (panels, 2)
+        # self._tv_vec = np.column_stack((min_xv_over_yv, min_yv_over_xv))
 
-        # i_ns and j_ns are the bottom leftmost pixel of each panel in pixel space. where i is the leftmost pixel in a panel (x) and j is the bottom (y)
-        self._i_ns = (self._tv_vec[:,0] + ((self._max_x - self._min_x)/2))/self._pixel_length_x 
-        self._j_ns = (self._tv_vec[:,1] + ((self._max_y - self._min_y)/2))/self._pixel_length_y
+        # # i_ns and j_ns are the bottom leftmost pixel of each panel in pixel space. where i is the leftmost pixel in a panel (x) and j is the bottom (y)
+        # self._i_ns = (self._tv_vec[:,0] + ((self._max_x - self._min_x)/2))/self._pixel_length_x 
+        # self._j_ns = (self._tv_vec[:,1] + ((self._max_y - self._min_y)/2))/self._pixel_length_y
+        
+        self._i_ns = (self._t_vec_arr[:,0] + ((self._max_x - self._min_x)/2))/self._pixel_length_x 
+        self._j_ns = (self._t_vec_arr[:,1] + ((self._max_y - self._min_y)/2))/self._pixel_length_y
 
         # for each panel, for y to y+fs and x to x+ss of the final pixel data array, add all the data from the particular panel 
+        #order of if statements corresponds to the order in which the quadrants of the detector are put together
+        #numpy.rot90 default is counterclockwise
+        
         for num in range(self._num_panels):
-            # print(f"({int(np.ceil(i_ns[num]))}, {int(np.ceil(j_ns[num]))}) - ({int(np.ceil(i_ns[num])) + self._n_ss_int}, {int(np.ceil(j_ns[num])) + self._n_fs_int})")
-            self._final_array[:, int(np.ceil(self._j_ns[num])) : int(np.ceil(self._j_ns[num] + self._n_fs_int)), int(np.ceil(self._i_ns[num])) : int(np.ceil(self._i_ns[num] + self._n_ss_int))] = self._all_data_array_reshape[:, :, :, num]
-
+            if self._fs_vec_arr[num,0] < 0 and self._ss_vec_arr[num,0] > 0: #fs neg and ss is pos
+                #90 deg turn counterclockwise??
+                print("q1",num)
+                print("fs", self._fs_vec_arr[num])
+                print("ss", self._ss_vec_arr[num])
+                rot_all_data_array = np.flip(self._all_data_array_reshape[:, :, :, num], axis = 2)
+                print("shape", rot_all_data_array.shape)
+                # self._final_array[:, int(np.ceil(self._j_ns[num] - self._n_fs_int)) : int(np.ceil(self._j_ns[num])), int(np.ceil(self._i_ns[num])) : int(np.ceil(self._i_ns[num] + self._n_ss_int))] = rot_all_data_array
+                self._final_array[:, int(np.ceil(self._j_ns[num] - self._n_fs_int)) : int(np.ceil(self._j_ns[num])), int(np.ceil(self._i_ns[num])) : int(np.ceil(self._i_ns[num] + self._n_ss_int))] = rot_all_data_array
+                
+            if self._fs_vec_arr[num,0] > 0 and self._ss_vec_arr[num,0] > 0: #if theyre both positive
+                #no rotation
+                print("q2",num)
+                print("fs", self._fs_vec_arr[num])
+                print("ss", self._ss_vec_arr[num])
+                self._final_array[:, int(np.ceil(self._j_ns[num])) : int(np.ceil(self._j_ns[num] + self._n_fs_int)), int(np.ceil(self._i_ns[num])) : int(np.ceil(self._i_ns[num] + self._n_ss_int))] = self._all_data_array_reshape[:, :, :, num]
+             
+            if self._fs_vec_arr[num,0] > 0 and self._ss_vec_arr[num,0] < 0: #fs pos and ss neg
+                #90 deg turn clockwise
+                print("q3",num)
+                print("fs", self._fs_vec_arr[num])
+                print("ss", self._ss_vec_arr[num])
+                rot_all_data_array = np.flip(self._all_data_array_reshape[:, :, :, num], axis = 1)
+                print("shape", rot_all_data_array.shape)
+                self._final_array[:, int(np.ceil(self._j_ns[num])) : int(np.ceil(self._j_ns[num] + self._n_fs_int)), int(np.ceil(self._i_ns[num] - self._n_ss_int)) : int(np.ceil(self._i_ns[num]))] = rot_all_data_array
+            
+            if self._fs_vec_arr[num,0] < 0 and self._ss_vec_arr[num,0] < 0: #fs pos and ss neg
+                #180 rotation
+                print("q4",num)
+                print("fs", self._fs_vec_arr[num])
+                print("ss", self._ss_vec_arr[num])
+                rot_all_data_array = np.flip(self._all_data_array_reshape[:, :, :, num], axis = (1,2))
+                print("shape", rot_all_data_array.shape)
+                self._final_array[:, int(np.ceil(self._j_ns[num] - self._n_fs_int)) : int(np.ceil(self._j_ns[num])), int(np.ceil(self._i_ns[num] - self._n_ss_int)) : int(np.ceil(self._i_ns[num]))] = rot_all_data_array
+              
+            
+            # self._final_array[:, int(np.ceil(self._j_ns[num])) : int(np.ceil(self._j_ns[num] + self._n_fs_int)), int(np.ceil(self._i_ns[num])) : int(np.ceil(self._i_ns[num] + self._n_ss_int))] = self._all_data_array_reshape[:, :, :, num]
+            
     # Checking and graphing outputs
     def graph_padded_data(self):
         
@@ -209,7 +253,7 @@ class ScatteringMatrix():
 
         cbar = plt.colorbar(heatmap, ax=ax)
         plt.show()
-        plt.savefig("/scratch/avelard3/cxls_hitfinder_joblogs/zfinal_data_array931240.png")
+        plt.savefig("/scratch/avelard3/cxls_hitfinder_joblogs/z_best_scattering.png")
         print("Created graph of all panels")
 
     def graph_relative_t_vec(self, path_and_name_to_save):
@@ -249,13 +293,13 @@ class ScatteringMatrix():
             x = ((self._t_vec_arr[i,0] + 100*self._ss_vec_arr[i,0]) + ((self._max_x - self._min_x)/2))/self._pixel_length_x 
             y = ((self._t_vec_arr[i,1] + 100*self._ss_vec_arr[i,1]) + ((self._max_y - self._min_y)/2))/self._pixel_length_y
             plt.scatter(x,y, color = 'red')
-            print("red")
+            print("red ss")
         
         for i in range(self._num_panels):
             x = ((self._t_vec_arr[i,0] + 100*self._fs_vec_arr[i,0]) + ((self._max_x - self._min_x)/2))/self._pixel_length_x 
             y = ((self._t_vec_arr[i,1] + 100*self._fs_vec_arr[i,1]) + ((self._max_y - self._min_y)/2))/self._pixel_length_y
             plt.scatter(x,y, color = 'blue')
-            print("blue")
+            print("blue fs")
         
         # for i in range(self._num_panels):
         #     x = self._i_ns[i] + 50
@@ -271,7 +315,7 @@ class ScatteringMatrix():
 
         print("graphed t vec")
         plt.show()
-        plt.savefig("/scratch/avelard3/cxls_hitfinder_joblogs/zt00_data_array.png")
+        plt.savefig("/scratch/avelard3/cxls_hitfinder_joblogs/z_best_scattering_and_vector.png")
    
 # Methods for padding annd cropping data (the class is defined below but its called in ScatteringMatrix graph_padded_data())     
 class ReshapeData():
