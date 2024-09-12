@@ -25,14 +25,11 @@ class Data(Dataset):
         self.file_paths = h5_file_path
         self.data = list(zip(self.image_data, self.meta_data, self.file_paths))
         
-        print("load data .py line 28", use_transform)
         self.use_transform = use_transform
-        print("load data.py line 30", self.use_transform)
         self.transforms = None #initialize
         
         # If transforms will be used, then it creates the pytorch object that will be used to transform future data
         if self.use_transform:
-            print("load data .py line 35", self.use_transform)
             self.make_transform()
         
     def __len__(self) -> int:
@@ -60,11 +57,9 @@ class Data(Dataset):
         try:
             print("load data line 61", self.use_transform)
             if self.use_transform:
-                print("applying a transform,", self.use_transform)
                 image = self.transforms(self.image_data[idx])
                 return image, self.meta_data[idx], self.file_paths[idx]
             else:
-                print("the else statement")
                 return self.data[idx]
         except Exception as e:
             print(f"An unexpected error occurred while getting item at index {idx}: {e}")
@@ -74,7 +69,6 @@ class Data(Dataset):
         If the transfom flag is true, this function creates the global variable for the transform for image data. 
         This part doesn't interact with the actual data; it just stores pytorch object data for a future transform.
         """
-        print("inside make_transform")       
         self.transforms = transforms.Compose([
             transforms.Resize(300) #Resize transform doesn't work for hitfinder, but transforms in general do work
         ])

@@ -98,25 +98,17 @@ class Paths(ABC):
 
                 unorganized_numpy_array = np.array(self._open_h5_file['entry_1/data_1/data']).astype(np.float32)
                 multi_panel_matrix = read_scattering_matrix.ScatteringMatrix("epix10k_geometry.json", "/scratch/avelard3/big_files/geom_data/", unorganized_numpy_array)
-                print("multi_panel_matrix = read_scattering_matrix.ScatteringMatrix")
                 numpy_array = multi_panel_matrix._final_array
-                print("numpy_array = multi_panel_matrix._final_array")
             else:
                 print("Assuming reading .h5 file")
                 numpy_array = np.array(self._open_h5_file['entry/data/data']).astype(np.float32)
             
             if numpy_array.shape[-2:] != conf.eiger_4m_image_size:
-                print("before reshape")
                 # Getting stuck here 11:47 8/22
                 numpy_array = SpecialCaseFunctions.reshape_input_data(numpy_array)    
-                print("after shape")                  
-            print("before load_h5_tensor")
             self._loaded_h5_tensor = torch.tensor(numpy_array)
-            print("before read metadata attributes")
             self.read_metadata_attributes()
-            print("before closing h5 file")
             self._open_h5_file.close()
-            print("end of load h5 data try")
                     
         except OSError:
             print(f"Error: An I/O error occurred while opening file (load h5 data) {file_path}")

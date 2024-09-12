@@ -144,7 +144,6 @@ def main() -> None:
         h5_tensor_list = path_manager.get_h5_tensor_list()
         h5_attribute_list = path_manager.get_h5_attribute_list()
         h5_file_paths = path_manager.get_h5_file_paths()
-        print("train and evaluate .py line 144", transform)
         data_manager = load_data.Data(h5_tensor_list, h5_attribute_list, h5_file_paths, transform)
         create_data_loader = load_data.CreateDataLoader(data_manager, batch_size)
         create_data_loader.split_training_data()
