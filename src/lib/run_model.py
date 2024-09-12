@@ -77,11 +77,15 @@ class RunModel:
         try:
             with torch.no_grad():
                 for inputs, attributes, paths in data_loader:
-                
+                    print("i'm annoying eric")
                     inputs = inputs.to(self.device, dtype=torch.float32)
+                    print("and then i'm annoying him again")
                     attributes = {key: value.to(self.device, dtype=torch.float32) for key, value in attributes.items()}
+                    print("this is after attributes")
                     score = self.model(inputs, attributes[self.camera_length], attributes[self.photon_energy])
+                    print(f'>>>>>>>>>>>>>>>>>>>>>>> {score} <<<<<<<<<<<<<<<<<<<<<<<<<<<')
                     prediction = (torch.sigmoid(score) > 0.5).long()
+                    print("this is after predictions")
                     
                     assert len(prediction) == len(paths), "Prediction and paths length mismatch."
 

@@ -17,7 +17,7 @@ class ScatteringMatrix():
         self.create_new_array()
         self.insert_data_into_new_matrix(data_file_path_name)
         self.graph_first_data_piecetogether()
-        self.graph_heatmap_with_vectors()
+        #self.graph_heatmap_with_vectors()
         
 
     def read_geom_file(self):
@@ -179,37 +179,27 @@ class ScatteringMatrix():
         for num in range(self._num_panels):
             if self._fs_vec_arr[num,0] < 0 and self._ss_vec_arr[num,0] > 0: #fs neg and ss is pos
                 #90 deg turn counterclockwise??
-                print("q1",num)
-                print("fs", self._fs_vec_arr[num])
-                print("ss", self._ss_vec_arr[num])
+                #top right
                 rot_all_data_array = np.flip(self._all_data_array_reshape[:, :, :, num], axis = 2)
-                print("shape", rot_all_data_array.shape)
                 # self._final_array[:, int(np.ceil(self._j_ns[num] - self._n_fs_int)) : int(np.ceil(self._j_ns[num])), int(np.ceil(self._i_ns[num])) : int(np.ceil(self._i_ns[num] + self._n_ss_int))] = rot_all_data_array
                 self._final_array[:, int(np.ceil(self._j_ns[num] - self._n_fs_int)) : int(np.ceil(self._j_ns[num])), int(np.ceil(self._i_ns[num])) : int(np.ceil(self._i_ns[num] + self._n_ss_int))] = rot_all_data_array
                 
             if self._fs_vec_arr[num,0] > 0 and self._ss_vec_arr[num,0] > 0: #if theyre both positive
                 #no rotation
-                print("q2",num)
-                print("fs", self._fs_vec_arr[num])
-                print("ss", self._ss_vec_arr[num])
+                #top left
+
                 self._final_array[:, int(np.ceil(self._j_ns[num])) : int(np.ceil(self._j_ns[num] + self._n_fs_int)), int(np.ceil(self._i_ns[num])) : int(np.ceil(self._i_ns[num] + self._n_ss_int))] = self._all_data_array_reshape[:, :, :, num]
              
             if self._fs_vec_arr[num,0] > 0 and self._ss_vec_arr[num,0] < 0: #fs pos and ss neg
                 #90 deg turn clockwise
-                print("q3",num)
-                print("fs", self._fs_vec_arr[num])
-                print("ss", self._ss_vec_arr[num])
+                #bottom left
                 rot_all_data_array = np.flip(self._all_data_array_reshape[:, :, :, num], axis = 1)
-                print("shape", rot_all_data_array.shape)
                 self._final_array[:, int(np.ceil(self._j_ns[num])) : int(np.ceil(self._j_ns[num] + self._n_fs_int)), int(np.ceil(self._i_ns[num] - self._n_ss_int)) : int(np.ceil(self._i_ns[num]))] = rot_all_data_array
             
             if self._fs_vec_arr[num,0] < 0 and self._ss_vec_arr[num,0] < 0: #fs pos and ss neg
                 #180 rotation
-                print("q4",num)
-                print("fs", self._fs_vec_arr[num])
-                print("ss", self._ss_vec_arr[num])
+                #bottom right
                 rot_all_data_array = np.flip(self._all_data_array_reshape[:, :, :, num], axis = (1,2))
-                print("shape", rot_all_data_array.shape)
                 self._final_array[:, int(np.ceil(self._j_ns[num] - self._n_fs_int)) : int(np.ceil(self._j_ns[num])), int(np.ceil(self._i_ns[num] - self._n_ss_int)) : int(np.ceil(self._i_ns[num]))] = rot_all_data_array
               
             

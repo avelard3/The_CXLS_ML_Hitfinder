@@ -79,7 +79,7 @@ def main():
         master_file = None
     
     attributes = {
-        'clen': camera_length,
+        'clen': camera_length, #############ANNELISE#######################
         'photon_energy': photon_energy,
         'peak': peaks
     } 
@@ -127,10 +127,11 @@ def main():
         data_manager = load_data.Data(h5_tensor_list, h5_attribute_list, h5_file_paths, transform)
         #toc
         #tic
-        data_manager.inference_data_loader(batch_size)
+        create_data_loader = load_data.CreateDataLoader(data_manager, batch_size)
+        create_data_loader.inference_data_loader()
         #toc
         #tic
-        data_loader = data_manager.get_inference_data_loader()
+        data_loader = create_data_loader.get_inference_data_loader()
         #toc
         #tic
         process_data.classify_data(data_loader) 

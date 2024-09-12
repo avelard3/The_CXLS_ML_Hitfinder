@@ -97,7 +97,7 @@ class Paths(ABC):
                 print("Reading .cxi file")
 
                 unorganized_numpy_array = np.array(self._open_h5_file['entry_1/data_1/data']).astype(np.float32)
-                multi_panel_matrix = read_scattering_matrix.ScatteringMatrix("epix10k_geometry.json", "/scratch/avelard3/The_CXLS_ML_Hitfinder/src/geom_data/", unorganized_numpy_array)
+                multi_panel_matrix = read_scattering_matrix.ScatteringMatrix("epix10k_geometry.json", "/scratch/avelard3/big_files/geom_data/", unorganized_numpy_array)
                 print("multi_panel_matrix = read_scattering_matrix.ScatteringMatrix")
                 numpy_array = multi_panel_matrix._final_array
                 print("numpy_array = multi_panel_matrix._final_array")
@@ -119,7 +119,7 @@ class Paths(ABC):
             print("end of load h5 data try")
                     
         except OSError:
-            print(f"Error: An I/O error occurred while opening file {file_path}")
+            print(f"Error: An I/O error occurred while opening file (load h5 data) {file_path}")
         except Exception as e:
             print(f"An unexpected error occurred while opening file {file_path}: {e}")
     
@@ -171,7 +171,7 @@ class Paths(ABC):
         try:
             self._open_h5_file = h5.File(self._master_file, 'r')
         except OSError:
-            print(f"Error: An I/O error occurred while opening file {self._master_file}")
+            print(f"Error: An I/O error occurred while opening file (load master file) {self._master_file}")
         except Exception as e:
             print(f"An unexpected error occurred while opening file master file: {e}") 
             
@@ -292,7 +292,7 @@ class PathsSingleEvent(Paths):
                 self.populate_attributes_from_master_dict()
             
         except Exception as e:
-            print(f"An unexpected error occurred while loading data: {e}")  
+            print(f"An unexpected error occurred while loading data (single_path): {e}")  
         
     def read_metadata_attributes(self) -> None:
         super().read_metadata_attributes()
@@ -358,17 +358,27 @@ class PathsMultiEvent(Paths):
         
     def load_h5_data(self) -> None:
         super().load_h5_data()
-        
+        print("inside load h5 data in pathsmultievent")
         try:
+            print("inside try of load h5 data in paths multievent view")
             tensor = [*torch.split(self._loaded_h5_tensor, 1, dim=0)]
             self._h5_tensor_list.extend(tensor)
             self._number_of_events = len(tensor)
             
             if self._master_file is not None:
+                print("if statement for populating dictionary")
                 self.populate_attributes_from_master_dict()
+            else:
+                print('Copying attributes')
+                temp_attribute = self._h5_attr_list[0]
+                print(f'~~~~~~~~~~~~~~~~~~~~~~~{temp_attribute}~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
+                while (len(self._h5_attr_list) < self._number_of_events):
+                    self._h5_attr_list.append(temp_attribute)
+                    
+                
             
         except Exception as e:
-            print(f"An unexpected error occurred while loading data: {e}")
+            print(f"An unexpected error occurred while loading data (multi path): {e}")
         
     def read_metadata_attributes(self) -> None:
         super().read_metadata_attributes()
