@@ -53,9 +53,7 @@ class Data(Dataset):
         """
                 
         # Check if a transform needs to be applied and apply it
-        print("__getitem__ load_data.py")
         try:
-            print("load data line 61", self.use_transform)
             if self.use_transform:
                 image = self.transforms(self.image_data[idx])
                 return image, self.meta_data[idx], self.file_paths[idx]

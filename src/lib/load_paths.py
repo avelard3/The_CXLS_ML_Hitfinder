@@ -133,6 +133,7 @@ class Paths(ABC):
 
         if self._master_file is not None:
             self.load_master_file()
+
         try:  
             print(f'------------------------------------------{self._open_h5_file.attrs.keys()}')
             if len(self._open_h5_file.attrs.keys()) != 0:
@@ -140,6 +141,8 @@ class Paths(ABC):
                 self.read_attribute_manager()
         except:
             pass
+
+
         try:
             if len(self._attribute_holding) == 0:
                 print("&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&")
@@ -148,10 +151,10 @@ class Paths(ABC):
         except KeyError:
             print(f"ERROR: Attribute not found in file: {self._open_h5_file}.")
         
-        
         if self._master_file is not None:
             self._master_dict = self._attribute_holding
         else:
+            print(f'very nice : {self._attribute_holding}')
             self._h5_attr_list.append(self._attribute_holding)
 
     @abstractmethod
@@ -200,6 +203,9 @@ class Paths(ABC):
             self._attribute_holding[conf.present_peaks_key] = self._open_h5_file[peak][()]
         self._attribute_holding[conf.camera_length_key] = self._open_h5_file[camera_length][()]
         self._attribute_holding[conf.photon_energy_key] = self._open_h5_file[photon_energy][()]
+        print(conf.camera_length_key)
+        print(conf.photon_energy_key)
+        print(self._attribute_holding)
                 
     @abstractmethod
     def get_h5_tensor_list(self) -> list:
@@ -350,7 +356,7 @@ class PathsMultiEvent(Paths):
         
     def load_h5_data(self) -> None:
         super().load_h5_data()
-        print("inside load h5 data in pathsmultievent")
+        print("inside load h5 data in paths multievent")
         try:
             print("inside try of load h5 data in paths multievent view")
             tensor = [*torch.split(self._loaded_h5_tensor, 1, dim=0)]
@@ -363,12 +369,9 @@ class PathsMultiEvent(Paths):
             else:
                 print('Copying attributes')
                 temp_attribute = self._h5_attr_list[0]
-                print(f'~~~~~~~~~~~~~~~~~~~~~~~{temp_attribute}~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
                 while (len(self._h5_attr_list) < self._number_of_events):
                     self._h5_attr_list.append(temp_attribute)
                     
-                
-            
         except Exception as e:
             print(f"An unexpected error occurred while loading data (multi path): {e}")
         

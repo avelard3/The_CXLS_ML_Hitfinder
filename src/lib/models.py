@@ -72,7 +72,7 @@ class HeatmapCNN(nn.Module):
 class Binary_Classification_With_Parameters(nn.Module):
     def __init__(self, input_channels=1, output_channels=1, input_size=(2163, 2069)):
         super(Binary_Classification_With_Parameters, self).__init__()
-        
+
         self.kernel_size1 = 10
         self.stride1 = 1
         self.padding1 = 1
@@ -92,10 +92,10 @@ class Binary_Classification_With_Parameters(nn.Module):
         out_width1 = self.calculate_output_dimension(input_size[1], self.kernel_size1, self.stride1, self.padding1)
         out_height2 = self.calculate_output_dimension(out_height1 // 2, self.kernel_size2, self.stride2, self.padding2) 
         out_width2 = self.calculate_output_dimension(out_width1 // 2, self.kernel_size2, self.stride2, self.padding2)
-        
+
         self.fc_size_1 = 16 * out_height2 * out_width2
         self.fc_size_2 = (out_height2 * out_width2) // 23782
-        
+
         self.fc1 = nn.Linear(self.fc_size_1, self.fc_size_2)
         self.fc2 = nn.Linear(self.fc_size_2 + 2, output_channels)
 
@@ -103,18 +103,34 @@ class Binary_Classification_With_Parameters(nn.Module):
         return ((input_dim + 2 * padding - kernel_size) // stride) + 1
 
     def forward(self, x, camera_length, photon_energy):
+        print("forward line 106 models.py")
         x = self.pool1(F.relu(self.gn1(self.conv1(x))))
+        print("forward line 108 models.py")
         x = F.relu(self.gn2(self.conv2(x)))
+        print("forward line 110 models.py")
         x = x.view(x.size(0), -1) 
+        print("forward line 112 models.py")
         x = F.relu(self.fc1(x))
+        print("forward line 114 models.py")
         
         device = x.device
+        print(f"device {device}")
         camera_length = camera_length.to(device).float()
+        print("cam length shape", camera_length.shape)
         photon_energy = photon_energy.to(device).float()
+        print("photon energy shape", photon_energy.shape)
         
-        params = torch.stack((camera_length, photon_energy), dim=1)
+        
+        #params = torch.stack((camera_length, photon_energy), dim=1) # 1 had [10, 2, 82]; 2 had [10, 82, 2]; 0 had [2, 10, 82]
+        params = torch.cat((camera_length, photon_energy), dim=1)
+        
+        print("params shape", params.shape)
+        print("x shape", x.shape)
+        print("parameters", params)
         x = torch.cat((x, params), dim=1)
+        print("x torch cat")
         x = self.fc2(x)
+        print("x fc2")
         return x
 
 
@@ -131,9 +147,6 @@ class Linear(nn.Module):
         x = self.fc(x)
         
         return x
-
-
-
 
 
 
