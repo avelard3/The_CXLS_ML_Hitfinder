@@ -53,6 +53,7 @@ class Data(Dataset):
         """
                 
         # Check if a transform needs to be applied and apply it
+        print(f'**********************{self.meta_data}**********************')
         try:
             if self.use_transform:
                 image = self.transforms(self.image_data[idx])

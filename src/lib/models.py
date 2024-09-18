@@ -121,8 +121,8 @@ class Binary_Classification_With_Parameters(nn.Module):
         print("photon energy shape", photon_energy.shape)
         
         
-        #params = torch.stack((camera_length, photon_energy), dim=1) # 1 had [10, 2, 82]; 2 had [10, 82, 2]; 0 had [2, 10, 82]
-        params = torch.cat((camera_length, photon_energy), dim=1)
+        params = torch.stack((camera_length, photon_energy), dim=1) # 1 had [10, 2, 82]; 2 had [10, 82, 2]; 0 had [2, 10, 82]
+        #params = torch.cat((camera_length, photon_energy), dim=1)
         
         print("params shape", params.shape)
         print("x shape", x.shape)

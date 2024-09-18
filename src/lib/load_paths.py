@@ -368,9 +368,9 @@ class PathsMultiEvent(Paths):
                 self.populate_attributes_from_master_dict()
             else:
                 print('Copying attributes')
-                temp_attribute = self._h5_attr_list[0]
-                while (len(self._h5_attr_list) < self._number_of_events):
-                    self._h5_attr_list.append(temp_attribute)
+                temp_attribute = self._h5_attr_list[0] #needs to be split into 82 dictionaries
+                
+                self._h5_attr_list.append(temp_attribute)
                     
         except Exception as e:
             print(f"An unexpected error occurred while loading data (multi path): {e}")
