@@ -1,3 +1,4 @@
+import h5py as h5
 import torch
 from torch.utils.data import DataLoader, Dataset
 from torchvision import transforms
@@ -7,23 +8,26 @@ import sys
 
 class Data(Dataset):
     
-    def __init__(self, classification_data: list, attribute_data: list, h5_file_path: list, use_transform: bool) -> None:
+    def __init__(self, vds_path: str, file_list: list, use_transform: bool) -> None:
         """
         Initialize the Data object with classification and attribute data.
 
         Args:
-            classification_data (list): List of classification data, that being list of pytorch tensors.
-            attribute_data (list): List of attribute data, that being list of metadata dictionaries.
-            h5_file_path (list): List of h5 file paths.
+            vds_path (str)
             use_transform (bool): Whether you want the transforms to be applied to the images to create more data or not
         """
         self.train_loader = None
         self.test_loader = None
         self.inference_loader = None
-        self.image_data = classification_data
-        self.meta_data = attribute_data
-        self.file_paths = h5_file_path
-        self.data = list(zip(self.image_data, self.meta_data, self.file_paths))
+        self.vds_path = vds_path
+        self.file_list = file_list
+        
+        self.file = h5.File(self.vds_path, 'r')
+        self.images = self.file['vsource_image']
+        self.camera_length = self.file['vsource_camera_length']
+        self.photon_energy = self.file['vsource_photon_energy']
+        self.hit_parameter = self.file['vsource_hit_parameter']
+        
         
         self.use_transform = use_transform
         self.transforms = None #initialize
@@ -39,7 +43,7 @@ class Data(Dataset):
         Returns:
             int: Number of samples in the dataset.
         """
-        return len(self.image_data)
+        return self.images.shape[0]
     
     def __getitem__(self, idx: int) -> tuple:
         """
@@ -53,13 +57,14 @@ class Data(Dataset):
         """
                 
         # Check if a transform needs to be applied and apply it
-        print(f'**********************{self.meta_data}**********************')
         try:
             if self.use_transform:
+                print("You tried to use a transform when transforms don't work")
                 image = self.transforms(self.image_data[idx])
                 return image, self.meta_data[idx], self.file_paths[idx]
             else:
-                return self.data[idx]
+                #! do i make them into torch.tensors here, or is that what happens in CreateDataLoader
+                return self.images[idx], self.camera_length[idx], self.photon_energy[idx], self.hit_parameter[idx], self.file_list[idx] #change
         except Exception as e:
             print(f"An unexpected error occurred while getting item at index {idx}: {e}")
             

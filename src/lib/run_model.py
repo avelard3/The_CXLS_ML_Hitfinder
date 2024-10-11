@@ -76,13 +76,15 @@ class RunModel:
         print('Starting classification...')
         try:
             with torch.no_grad():
-                for inputs, attributes, paths in data_loader:
-                    print("i'm annoying eric")
-                    inputs = inputs.to(self.device, dtype=torch.float32)
-                    print("and then i'm annoying him again")
-                    attributes = {key: value.to(self.device, dtype=torch.float32) for key, value in attributes.items()}
-                    print("this is after attributes")
-                    score = self.model(inputs, attributes[self.camera_length], attributes[self.photon_energy])
+                for images, camera_length, photon_energy, _, paths in data_loader:
+                    inputs = torch.Tensor(images).to(self.device, dtype=torch.float32)
+                    inputs = [*torch.split(inputs, 1, dim=0)]
+                    paths.extend(inputs)
+                    cam_len = torch.Tensor(camera_length).to(self.device, dtype=torch.float32)
+                    #cam_len = [*torch.split(cam_len, 1, dim=0)]
+                    phot_en = torch.Tensor(photon_energy).to(self.device, dtype=torch.float32)
+                    #phot_en = [*torch.split(phot_en, 1, dim=0)]
+                    score = self.model(inputs, cam_len, phot_en)
                     print(f'>>>>>>>>>>>>>>>>>>>>>>> {score} <<<<<<<<<<<<<<<<<<<<<<<<<<<')
                     prediction = (torch.sigmoid(score) > 0.5).long()
                     print("this is after predictions")

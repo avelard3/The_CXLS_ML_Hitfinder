@@ -113,9 +113,9 @@ def main() -> None:
     
     # Create a queue for files to keep from overwhelming the computer (so you can just iterate one by one)
     if multievent == 'True' or multievent == 'true':
-        path_manager = load_paths.PathsMultiEvent(h5_file_list,  attributes,  master_file)
+        path_manager = old_load_paths.PathsMultiEvent(h5_file_list,  attributes,  master_file)
     else:
-        path_manager = load_paths.PathsSingleEvent(h5_file_list, attributes, master_file)
+        path_manager = old_load_paths.PathsSingleEvent(h5_file_list, attributes, master_file)
         
     path_manager.read_file_paths()
     h5_file_path_queue = path_manager.get_file_path_queue()

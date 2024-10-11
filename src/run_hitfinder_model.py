@@ -91,55 +91,55 @@ def main():
         'device': device,
     }
     
-    # path_manager = data_path_manager.Paths(h5_file_list, attributes, multievent, master_file)
-    if multievent == 'True' or multievent == 'true':
-        path_manager = load_paths.PathsMultiEvent(h5_file_list,  attributes,  master_file)
-    else:
-        path_manager = load_paths.PathsSingleEvent(h5_file_list, attributes, master_file)
+    path_manager = load_paths.Paths(h5_file_list, attributes, master_file, multievent)
+    #path_manager is just instantiate load_paths_base.Paths(args)
+    
+    
+    # if multievent == 'True' or multievent == 'true':
+    #     path_manager = load_paths.PathsMultiEvent(h5_file_list,  attributes,  master_file)
+    # else:
+    #     path_manager = load_paths.PathsSingleEvent(h5_file_list, attributes, master_file)
     #toc
     #tic
-    path_manager.read_file_paths()
-    h5_file_path_queue = path_manager.get_file_path_queue()
+    path_manager.map_dataset_to_vds()
     
-    queue_size = h5_file_path_queue.qsize()
     
     process_data = run_model.RunModel(cfg, attributes)
     process_data.make_model_instance()
     process_data.load_model()
+    # #toc
+    # while not h5_file_path_queue.empty():
+    #     #tic
+    #     path_manager.process_files() #problem child
+    #     h5_tensor_list = path_manager.get_h5_tensor_list() # self._h5_tensor_list
+    #     #toc
+    #     #tic
+    #     h5_attribute_list = path_manager.get_h5_attribute_list() # self._h5_attr_list
+    #     #toc
+    #     #tic
+    #     events = path_manager.get_event_count() # self._number_of_events
+    #     #toc
+    vds_dataset = path_manager.get_vds()    
+    h5_file_paths = path_manager.get_file_names()
+    
+
+    #tic
+    data_manager = load_data.Data(vds_dataset, h5_file_paths, transform)
     #toc
-    while not h5_file_path_queue.empty():
-        #tic
-        path_manager.process_files() #problem child
-        #toc
-        #tic
-        h5_file_paths = path_manager.get_h5_file_paths()
-        #toc
-        #tic
-        h5_tensor_list = path_manager.get_h5_tensor_list()
-        #toc
-        #tic
-        h5_attribute_list = path_manager.get_h5_attribute_list()
-        #toc
-        #tic
-        events = path_manager.get_event_count()
-        #toc
-        #tic
-        data_manager = load_data.Data(h5_tensor_list, h5_attribute_list, h5_file_paths, transform)
-        #toc
-        #tic
-        create_data_loader = load_data.CreateDataLoader(data_manager, batch_size)
-        create_data_loader.inference_data_loader()
-        #toc
-        #tic
-        data_loader = create_data_loader.get_inference_data_loader()
-        #toc
-        #tic
-        process_data.classify_data(data_loader) 
-        #toc
-        
+    #tic
+    create_data_loader = load_data.CreateDataLoader(data_manager, batch_size)
+    create_data_loader.inference_data_loader()
+    #toc
+    #tic
+    data_loader = create_data_loader.get_inference_data_loader()
+    #toc
+    #tic
+    process_data.classify_data(data_loader) 
+    #toc        
     #tic    
     process_data.create_model_output_lst_files()
-    process_data.output_verification(queue_size, events)
+    #! There is no queue size now so there is no output verification
+    # process_data.output_verification(queue_size, events)
     #toc
 if __name__ == '__main__':
     main()
