@@ -63,7 +63,14 @@ class Data(Dataset):
                 image = self.transforms(self.image_data[idx])
                 return image, self.meta_data[idx], self.file_paths[idx]
             else:
-                #! do i make them into torch.tensors here, or is that what happens in CreateDataLoader
+                print(f'shape self.images[idx] in load_data getitem {self.images[idx].shape}')
+                print(f'shape self.imagesload_data getitem {self.images.shape}')
+                print(f'shape self.camera_length[idx] in load_data getitem {self.camera_length[idx].shape}')
+                print(f'shape self.camera_length in load_data getitem {self.camera_length.shape}')
+                print(f'shape self.hit_parameter[idx] in load_data getitem {self.hit_parameter[idx].shape}')
+                print(f'shape self.hit_parameter in load_data getitem {self.hit_parameter.shape}')
+
+
                 return self.images[idx], self.camera_length[idx], self.photon_energy[idx], self.hit_parameter[idx], self.file_list[idx] #change
         except Exception as e:
             print(f"An unexpected error occurred while getting item at index {idx}: {e}")

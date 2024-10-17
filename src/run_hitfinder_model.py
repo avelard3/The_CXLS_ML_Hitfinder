@@ -132,6 +132,7 @@ def main():
     #toc
     #tic
     data_loader = create_data_loader.get_inference_data_loader()
+    print(f"data_loader shape from run_hitfinder_model {data_loader}")
     #toc
     #tic
     process_data.classify_data(data_loader) 
