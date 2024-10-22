@@ -4,11 +4,12 @@ from torch.utils.data import DataLoader, Dataset
 from torchvision import transforms
 from . import conf
 import sys
+from typing import Optional
 
 
 class Data(Dataset):
     
-    def __init__(self, vds_path: str, file_list: list, use_transform: bool) -> None:
+    def __init__(self, vds_path: str, file_list: list, use_transform: bool, master_file: Optional[str] = None,) -> None:
         """
         Initialize the Data object with classification and attribute data.
 
@@ -24,6 +25,7 @@ class Data(Dataset):
         
         self.file = h5.File(self.vds_path, 'r')
         self.images = self.file['vsource_image']
+        
         self.camera_length = self.file['vsource_camera_length']
         self.photon_energy = self.file['vsource_photon_energy']
         self.hit_parameter = self.file['vsource_hit_parameter']
@@ -31,6 +33,7 @@ class Data(Dataset):
         
         self.use_transform = use_transform
         self.transforms = None #initialize
+        self._master_file = master_file
         
         # If transforms will be used, then it creates the pytorch object that will be used to transform future data
         if self.use_transform:
@@ -70,8 +73,13 @@ class Data(Dataset):
                 print(f'shape self.hit_parameter[idx] in load_data getitem {self.hit_parameter[idx].shape}')
                 print(f'shape self.hit_parameter in load_data getitem {self.hit_parameter.shape}')
 
-
-                return self.images[idx], self.camera_length[idx], self.photon_energy[idx], self.hit_parameter[idx], self.file_list[idx] #change
+                #if statement with return only one thing in masterfile metadata #! 
+                #*
+                if self._master_file != None:
+                    return self.images[idx], self.camera_length[0], self.photon_energy[0], self.hit_parameter[0], self.file_list[idx]
+                else:
+                    return self.images[idx], self.camera_length[idx], self.photon_energy[idx], self.hit_parameter[idx], self.file_list[idx] #change
+                #*
         except Exception as e:
             print(f"An unexpected error occurred while getting item at index {idx}: {e}")
             

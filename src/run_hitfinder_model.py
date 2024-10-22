@@ -124,7 +124,7 @@ def main():
     
 
     #tic
-    data_manager = load_data.Data(vds_dataset, h5_file_paths, transform)
+    data_manager = load_data.Data(vds_dataset, h5_file_paths, transform, master_file)
     #toc
     #tic
     create_data_loader = load_data.CreateDataLoader(data_manager, batch_size)

@@ -18,4 +18,4 @@ module load mamba/latest
 module load cuda-11.8.0-gcc-12.1.0
 source activate hitfinder_sol_env
 
-python /scratch/avelard3/The_CXLS_ML_Hitfinder/src/lib/read_scattering_matrix.py
+python /scratch/avelard3/test_VDS.py

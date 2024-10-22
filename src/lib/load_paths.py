@@ -6,6 +6,7 @@ from queue import Queue
 import concurrent.futures
 from typing import Optional
 from torch.utils.data import Dataset
+import datetime
 # from .The_CXLS_ML_Hitfinder.src.lib.utils import SpecialCaseFunctions
 # from .The_CXLS_ML_Hitfinder.src.lib import conf
 # from .The_CXLS_ML_Hitfinder.src.lib import read_scattering_matrix
@@ -33,20 +34,32 @@ class Paths:
         self._is_multi_event = is_multi_event
         
     def map_dataset_to_vds(self) -> None:
-        #! come up with fancy name
-        self.vds_name = 'name_this_something.h5'
+        
+        now = datetime.datetime.now()
+        formatted_date_time = now.strftime("%m%d%y-%H:%M")
+        self.vds_name = f'vds_{formatted_date_time}.h5'
+        print(f'Creating vds with name: {self.vds_name}')
+        
+        
         #! how do i find how many images exist?!?
         num_images = 3
         #FIXME
         height = 2069
         width = 2163
         image_shape = (num_images, 1, height, width)
-        attr_shape = (num_images, 1)
+        #*
+        if self._master_file != None:
+            attr_shape = (1,1)
+        else:
+            attr_shape = (num_images, 1) #change shape to (1,1)
+        #*
         
         with h5.File(self.vds_name, 'w') as vds_file:
             # Virtual layout for images
             image_layout = h5.VirtualLayout(shape=image_shape, dtype='float32')
             # Virtual layout for metadata #FIXME for all attributes
+            
+            # no if statement? 
             camera_length_layout = h5.VirtualLayout(shape=attr_shape, dtype='float32')
             photon_energy_layout = h5.VirtualLayout(shape=attr_shape, dtype='float32')
             hit_parameter_layout = h5.VirtualLayout(shape=attr_shape, dtype='float32')
@@ -54,10 +67,13 @@ class Paths:
             # Loop through each source file and map it to the virtual dataset
             with open(self._list_path, 'r') as lst_file:
                 for i, source_file in enumerate(lst_file):
-                    source_file = source_file.strip()
-                    
-                    
-                    self._h5_file_list.append(source_file) # adding file to list of files
+                    numbered_file = source_file.strip()
+                    #*
+                    if self._is_multi_event:
+                        pic_num = i % self._number_of_events
+                        numbered_file =f'{numbered_file}_{str(pic_num)}'
+                    #*
+                    self._h5_file_list.append(numbered_file) # adding file to list of files
                     with h5.File(source_file, 'r') as f:
                         # Image data source
                         vsource_image = h5.VirtualSource(f['entry/data/data'])
@@ -66,18 +82,23 @@ class Paths:
                         #print(f'specific image_layout load_paths map_dataset_to_vds {image_layout[i, 0, :, :]}')
                         #^ it didn't like this line of code... you can't do that with virtual data sets?
                         #camera length or detector distance
-                        vsource_camera_length = h5.VirtualSource(f['/instrument/Detector-Distance_mm/'])
-                        camera_length_layout[i] = vsource_camera_length
-                        print(f'camera_length_layout load_paths map_dataset_to_vds {camera_length_layout}')
-                        #print(f'specific camera_length_layout load_paths map_dataset_to_vds {camera_length_layout[i]}')
-                        vsource_photon_energy = h5.VirtualSource(f['/photon_energy_eV/'])
-                        photon_energy_layout[i] = vsource_photon_energy
-                        print(f'photon_energy_layout load_paths map_dataset_to_vds {photon_energy_layout}')
-                        #print(f'specific photon_energy_layout load_paths map_dataset_to_vds {photon_energy_layout[i]}')
-                        vsource_hit_parameter = h5.VirtualSource(f['/control/hit/'])
-                        hit_parameter_layout[i] = vsource_hit_parameter
-                        print(f'hit_parameter_layout load_paths map_dataset_to_vds {hit_parameter_layout}')
-                        #print(f'specific hit_parameter_layout load_paths map_dataset_to_vds {hit_parameter_layout[i]}')
+                        
+                        #*
+                        #if statement (to check if attr_shape.shape[0] not 1 and i is not 0) 
+                        if attr_shape.shape[0] != 1 and i != 0:
+                            vsource_camera_length = h5.VirtualSource(f['/instrument/Detector-Distance_mm/'])
+                            camera_length_layout[i] = vsource_camera_length
+                            print(f'camera_length_layout load_paths map_dataset_to_vds {camera_length_layout}')
+                            #print(f'specific camera_length_layout load_paths map_dataset_to_vds {camera_length_layout[i]}')
+                            vsource_photon_energy = h5.VirtualSource(f['/photon_energy_eV/'])
+                            photon_energy_layout[i] = vsource_photon_energy
+                            print(f'photon_energy_layout load_paths map_dataset_to_vds {photon_energy_layout}')
+                            #print(f'specific photon_energy_layout load_paths map_dataset_to_vds {photon_energy_layout[i]}')
+                            vsource_hit_parameter = h5.VirtualSource(f['/control/hit/'])
+                            hit_parameter_layout[i] = vsource_hit_parameter
+                            print(f'hit_parameter_layout load_paths map_dataset_to_vds {hit_parameter_layout}')
+                            #print(f'specific hit_parameter_layout load_paths map_dataset_to_vds {hit_parameter_layout[i]}')
+                        #*
                 lst_file.close()
                 
             # Create the VDS for images and metadata in the virtual HDF5 file
@@ -88,5 +109,5 @@ class Paths:
             
     def get_vds(self) -> str:
         return self.vds_name
-    def get_file_names(self) -> list:
+    def get_file_names(self) -> list:  
         return self._h5_file_list
