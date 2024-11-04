@@ -1,2 +1,6 @@
 .vscode
 .ipynb_checkpoints
+/sbatch_scripts/
+/src/lib/__pycache__/
+/test_functions/
+/parameters.h5/
