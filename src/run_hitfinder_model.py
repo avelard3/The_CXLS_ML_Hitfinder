@@ -90,8 +90,8 @@ def main():
         'save_output_list': save_output_list,
         'device': device,
     }
-    
-    path_manager = load_paths.Paths(h5_file_list, attributes, master_file, multievent)
+    executing_mode = 'running'
+    path_manager = load_paths.Paths(h5_file_list, attributes, master_file, multievent, executing_mode)
     #path_manager is just instantiate load_paths_base.Paths(args)
     
     

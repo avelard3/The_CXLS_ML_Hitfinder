@@ -22,7 +22,7 @@ class Data(Dataset):
         self.inference_loader = None
         self.vds_path = vds_path
         self.file_list = file_list
-        
+        # add function that does this, make NONE in init
         self.file = h5.File(self.vds_path, 'r')
         self.images = self.file['vsource_image']
         

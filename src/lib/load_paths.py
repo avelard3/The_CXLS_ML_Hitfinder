@@ -11,7 +11,7 @@ import datetime
 # from .The_CXLS_ML_Hitfinder.src.lib import conf
 # from .The_CXLS_ML_Hitfinder.src.lib import read_scattering_matrix
 class Paths:
-    def __init__(self, list_path: list, attributes: dict, master_file: Optional[str] = None, is_multi_event: bool = False) -> None:
+    def __init__(self, list_path: list, attributes: dict, master_file: Optional[str] = None, is_multi_event: bool = False, executing_mode: str) -> None:
         """
         Constructor for Paths class that handles both single and multi-event files.
         Args:
@@ -24,7 +24,6 @@ class Paths:
         self._attributes = attributes
         self._master_file = master_file
         self._master_dict = {}
-        self._h5_files = Queue()
         self._h5_tensor_list, self._h5_attr_list, self._h5_file_list = [], [], []
         self._loaded_h5_tensor = None
         self._h5_file_path = None
@@ -32,14 +31,16 @@ class Paths:
         self._attribute_holding = {}
         self._number_of_events = 1
         self._is_multi_event = is_multi_event
-        
-    def map_dataset_to_vds(self) -> None:
-        
+        self._executing_mode = executing_mode
+            
+    def set_up_files(self) -> None:
+        # add decorators
         now = datetime.datetime.now()
         formatted_date_time = now.strftime("%m%d%y-%H:%M")
         self.vds_name = f'vds_{formatted_date_time}.h5'
         print(f'Creating vds with name: {self.vds_name}')
         
+        #? I think it would be really nice if we could just give it a folder with files in it and tell it to deal with that, rather than making a list file with all the names in it
         
         #! how do i find how many images exist?!?
         num_images = 3
@@ -54,6 +55,9 @@ class Paths:
             attr_shape = (num_images, 1) #change shape to (1,1)
         #*
         
+        
+    def map_dataset_to_vds(self) -> None:
+        
         with h5.File(self.vds_name, 'w') as vds_file:
             # Virtual layout for images
             image_layout = h5.VirtualLayout(shape=image_shape, dtype='float32')
@@ -67,13 +71,14 @@ class Paths:
             # Loop through each source file and map it to the virtual dataset
             with open(self._list_path, 'r') as lst_file:
                 for i, source_file in enumerate(lst_file):
+                    source_file = source_file.strip() #create a global array
+                    
                     numbered_file = source_file.strip()
-                    #*
                     if self._is_multi_event:
                         pic_num = i % self._number_of_events
-                        numbered_file =f'{numbered_file}_{str(pic_num)}'
-                    #*
+                        numbered_file =f'{numbered_file}_{str(pic_num)}
                     self._h5_file_list.append(numbered_file) # adding file to list of files
+                    
                     with h5.File(source_file, 'r') as f:
                         # Image data source
                         vsource_image = h5.VirtualSource(f['entry/data/data'])
@@ -85,7 +90,7 @@ class Paths:
                         
                         #*
                         #if statement (to check if attr_shape.shape[0] not 1 and i is not 0) 
-                        if attr_shape.shape[0] != 1 and i != 0:
+                        if attr_shape[0] != 1 and i != 0:
                             vsource_camera_length = h5.VirtualSource(f['/instrument/Detector-Distance_mm/'])
                             camera_length_layout[i] = vsource_camera_length
                             print(f'camera_length_layout load_paths map_dataset_to_vds {camera_length_layout}')
