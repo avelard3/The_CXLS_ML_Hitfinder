@@ -3,6 +3,7 @@ from lib import *
 import torch
 import datetime
 from queue import Queue
+import numpy as np
 
 def arguments(parser) -> argparse.ArgumentParser:
     """
@@ -147,10 +148,11 @@ def main() -> None:
     create_data_loader = load_data.CreateDataLoader(data_manager, batch_size)
 
     create_data_loader.split_training_data() #?
-    train_loader, test_loader = create_data_loader.get_training_data_loaders()
-        
+    train_loader, test_loader = create_data_loader.get_training_data_loaders() # so is this notgetting the parameters it should 12/17 3:48
+    
+                
     training_manager.assign_new_data(train_loader, test_loader)
-
+    
     training_manager.epoch_loop()
     training_manager.plot_loss_accuracy(training_results)
         
@@ -170,7 +172,7 @@ def main() -> None:
     # data_loader = create_data_loader.get_inference_data_loader()
     # print(f"data_loader shape from run_hitfinder_model {data_loader}")
 
-    # training_manager.classify_data(data_loader) 
+    # training_manager.classify_data(data_loader) #!
    
     
     # path_manager.process_files()

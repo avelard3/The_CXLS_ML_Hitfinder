@@ -111,7 +111,7 @@ class Binary_Classification_With_Parameters(nn.Module):
         print("models camera length shape", camera_length.shape)
         photon_energy = photon_energy.to(device).float()
         print("models photon energy shape", photon_energy.shape)
-        params = torch.stack((camera_length, photon_energy), dim=1)
+        params = torch.stack((camera_length, photon_energy), dim=1) #error 12/17 3:33, but it seems to be bc cam_len & phot_en are empty
         print("models params shape", params.shape)
         x = torch.cat((x, params), dim=1)
         print("after torch cat")
