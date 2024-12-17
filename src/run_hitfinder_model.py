@@ -111,7 +111,7 @@ def main():
     vds_dataset = path_manager.get_vds()    
     h5_file_paths = path_manager.get_file_names()
 
-    data_manager = load_data.Data(vds_dataset, h5_file_paths, transform, master_file)
+    data_manager = load_data.Data(vds_dataset, h5_file_paths, executing_mode, transform, master_file)
 
     create_data_loader = load_data.CreateDataLoader(data_manager, batch_size)
     create_data_loader.inference_data_loader()

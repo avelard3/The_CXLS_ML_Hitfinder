@@ -88,10 +88,12 @@ def main() -> None:
     transfer_learning_state_dict = args.transfer_learn
     transform = args.apply_transform # Parameter for Data class
     multievent = args.multievent
-    master_file = args.master_file
+    
     
     #temperary holding
+    transform = False
     
+    master_file = args.master_file
     if master_file == 'None' or master_file == 'none':
         master_file = None
         
@@ -102,23 +104,12 @@ def main() -> None:
     if transfer_learning_state_dict == 'None' or transfer_learning_state_dict == 'none':
         transfer_learning_state_dict = None
     
-    
-    print("train and evaluate .py line 102", transform)
-    
+        
     attributes = {
         'camera length': camera_length,
         'photon energy': photon_energy,
         'peak': peaks
     }
-    
-    # Create a queue for files to keep from overwhelming the computer (so you can just iterate one by one)
-    if multievent == 'True' or multievent == 'true':
-        path_manager = old_load_paths.PathsMultiEvent(h5_file_list,  attributes,  master_file)
-    else:
-        path_manager = old_load_paths.PathsSingleEvent(h5_file_list, attributes, master_file)
-        
-    path_manager.read_file_paths()
-    h5_file_path_queue = path_manager.get_file_path_queue()
     
     cfg = {
         'batch size': batch_size,
@@ -131,28 +122,37 @@ def main() -> None:
         'model': model_arch
     }
     
+    
+    
+    executing_mode = 'training'
+    path_manager = load_paths.Paths(h5_file_list, attributes, executing_mode, master_file, multievent)
+    
+    # Create a queue for files to keep from overwhelming the computer (so you can just iterate one by one)
+    # if multievent == 'True' or multievent == 'true':
+    #     path_manager = old_load_paths.PathsMultiEvent(h5_file_list,  attributes,  master_file)
+    # else:
+    #     path_manager = old_load_paths.PathsSingleEvent(h5_file_list, attributes, master_file)
+        
+    path_manager.run_paths()
+    
     training_manager = train_model.TrainModel(cfg, attributes, transfer_learning_state_dict)
     training_manager.make_training_instances()
     training_manager.load_model_state_dict()
 
-    # Iterate through h5 files to split data and do manager/loader
-    # FIXME: I don't understand anything
+    vds_dataset = path_manager.get_vds()
+    h5_file_paths = path_manager.get_file_names()
+    
+    data_manager = load_data.Data(vds_dataset, h5_file_paths, executing_mode, transform, master_file)
+    
+    create_data_loader = load_data.CreateDataLoader(data_manager, batch_size)
 
-    while not h5_file_path_queue.empty():
-        path_manager.process_files()
-
-        h5_tensor_list = path_manager.get_h5_tensor_list()
-        h5_attribute_list = path_manager.get_h5_attribute_list()
-        h5_file_paths = path_manager.get_h5_file_paths()
-        data_manager = load_data.Data(h5_tensor_list, h5_attribute_list, h5_file_paths, transform)
-        create_data_loader = load_data.CreateDataLoader(data_manager, batch_size)
-        create_data_loader.split_training_data()
-        train_loader, test_loader = create_data_loader.get_training_data_loaders()
+    create_data_loader.split_training_data() #?
+    train_loader, test_loader = create_data_loader.get_training_data_loaders()
         
-        training_manager.assign_new_data(train_loader, test_loader)
+    training_manager.assign_new_data(train_loader, test_loader)
 
-        training_manager.epoch_loop()
-        training_manager.plot_loss_accuracy(training_results)
+    training_manager.epoch_loop()
+    training_manager.plot_loss_accuracy(training_results)
         
     # Saving model
     training_manager.save_model(model_dict_save_path)
@@ -163,6 +163,23 @@ def main() -> None:
     evaluation_manager.run_testing_set()
     evaluation_manager.make_classification_report()
     evaluation_manager.plot_confusion_matrix(training_results)
+    
+    # create_data_loader = load_data.CreateDataLoader(data_manager, batch_size)
+    # create_data_loader.inference_data_loader() #?
+
+    # data_loader = create_data_loader.get_inference_data_loader()
+    # print(f"data_loader shape from run_hitfinder_model {data_loader}")
+
+    # training_manager.classify_data(data_loader) 
+   
+    
+    # path_manager.process_files()
+    # h5_tensor_list = path_manager.get_h5_tensor_list()
+    # h5_attribute_list = path_manager.get_h5_attribute_list()
+    # h5_file_paths = path_manager.get_h5_file_paths()
+    # data_manager = load_data.Data(h5_tensor_list, h5_attribute_list, h5_file_paths, transform)
+    # create_data_loader = load_data.CreateDataLoader(data_manager, batch_size)
+    
     
     
     

@@ -48,6 +48,7 @@ class Paths:
         
         #! how do i find how many images exist?!?
         num_images = 3
+        print("The place where you have to maanually enter the number of images in load_paths line 50", num_images)
         #FIXME
         height = 2069
         width = 2163
@@ -67,7 +68,7 @@ class Paths:
             self._image_layout = h5.VirtualLayout(shape=self._image_shape, dtype='float32')
             self._camera_length_layout = h5.VirtualLayout(shape=self._attr_shape, dtype='float32')
             self._photon_energy_layout = h5.VirtualLayout(shape=self._attr_shape, dtype='float32')
-            if self._executing_mode == 'running':
+            if self._executing_mode == 'training':
                 self._hit_parameter_layout = h5.VirtualLayout(shape=self._attr_shape, dtype='float32')
             
             # Loop through each source file and map it to the virtual dataset
@@ -78,7 +79,9 @@ class Paths:
                   
                     with h5.File(self._source_file, 'r') as f:
                         # Image data source
+                        print("self._image_shape", self._image_shape)
                         vsource_image = h5.VirtualSource(f['entry/data/data'])
+                        print("vsource_image", vsource_image.shape) #why does vsource_image = (500, 4371, 4150)
                         self._image_layout[i, 0, :, :] = vsource_image  # Map into (1, height, width)
 
                         if self._attr_shape[0] != 1 and i != 0: #multievent is false? ..... but then where does teh first one go?
@@ -89,7 +92,8 @@ class Paths:
                             self._photon_energy_layout[i] = vsource_photon_energy
 
                             vsource_hit_parameter = h5.VirtualSource(f['/control/hit/'])
-                            if self._executing_mode == 'running':
+                            if self._executing_mode == 'training':
+                                print("CRAP IT SAW THE HIT PARAM")
                                 self._hit_parameter_layout[i] = vsource_hit_parameter
 
                         f.close()
@@ -99,7 +103,7 @@ class Paths:
             vds_file.create_virtual_dataset('vsource_image', self._image_layout)
             vds_file.create_virtual_dataset('vsource_camera_length', self._camera_length_layout)
             vds_file.create_virtual_dataset('vsource_photon_energy', self._photon_energy_layout)
-            if self._executing_mode == 'running':
+            if self._executing_mode == 'training':
                 vds_file.create_virtual_dataset('vsource_hit_parameter', self._hit_parameter_layout)
             
     def add_file_to_list(self, numbered_file: str, i: int) -> None:

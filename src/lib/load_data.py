@@ -5,11 +5,12 @@ from torchvision import transforms
 from . import conf
 import sys
 from typing import Optional
+import numpy as np
 
 
 class Data(Dataset):
     
-    def __init__(self, vds_path: str, file_list: list, use_transform: bool, master_file: Optional[str] = None,) -> None:
+    def __init__(self, vds_path: str, file_list: list, executing_mode: str, use_transform: bool, master_file: Optional[str] = None,) -> None:
         """
         Initialize the Data object with classification and attribute data.
 
@@ -22,13 +23,15 @@ class Data(Dataset):
         self.inference_loader = None
         self.vds_path = vds_path
         self.file_list = file_list
+        self.executing_mode = executing_mode
         # add function that does this, make NONE in init
         self.file = h5.File(self.vds_path, 'r')
         self.images = self.file['vsource_image']
         
         self.camera_length = self.file['vsource_camera_length']
         self.photon_energy = self.file['vsource_photon_energy']
-        self.hit_parameter = self.file['vsource_hit_parameter']
+        if self.executing_mode == "training":
+            self.hit_parameter = self.file['vsource_hit_parameter']
         
         
         self.use_transform = use_transform
@@ -37,6 +40,7 @@ class Data(Dataset):
         
         # If transforms will be used, then it creates the pytorch object that will be used to transform future data
         if self.use_transform:
+            print("status of transform load data line 43", self.use_transform)
             self.make_transform()
         
     def __len__(self) -> int:
@@ -66,28 +70,39 @@ class Data(Dataset):
                 image = self.transforms(self.image_data[idx])
                 return image, self.meta_data[idx], self.file_paths[idx]
             else:
+                print("123456789",type(self.images))
+                print(type(self.camera_length))
+                print(type(self.photon_energy))
+                print(type(self.hit_parameter))
+                print(type(self.file_list))
+                
                 print(f'shape self.images[idx] in load_data getitem {self.images[idx].shape}')
                 print(f'shape self.imagesload_data getitem {self.images.shape}')
                 print(f'shape self.camera_length[idx] in load_data getitem {self.camera_length[idx].shape}')
                 print(f'shape self.camera_length in load_data getitem {self.camera_length.shape}')
-                print(f'shape self.hit_parameter[idx] in load_data getitem {self.hit_parameter[idx].shape}')
-                print(f'shape self.hit_parameter in load_data getitem {self.hit_parameter.shape}')
+
 
                 #if statement with return only one thing in masterfile metadata #! 
                 #*
+                if self.executing_mode == "running":
+                    self.hit_parameter = np.empty(self.camera_length.shape)
+
+                    
                 if self._master_file != None:
                     return self.images[idx], self.camera_length[0], self.photon_energy[0], self.hit_parameter[0], self.file_list[idx]
                 else:
                     return self.images[idx], self.camera_length[idx], self.photon_energy[idx], self.hit_parameter[idx], self.file_list[idx] #change
+
                 #*
         except Exception as e:
             print(f"An unexpected error occurred while getting item at index {idx}: {e}")
             
-    def make_transform(self) -> None:
+    def make_(self) -> None:
         """
         If the transfom flag is true, this function creates the global variable for the transform for image data. 
         This part doesn't interact with the actual data; it just stores pytorch object data for a future transform.
         """
+        print("well it's def trying to do a transform load data line 98")
         self.transforms = transforms.Compose([
             transforms.Resize(300) #Resize transform doesn't work for hitfinder, but transforms in general do work
         ])
