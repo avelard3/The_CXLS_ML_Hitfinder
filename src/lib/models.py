@@ -231,7 +231,7 @@ class Binary_Classification_SA_CA_Meta_Data(nn.Module):
         print(f'After view (flatten): {x.shape}')
         x = F.relu(self.fc1(x))
         print(f'After fc1: {x.shape}')
-        params = torch.stack((camera_length, photon_energy), dim=1)
+        params = torch.stack((camera_length, photon_energy), dim=1) #changed this from 1
         print(f'Params shape: {params.shape}')
         x = torch.cat((x, params), dim=1)
         print(f'After concatenation: {x.shape}')

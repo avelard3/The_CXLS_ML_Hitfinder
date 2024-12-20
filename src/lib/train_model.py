@@ -59,19 +59,13 @@ class TrainModel:
         
         for _, camera_length, photon_energy, _, _ in self.train_loader: 
             cam_len = np.array(camera_length)                    
-            print(cam_len)
             print("shape of cam_len in tensors train train_model, assign_new_data", cam_len.shape)
-            phot_en = np.array(photon_energy)                    
-            print(phot_en)
-            print("shape of photon energy in tensors train train_model, assign_new_data", phot_en.shape)
+
                     
         for _, camera_length, photon_energy, _, _ in self.test_loader:             
             cam_len = np.array(camera_length)                    
-            print(cam_len)
             print("shape of cam_len in tensors test train_model, assign_new_data", cam_len.shape)
-            phot_en = np.array(photon_energy)                    
-            print(phot_en) 
-            print("shape of photon energy in tensors test train_model, assign_new_data", phot_en.shape)
+
         
     def make_training_instances(self) -> None:
         """
@@ -143,19 +137,12 @@ class TrainModel:
         
         for _, camera_length, photon_energy, _, _ in self.train_loader: 
             cam_len = np.array(camera_length)                    
-            print(cam_len)
             print("shape of cam_len in tensors train train_model, just before epoch loop", cam_len.shape)
-            phot_en = np.array(photon_energy)                    
-            print(phot_en)
-            print("shape of photon energy in tensors train train_model, just before epoch loop", phot_en.shape)
+
                     
         for _, camera_length, photon_energy, _, _ in self.test_loader:             
             cam_len = np.array(camera_length)                    
-            print(cam_len)
             print("shape of cam_len in tensors test train_model,, just before epoch loop", cam_len.shape)
-            phot_en = np.array(photon_energy)                    
-            print(phot_en) 
-            print("shape of photon energy in tensors test train_model, just before epoch loop", phot_en.shape)
             
         for epoch in range(self.epochs):
             print('-- epoch '+str(epoch)) 
@@ -178,59 +165,36 @@ class TrainModel:
         self.model.train()
         
         try:
-            print("0")
-            # so theres an issue right below here
-            # so problem is in train_loader and maybe test_loader
-            print("train_loader !!!!!!!!!!!!!!!!!!!", self.train_loader)
+            print("Train in train_model")
             for images, camera_length, photon_energy, hit_parameter, _ in self.train_loader: 
-                print("0.5")
-                print("shape of images at beginning of for loop train", images.shape)
+
                 inputs = torch.Tensor(images).to(self.device, dtype=torch.float32)
-                print("shape of images as inputs in tensors train", inputs.shape)
-                print(inputs)
+                print("shape of images in train loop", inputs.shape)
+                print(type(camera_length))
                 cam_len = torch.Tensor(camera_length).to(self.device, dtype=torch.float32).squeeze()                    
-                print(cam_len)
-                print("shape of cam_len in tensors train", cam_len.shape)
+                print("shape of cam_len in train loop", cam_len.shape)
                 phot_en = torch.Tensor(photon_energy).to(self.device, dtype=torch.float32).squeeze()                    
-                print(phot_en)
-                print("shape of photon energy in tensors train", phot_en.shape)
+                print("shape of phot_en in train loop", phot_en.shape)
 
 
                 self.optimizer.zero_grad()
-                print("3")
+                
                 score = self.model(inputs, cam_len, phot_en) 
-                print("4")
                 truth = hit_parameter.reshape(-1, 1).float().to(self.device)
-                print("5")
+                
                 loss = self.criterion(score, truth)
-                print("6") #ran to here
-                # self.scaler.scale(loss).backward()
-                # print("7")
-                # self.scaler.step(self.optimizer)
-                # print("8")
-                # self.scaler.update()
-                print("9")
                 running_loss_train += loss.item()
-                print("10")
+                
                 predictions = (torch.sigmoid(score) > 0.5).long()
-                print("11")
                 accuracy_train += (predictions == truth).float().sum()
-                print("12")
                 total_predictions += torch.numel(truth)
-                print("13")
-            print("14")
+
             loss_train = running_loss_train / len(self.train_loader)  
-            print("15")
             self.plot_train_loss[epoch] = loss_train
-            print("16")
             print(f'Train loss: {loss_train}')
-            print("17")
             accuracy_train /= total_predictions
-            print("18")
             self.plot_train_accuracy[epoch] = accuracy_train
-            print("19")
             print(f'Train accuracy: {accuracy_train}')
-            print("20")
 
         except RuntimeError as e:
             print(f"RuntimeError during training: {e}")  
@@ -248,76 +212,49 @@ class TrainModel:
         """
         
         running_loss_test, accuracy_test, predictions, total = 0.0, 0.0, 0.0, 0.0
-        for _, camera_length, photon_energy, _, _ in self.train_loader: 
-            cam_len = np.array(camera_length)                    
-            print(cam_len)
-            print("shape of cam_len in tensors train train_model, after self.model.eval", cam_len.shape)
-            phot_en = np.array(photon_energy)                    
-            print(phot_en)
-            print("shape of photon energy in tensors train train_model, after self.model.eval", phot_en.shape)
-                    
-        for _, camera_length, photon_energy, _, _ in self.test_loader:             
-            cam_len = np.array(camera_length)                    
-            print(cam_len)
-            print("shape of cam_len in tensors test train_model,, after self.model.evalp", cam_len.shape)
-            phot_en = np.array(photon_energy)                    
-            print(phot_en) 
-            print("shape of photon energy in tensors test train_model, after self.model.eval", phot_en.shape)
+ 
         self.model.eval()
-        for _, camera_length, photon_energy, _, _ in self.train_loader: 
-            cam_len = np.array(camera_length)                    
-            print(cam_len)
-            print("shape of cam_len in tensors train train_model, after self.model.eval", cam_len.shape)
-            phot_en = np.array(photon_energy)                    
-            print(phot_en)
-            print("shape of photon energy in tensors train train_model, after self.model.eval", phot_en.shape)
-                    
-        for _, camera_length, photon_energy, _, _ in self.test_loader:             
-            cam_len = np.array(camera_length)                    
-            print(cam_len)
-            print("shape of cam_len in tensors test train_model,after self.model.eval", cam_len.shape)
-            phot_en = np.array(photon_energy)                    
-            print(phot_en) 
-            print("shape of photon energy in tensors test train_model, after self.model.eval", phot_en.shape)
+
+            
+        #things are looking good here with empty parameter set
+            
         try:
-            print("test_loader !!!!!!!!!!!!!!!!!!!", self.test_loader)
+            print("Test in train_model")
             with torch.no_grad():
+                
                 for images, camera_length, photon_energy, hit_parameter, _ in self.test_loader:
+    
+                    
+                    
                     # inputs = inputs.unsqueeze(1).to(self.device, dtype=torch.float32)
-                    print("shape of images at beginning of for loop test", images.shape)
                     inputs = torch.Tensor(images).to(self.device, dtype=torch.float32)
-                    print("shape of images as inputs in tensors test", inputs.shape)
-                    print(inputs)
+                    print("shape of images in test loop", inputs.shape)
                     cam_len = torch.Tensor(camera_length).to(self.device, dtype=torch.float32).squeeze()                    
+                    # print("shape of cam_len in test loop", cam_len.shape) # so this is empty 12/17 3:33 (& so is photon energy)
+                    # print(cam_len)
+                    cam_len = torch.Tensor(camera_length).to(self.device, dtype=torch.float32)
+                    # I NEED TO KNOW THE SIZE cam_len = torch.squeeze(cam_len)                  
+                    print("shape of cam_len in test loop", cam_len.shape)
                     print(cam_len)
-                    print("shape of cam_len in tensors test", cam_len.shape) # so this is empty 12/17 3:33 (& so is photon energy)
-                    phot_en = torch.Tensor(photon_energy).to(self.device, dtype=torch.float32).squeeze()                    
-                    print(phot_en)
-                    print("shape of photon energy in tensors test", phot_en.shape)
-                    print("a")
+                    #phot_en = torch.Tensor(photon_energy).to(self.device, dtype=torch.float32).squeeze()      
+                    phot_en = torch.Tensor(photon_energy).to(self.device, dtype=torch.float32)      
+                    # SAME phot_en = torch.squeeze(phot_en)        
+                    print("shape of phot_en in test loop", phot_en.shape)
+
                     score = self.model(inputs, cam_len, phot_en)
-                    print("b")
                     truth = hit_parameter.reshape(-1, 1).float().to(self.device)
-                    print("c")
+
                     loss = self.criterion(score, truth)
-                    print("d")
                     running_loss_test += loss.item()
-                    print("e")
+
                     predictions = (torch.sigmoid(score) > 0.5).long()
-                    print("f")
                     accuracy_test += (predictions == truth).float().sum()
-                    print("g")
                     total += torch.numel(truth)
-                    print("h")
 
             loss_test = running_loss_test / len(self.test_loader)
-            print("m")
             self.scheduler.step(loss_test)
-            print("n")
             self.plot_test_loss[epoch] = loss_test
-            print("p")
             accuracy_test /= total
-            print("q")
             self.plot_test_accuracy[epoch] = accuracy_test
 
             print(f'Test loss: {loss_test}')

@@ -44,18 +44,33 @@ class ModelEvaluation:
         This function creates arrays of labels and predictions to compare against each other for metrics. 
         """
         print(f'Running evaluation on model: {self.model.__class__.__name__}')
+        
+
+                  
+        for _, camera_length, photon_energy, _, _ in self.test_loader:             
+            cam_len = np.array(camera_length)                    
+            print("shape of cam_len in test_loader, evaluate_model, run_test_set, before model.eval", cam_len.shape)
+            
+            
         self.model.eval()
+        
+        for _, camera_length, photon_energy, _, _ in self.test_loader:             
+            cam_len = np.array(camera_length)                    
+            print("shape of cam_len in test_loader, evaluate_model, run_test_set, after model.eval", cam_len.shape)
+            
         try:
             with torch.no_grad():
-                for inputs, attributes, _ in self.test_loader:
+                for images, camera_length, photon_energy, hit_parameter, _ in self.test_loader:
                     
-                    # inputs = inputs.unsqueeze(1).to(self.device, dtype=torch.float32)
-                    inputs = inputs.to(self.device, dtype=torch.float32)
-                    attributes = {key: value.to(self.device, dtype=torch.float32) for key, value in attributes.items()}
+                    inputs = torch.Tensor(images).to(self.device, dtype=torch.float32)
+                    print("shape of images as inputs in evaluate loop", inputs.shape)
+                    cam_len = torch.Tensor(camera_length).to(self.device, dtype=torch.float32).squeeze()                    
+                    print("shape of cam_len in evaluate loop", cam_len.shape) 
+                    phot_en = torch.Tensor(photon_energy).to(self.device, dtype=torch.float32).squeeze()                    
+                    print("shape of phot_en in evaluate loop", phot_en.shape)
 
-                    with autocast(enabled=False):
-                        score = self.model(inputs, attributes[self.camera_length], attributes[self.photon_energy])
-                        truth = attributes[self.peak].reshape(-1, 1).float().to(self.device)
+                    score = self.model(inputs, cam_len, phot_en)
+                    truth = hit_parameter.reshape(-1, 1).float().to(self.device)
                                     
                     predictions = (torch.sigmoid(score) > 0.5).long()
                     self.all_labels.extend(torch.flatten(truth.cpu()))

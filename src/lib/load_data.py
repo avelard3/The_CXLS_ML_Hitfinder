@@ -70,23 +70,11 @@ class Data(Dataset):
                 image = self.transforms(self.image_data[idx])
                 return image, self.meta_data[idx], self.file_paths[idx]
             else:
-                print("123456789",type(self.images))
-                print(type(self.camera_length))
-                print(type(self.photon_energy))
-                print(type(self.hit_parameter))
-                print(type(self.file_list))
-                
-                print(f'shape self.images[idx] in load_data getitem {self.images[idx].shape}')
-                print(f'shape self.imagesload_data getitem {self.images.shape}')
-                print(f'shape self.camera_length[idx] in load_data getitem {self.camera_length[idx].shape}')
-                print(f'shape self.camera_length in load_data getitem {self.camera_length.shape}')
-
 
                 #if statement with return only one thing in masterfile metadata #! 
                 #*
                 if self.executing_mode == "running":
                     self.hit_parameter = np.empty(self.camera_length.shape)
-
                     
                 if self._master_file != None:
                     return self.images[idx], self.camera_length[0], self.photon_energy[0], self.hit_parameter[0], self.file_list[idx]

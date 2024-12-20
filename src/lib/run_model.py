@@ -83,6 +83,7 @@ class RunModel:
                     print(inputs)
                     #paths.extend(inputs)
                     print("shape of images as inputs after paths.extend", inputs.shape)
+                    print(type(camera_length))
                     cam_len = torch.Tensor(camera_length).to(self.device, dtype=torch.float32).squeeze()                    
                     print(cam_len)
                     print("shape of cam_len in tensors", cam_len.shape)
