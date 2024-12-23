@@ -64,9 +64,9 @@ class ModelEvaluation:
                     
                     inputs = torch.Tensor(images).to(self.device, dtype=torch.float32)
                     print("shape of images as inputs in evaluate loop", inputs.shape)
-                    cam_len = torch.Tensor(camera_length).to(self.device, dtype=torch.float32).squeeze()                    
+                    cam_len = torch.Tensor(camera_length).to(self.device, dtype=torch.float32).squeeze(1)                    
                     print("shape of cam_len in evaluate loop", cam_len.shape) 
-                    phot_en = torch.Tensor(photon_energy).to(self.device, dtype=torch.float32).squeeze()                    
+                    phot_en = torch.Tensor(photon_energy).to(self.device, dtype=torch.float32).squeeze(1)                    
                     print("shape of phot_en in evaluate loop", phot_en.shape)
 
                     score = self.model(inputs, cam_len, phot_en)

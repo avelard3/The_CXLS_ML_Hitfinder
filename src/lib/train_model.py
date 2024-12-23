@@ -167,13 +167,13 @@ class TrainModel:
         try:
             print("Train in train_model")
             for images, camera_length, photon_energy, hit_parameter, _ in self.train_loader: 
-
+                print("train ---------------------------------------", camera_length.shape)
                 inputs = torch.Tensor(images).to(self.device, dtype=torch.float32)
                 print("shape of images in train loop", inputs.shape)
                 print(type(camera_length))
-                cam_len = torch.Tensor(camera_length).to(self.device, dtype=torch.float32).squeeze()                    
+                cam_len = torch.Tensor(camera_length).to(self.device, dtype=torch.float32).squeeze(1)                    
                 print("shape of cam_len in train loop", cam_len.shape)
-                phot_en = torch.Tensor(photon_energy).to(self.device, dtype=torch.float32).squeeze()                    
+                phot_en = torch.Tensor(photon_energy).to(self.device, dtype=torch.float32).squeeze(1)                    
                 print("shape of phot_en in train loop", phot_en.shape)
 
 
@@ -229,17 +229,18 @@ class TrainModel:
                     # inputs = inputs.unsqueeze(1).to(self.device, dtype=torch.float32)
                     inputs = torch.Tensor(images).to(self.device, dtype=torch.float32)
                     print("shape of images in test loop", inputs.shape)
-                    cam_len = torch.Tensor(camera_length).to(self.device, dtype=torch.float32).squeeze()                    
-                    # print("shape of cam_len in test loop", cam_len.shape) # so this is empty 12/17 3:33 (& so is photon energy)
-                    # print(cam_len)
-                    cam_len = torch.Tensor(camera_length).to(self.device, dtype=torch.float32)
-                    # I NEED TO KNOW THE SIZE cam_len = torch.squeeze(cam_len)                  
+                    print("camera_length", camera_length)
+                    print("---------------------------------------------------------------", camera_length.shape)
+                    cam_len = torch.Tensor(camera_length).to(self.device, dtype=torch.float32).squeeze(1)                    
+              
                     print("shape of cam_len in test loop", cam_len.shape)
                     print(cam_len)
-                    #phot_en = torch.Tensor(photon_energy).to(self.device, dtype=torch.float32).squeeze()      
-                    phot_en = torch.Tensor(photon_energy).to(self.device, dtype=torch.float32)      
+                    print("photon_energy", photon_energy)
+                    phot_en = torch.Tensor(photon_energy).to(self.device, dtype=torch.float32).squeeze(1)      
+                    #phot_en = torch.Tensor(photon_energy).to(self.device, dtype=torch.float32)      
                     # SAME phot_en = torch.squeeze(phot_en)        
                     print("shape of phot_en in test loop", phot_en.shape)
+                    print(phot_en)
 
                     score = self.model(inputs, cam_len, phot_en)
                     truth = hit_parameter.reshape(-1, 1).float().to(self.device)
