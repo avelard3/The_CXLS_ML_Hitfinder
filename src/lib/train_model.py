@@ -56,15 +56,7 @@ class TrainModel:
         """
         self.train_loader = train
         self.test_loader = test
-        
-        for _, camera_length, photon_energy, _, _ in self.train_loader: 
-            cam_len = np.array(camera_length)                    
-            print("shape of cam_len in tensors train train_model, assign_new_data", cam_len.shape)
 
-                    
-        for _, camera_length, photon_energy, _, _ in self.test_loader:             
-            cam_len = np.array(camera_length)                    
-            print("shape of cam_len in tensors test train_model, assign_new_data", cam_len.shape)
 
         
     def make_training_instances(self) -> None:
@@ -134,15 +126,6 @@ class TrainModel:
         """
          
         print(f'Model testing and validation: {self.model.__class__.__name__}')       
-        
-        for _, camera_length, photon_energy, _, _ in self.train_loader: 
-            cam_len = np.array(camera_length)                    
-            print("shape of cam_len in tensors train train_model, just before epoch loop", cam_len.shape)
-
-                    
-        for _, camera_length, photon_energy, _, _ in self.test_loader:             
-            cam_len = np.array(camera_length)                    
-            print("shape of cam_len in tensors test train_model,, just before epoch loop", cam_len.shape)
             
         for epoch in range(self.epochs):
             print('-- epoch '+str(epoch)) 
@@ -167,15 +150,9 @@ class TrainModel:
         try:
             print("Train in train_model")
             for images, camera_length, photon_energy, hit_parameter, _ in self.train_loader: 
-                print("train ---------------------------------------", camera_length.shape)
                 inputs = torch.Tensor(images).to(self.device, dtype=torch.float32)
-                print("shape of images in train loop", inputs.shape)
-                print(type(camera_length))
                 cam_len = torch.Tensor(camera_length).to(self.device, dtype=torch.float32).squeeze(1)                    
-                print("shape of cam_len in train loop", cam_len.shape)
                 phot_en = torch.Tensor(photon_energy).to(self.device, dtype=torch.float32).squeeze(1)                    
-                print("shape of phot_en in train loop", phot_en.shape)
-
 
                 self.optimizer.zero_grad()
                 
@@ -228,25 +205,17 @@ class TrainModel:
                     
                     # inputs = inputs.unsqueeze(1).to(self.device, dtype=torch.float32)
                     inputs = torch.Tensor(images).to(self.device, dtype=torch.float32)
-                    print("shape of images in test loop", inputs.shape)
-                    print("camera_length", camera_length)
-                    print("---------------------------------------------------------------", camera_length.shape)
                     cam_len = torch.Tensor(camera_length).to(self.device, dtype=torch.float32).squeeze(1)                    
-              
-                    print("shape of cam_len in test loop", cam_len.shape)
-                    print(cam_len)
-                    print("photon_energy", photon_energy)
                     phot_en = torch.Tensor(photon_energy).to(self.device, dtype=torch.float32).squeeze(1)      
-                    #phot_en = torch.Tensor(photon_energy).to(self.device, dtype=torch.float32)      
-                    # SAME phot_en = torch.squeeze(phot_en)        
-                    print("shape of phot_en in test loop", phot_en.shape)
-                    print(phot_en)
 
                     score = self.model(inputs, cam_len, phot_en)
                     truth = hit_parameter.reshape(-1, 1).float().to(self.device)
 
                     loss = self.criterion(score, truth)
                     running_loss_test += loss.item()
+                    
+                        
+                        
 
                     predictions = (torch.sigmoid(score) > 0.5).long()
                     accuracy_test += (predictions == truth).float().sum()

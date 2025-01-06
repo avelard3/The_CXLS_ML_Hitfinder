@@ -77,21 +77,10 @@ class RunModel:
         try:
             with torch.no_grad(): #? what does this mean
                 for images, camera_length, photon_energy, _, paths in data_loader:
-                    print("shape of images at beginning of for loop", images.shape)
                     inputs = torch.Tensor(images).to(self.device, dtype=torch.float32)
-                    print("shape of images as inputs in tensors", inputs.shape)
-                    print(inputs)
-                    #paths.extend(inputs)
-                    print("shape of images as inputs after paths.extend", inputs.shape)
-                    print(type(camera_length))
-                    cam_len = torch.Tensor(camera_length).to(self.device, dtype=torch.float32).squeeze()                    
-                    print(cam_len)
-                    print("shape of cam_len in tensors", cam_len.shape)
-                    #cam_len = [*torch.split(cam_len, 1, dim=0)]
-                    phot_en = torch.Tensor(photon_energy).to(self.device, dtype=torch.float32).squeeze()                    
-                    print(phot_en)
-                    print("shape of photon energy in tensors", phot_en.shape)
-                    #phot_en = [*torch.split(phot_en, 1, dim=0)]
+                    cam_len = torch.Tensor(camera_length).to(self.device, dtype=torch.float32).squeeze(1)                    
+                    phot_en = torch.Tensor(photon_energy).to(self.device, dtype=torch.float32).squeeze(1)                    
+
                     score = self.model(inputs, cam_len, phot_en)
                     print(f'>>>>>>>>>>>>>>>>>>>>>>> {score} <<<<<<<<<<<<<<<<<<<<<<<<<<<')
                     prediction = (torch.sigmoid(score) > 0.5).long()

@@ -1,9 +1,6 @@
 import h5py as h5
-import hdf5plugin
 import numpy as np
 import torch
-from queue import Queue
-import concurrent.futures
 from typing import Optional
 from torch.utils.data import Dataset
 import datetime
@@ -33,6 +30,12 @@ class Paths:
         self._is_multi_event = is_multi_event
         self._executing_mode = executing_mode
         
+        #FIXME: should be variables of sbatch scripts
+        self._image_location = 'entry/data/data'
+        self._camera_length_location = '/instrument/Detector-Distance_mm/'
+        self._photon_energy_location = '/photon_energy_eV/'
+        self._hit_parameter_location = '/control/hit/'
+        
     def run_paths(self) -> None:
         self.set_up_files()
         self.map_dataset_to_vds()
@@ -46,24 +49,47 @@ class Paths:
         
         #? I think it would be really nice if we could just give it a folder with files in it and tell it to deal with that, rather than making a list file with all the names in it
         
-        #! how do i find how many images exist?!?
-        num_images = 3
-        print("The place where you have to maanually enter the number of images in load_paths line 50", num_images)
-        #FIXME
-        height = 2069
-        width = 2163
-        self._image_shape = (num_images, 1, height, width)
-
-        if self._master_file != None:
-            self._attr_shape = (1,1)
-        else:
-            self._attr_shape = (num_images, 1) #change shape to (1,1)
-
-
+        # Dynamically determine the number of images
+        total_images = 0
+        file_names_only = []
+        #Check dimensions and shape of each h5 file & store in np.array
+        with open(self._list_path, 'r') as lst_file: # open lst file
+            self._dim_and_shape_list = [] #and use list_name.append([img_shape which has num of img in h5, img_dim]) to add more data
+            for source_file in lst_file: # open one of h5 files in lst file
+                source_file = source_file.strip()
+                file_names_only.append(source_file)
+                with h5.File(source_file, 'r') as f: # use h5.File to read the h5 file that you just opened
+                    # Assuming the dataset with images is located at 'entry/data/data' #FIXME this should be an input in the sbatch script
+                    dataset_shape = f[self._image_location].shape
+                    
+                    image_file_dim = len(dataset_shape)
+                    print('DATASET SHAPE', dataset_shape)
+                    print('DATASET DIM', image_file_dim)
+                    
+                    if image_file_dim == 2:
+                        self._dim_and_shape_list.append([1, image_file_dim])
+                    elif image_file_dim == 3:
+                        self._dim_and_shape_list.append([dataset_shape[0], image_file_dim])
+                    else:
+                        print("ERROR: dimensions of dataset must be 2 or 3, but instead it was ", image_file_dim)
+                    print(self._dim_and_shape_list)
+                    print(f'File {source_file} contains {total_images} images.')
+                f.close()
+        lst_file.close()
+        self._dim_and_shape_array = np.array(self._dim_and_shape_list)
         
+        self._total_num_images = np.sum(self._dim_and_shape_array[:,0])
+        self._height = 2069 #FIXME
+        self._width = 2163 #FIXME
+        self._image_shape = (self._total_num_images, 1, self._height, self._width) #getting rid of (num_images, 1, height, width)
+        self._attr_shape = (self._total_num_images, 1) #change shape to (1,1)
+        
+        #! self.add_files_to_list(file_names_only, self._dim_and_shape_array)
+        #! need to deal with file list
+
         
     def map_dataset_to_vds(self) -> None:
-        with h5.File(self.vds_name, 'w') as vds_file:
+        with h5.File(self.vds_name, 'w') as vds_file: #start creating vds file
             # Virtual layout for images
             self._image_layout = h5.VirtualLayout(shape=self._image_shape, dtype='float32')
             self._camera_length_layout = h5.VirtualLayout(shape=self._attr_shape, dtype='float32')
@@ -72,32 +98,56 @@ class Paths:
                 self._hit_parameter_layout = h5.VirtualLayout(shape=self._attr_shape, dtype='float32')
             
             # Loop through each source file and map it to the virtual dataset
-            with open(self._list_path, 'r') as lst_file:
-                for i, source_file in enumerate(lst_file):
-                    self._source_file = source_file.strip() #create a global array
-                    self.add_file_to_list(self._source_file, i)
+            with open(self._list_path, 'r') as lst_file: # open list file
+                
+                for i, source_file in enumerate(lst_file): # for each file numbered up to i in the list file (aka: for i in range(len(lst_file)): source_file = lst_file[i])
+                    self._source_file = source_file.strip() 
+                    self.add_file_to_list(self._source_file, i) # add the current file name & number to a list to keep track of images
                   
-                    with h5.File(self._source_file, 'r') as f:
+                    with h5.File(self._source_file, 'r') as f: # using h5.File to read the current h5 file in the list 
                         # Image data source
-                        print("self._image_shape", self._image_shape)
-                        vsource_image = h5.VirtualSource(f['entry/data/data'])
-                        print("vsource_image", vsource_image.shape) #why does vsource_image = (500, 4371, 4150)
-                        self._image_layout[i, 0, :, :] = vsource_image  # Map into (1, height, width)
-
-                        if self._attr_shape[0] != 1 and i != 0: #multievent is false? ..... but then where does teh first one go?
-                            vsource_camera_length = h5.VirtualSource(f['/instrument/Detector-Distance_mm/'])
+                        # I think you can declare these in the beginning together
+                        vsource_image = h5.VirtualSource(f[self._image_location])
+                        vsource_camera_length = h5.VirtualSource(f[self._camera_length_location]) 
+                        vsource_photon_energy = h5.VirtualSource(f[self._photon_energy_location])
+                        
+                        self._image_layout[i, 0, :, :] = vsource_image # so if there are multiple images in here, then i think i would need to do things like vsource_image[0], vsource_image[1] etc
+                        
+#* I think I need a different variable to keep track of the number of which image is being looked at 
+                        if self._dim_and_shape_array[i,1] == 2: #if it's single event
+                            self.add_file_to_list(self._source_file, 1)
                             self._camera_length_layout[i] = vsource_camera_length
-
-                            vsource_photon_energy = h5.VirtualSource(f['/photon_energy_eV/'])
                             self._photon_energy_layout[i] = vsource_photon_energy
-
-                            vsource_hit_parameter = h5.VirtualSource(f['/control/hit/'])
-                            if self._executing_mode == 'training':
-                                print("CRAP IT SAW THE HIT PARAM")
-                                self._hit_parameter_layout[i] = vsource_hit_parameter
+                            
+                        elif self._dim_and_shape_array[i,1] == 2 and len(vsource_camera_length) == 1: # if it's multievent with shared metadata
+                            for j in range(self._dim_and_shape_array[i,0]):
+                                print("vsource cam length in load_paths", len(vsource_camera_length))
+                                print("i+j in load_paths", (i+j))
+                                self.add_file_to_list(self._source_file, j+1)
+                                self._camera_length_layout[i+j] = vsource_camera_length
+                                self._photon_energy_layout[i+j] = vsource_photon_energy
+                                
+                        elif self._dim_and_shape_array[i,1] == 2 and len(vsource_camera_length) > 1: # if it's multievent with indiv metadata
+                            for j in range(self._dim_and_shape_array[i,0]):
+                                print("i+j in load_paths", (i+j))
+                                self.add_file_to_list(self._source_file, j+1)
+                            
+                            print("vsource cam length in load_paths", len(vsource_camera_length))
+                            self._camera_length_layout[i] = vsource_camera_length #i think this still needs to be different than single event but idk
+                            self._photon_energy_layout[i] = vsource_photon_energy
+                            
+                        else:
+                            print("ERROR: adding metadata to virtual datasets")
+                        
+                        #if we're training
+                        if self._executing_mode == 'training':
+                            print("Created hit_parameter VDS")
+                            vsource_hit_parameter = h5.VirtualSource(f[self._hit_parameter_location])
+                            self._hit_parameter_layout[i] = vsource_hit_parameter
 
                         f.close()
                 lst_file.close()
+
                 
             # Create the VDS for images and metadata in the virtual HDF5 file
             vds_file.create_virtual_dataset('vsource_image', self._image_layout)
@@ -105,7 +155,7 @@ class Paths:
             vds_file.create_virtual_dataset('vsource_photon_energy', self._photon_energy_layout)
             if self._executing_mode == 'training':
                 vds_file.create_virtual_dataset('vsource_hit_parameter', self._hit_parameter_layout)
-            
+
     def add_file_to_list(self, numbered_file: str, i: int) -> None:
         if self._is_multi_event:
             pic_num = i % self._number_of_events

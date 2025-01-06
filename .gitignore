@@ -6,3 +6,10 @@
 /parameters.h5/
 src/lib/__pycache__/load_data.cpython-312.pyc
 src/lib/__pycache__/load_paths.cpython-312.pyc
+
+src/lib/__pycache__/evaluate_model.cpython-312.pyc
+src/lib/__pycache__/load_data.cpython-312.pyc
+src/lib/__pycache__/load_paths.cpython-312.pyc
+src/lib/__pycache__/models.cpython-312.pyc
+src/lib/__pycache__/run_model.cpython-312.pyc
+src/lib/__pycache__/train_model.cpython-312.pyc

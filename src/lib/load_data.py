@@ -120,7 +120,8 @@ class CreateDataLoader():
             
             num_train = int(0.8 * num_items)
             num_test = num_items - num_train
-
+            
+            
             try:
                 train_dataset, test_dataset = torch.utils.data.random_split(self._hitfinder_dataset, [num_train, num_test])
             except Exception as e:

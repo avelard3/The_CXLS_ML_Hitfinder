@@ -63,11 +63,8 @@ class ModelEvaluation:
                 for images, camera_length, photon_energy, hit_parameter, _ in self.test_loader:
                     
                     inputs = torch.Tensor(images).to(self.device, dtype=torch.float32)
-                    print("shape of images as inputs in evaluate loop", inputs.shape)
                     cam_len = torch.Tensor(camera_length).to(self.device, dtype=torch.float32).squeeze(1)                    
-                    print("shape of cam_len in evaluate loop", cam_len.shape) 
                     phot_en = torch.Tensor(photon_energy).to(self.device, dtype=torch.float32).squeeze(1)                    
-                    print("shape of phot_en in evaluate loop", phot_en.shape)
 
                     score = self.model(inputs, cam_len, phot_en)
                     truth = hit_parameter.reshape(-1, 1).float().to(self.device)
@@ -94,6 +91,8 @@ class ModelEvaluation:
         """
         try:
             print('Creating classification report...')
+            print("classification report self.all_labels in evaluate model", self.all_labels)
+            print("classification report self.all_predictions in evaluate model", self.all_predictions)
             self.classification_report_dict = classification_report(self.all_labels, self.all_predictions, output_dict=True)
             print('Classification Matrix: ')
             [print(f"{key}: {value}") for key, value in self.classification_report_dict.items()]

@@ -92,15 +92,7 @@ def main():
     }
     executing_mode = 'running'
     path_manager = load_paths.Paths(h5_file_list, attributes, executing_mode, master_file, multievent)
-    #path_manager is just instantiate load_paths_base.Paths(args)
-    
-    
-    # if multievent == 'True' or multievent == 'true':
-    #     path_manager = load_paths.PathsMultiEvent(h5_file_list,  attributes,  master_file)
-    # else:
-    #     path_manager = load_paths.PathsSingleEvent(h5_file_list, attributes, master_file)
-    #toc
-    #tic
+
     path_manager.run_paths()
     
     
@@ -122,8 +114,6 @@ def main():
     process_data.classify_data(data_loader) 
    
     process_data.create_model_output_lst_files()
-    #! There is no queue size now so there is no output verification
-    # process_data.output_verification(queue_size, events)
-    #toc
+
 if __name__ == '__main__':
     main()

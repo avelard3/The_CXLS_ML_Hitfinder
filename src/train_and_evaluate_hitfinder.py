@@ -127,13 +127,7 @@ def main() -> None:
     
     executing_mode = 'training'
     path_manager = load_paths.Paths(h5_file_list, attributes, executing_mode, master_file, multievent)
-    
-    # Create a queue for files to keep from overwhelming the computer (so you can just iterate one by one)
-    # if multievent == 'True' or multievent == 'true':
-    #     path_manager = old_load_paths.PathsMultiEvent(h5_file_list,  attributes,  master_file)
-    # else:
-    #     path_manager = old_load_paths.PathsSingleEvent(h5_file_list, attributes, master_file)
-        
+
     path_manager.run_paths()
     
     training_manager = train_model.TrainModel(cfg, attributes, transfer_learning_state_dict)
@@ -148,8 +142,7 @@ def main() -> None:
     create_data_loader = load_data.CreateDataLoader(data_manager, batch_size)
 
     create_data_loader.split_training_data() #?
-    train_loader, test_loader = create_data_loader.get_training_data_loaders() # so is this notgetting the parameters it should 12/17 3:48
-    
+    train_loader, test_loader = create_data_loader.get_training_data_loaders() 
                 
     training_manager.assign_new_data(train_loader, test_loader)
     
@@ -161,29 +154,11 @@ def main() -> None:
     trained_model = training_manager.get_model()
     
     # Checking and reporting accuracy of model
-    evaluation_manager = evaluate_model.ModelEvaluation(cfg, attributes, trained_model, test_loader) #error here said that test_loader doesn't have a value i think
+    evaluation_manager = evaluate_model.ModelEvaluation(cfg, attributes, trained_model, test_loader) 
     evaluation_manager.run_testing_set()
     evaluation_manager.make_classification_report()
     evaluation_manager.plot_confusion_matrix(training_results)
     
-    # create_data_loader = load_data.CreateDataLoader(data_manager, batch_size)
-    # create_data_loader.inference_data_loader() #?
 
-    # data_loader = create_data_loader.get_inference_data_loader()
-    # print(f"data_loader shape from run_hitfinder_model {data_loader}")
-
-    # training_manager.classify_data(data_loader) #!
-   
-    
-    # path_manager.process_files()
-    # h5_tensor_list = path_manager.get_h5_tensor_list()
-    # h5_attribute_list = path_manager.get_h5_attribute_list()
-    # h5_file_paths = path_manager.get_h5_file_paths()
-    # data_manager = load_data.Data(h5_tensor_list, h5_attribute_list, h5_file_paths, transform)
-    # create_data_loader = load_data.CreateDataLoader(data_manager, batch_size)
-    
-    
-    
-    
 if __name__ == '__main__':
     main()
