@@ -21,10 +21,10 @@ def arguments(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
     parser.add_argument('-d', '--dict', type=str, help='File path to the model state dict .pt file.')
     parser.add_argument('-o', '--output', type=str, help='Output file path only for the .lst files after classification.')
     
+    parser.add_argument('-im', '--image_location', type=str, help='Attribute name for the image')
     parser.add_argument('-cl', '--camera_length', type=str, help='Attribute name for the camera length parameter.')
     parser.add_argument('-pe', '--photon_energy', type=str, help='Attribute name for the photon energy parameter.')
     parser.add_argument('-b', '--batch', type=int, help='Batch size for data running through the model.')
-    parser.add_argument('-me', '--multievent', type=str, help='True or false value for if the input .h5 files are multievent or not.')
     parser.add_argument('-mf', '--master_file', type=str, default=None, help='File path to the master file containing the .lst files.')
     
     try:
@@ -65,11 +65,11 @@ def main():
     model_path = args.dict
     save_output_list = args.output 
     
-    camera_length = args.camera_length
-    photon_energy = args.photon_energy
-    peaks = None
+    image_location = args.image_location
+    camera_length_location = args.camera_length
+    photon_energy_location = args.photon_energy
+    peaks_location = None
     batch_size = args.batch
-    multievent = args.multievent
     
     # Temperary hold
     transform = False
@@ -78,11 +78,12 @@ def main():
     if master_file == 'None' or master_file == 'none':
         master_file = None
     
-    attributes = {
-        'clen': camera_length, #############ANNELISE#######################
-        'photon_energy': photon_energy,
-        'peak': peaks
-    } 
+    h5_locations = {
+        'image': image_location,
+        'camera length': camera_length_location,
+        'photon energy': photon_energy_location,
+        'peak': peaks_location
+    }
     
     cfg = {
         'model': model_arch,
@@ -91,12 +92,12 @@ def main():
         'device': device,
     }
     executing_mode = 'running'
-    path_manager = load_paths.Paths(h5_file_list, attributes, executing_mode, master_file, multievent)
+    path_manager = load_paths.Paths(h5_file_list, h5_locations, executing_mode, master_file)
 
     path_manager.run_paths()
     
     
-    process_data = run_model.RunModel(cfg, attributes)
+    process_data = run_model.RunModel(cfg, h5_locations)
     process_data.make_model_instance()
     process_data.load_model()
 

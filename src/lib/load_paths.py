@@ -8,7 +8,7 @@ import datetime
 # from .The_CXLS_ML_Hitfinder.src.lib import conf
 # from .The_CXLS_ML_Hitfinder.src.lib import read_scattering_matrix
 class Paths:
-    def __init__(self, list_path: list, attributes: dict, executing_mode: str, master_file: Optional[str] = None, is_multi_event: bool = False) -> None:
+    def __init__(self, list_path: list, h5_location: dict, executing_mode: str, master_file: Optional[str] = None, is_multi_event: bool = False) -> None:
         """
         Constructor for Paths class that handles both single and multi-event files.
         Args:
@@ -18,7 +18,7 @@ class Paths:
             is_multi_event (bool, optional): Flag to distinguish between single and multi-event processing. Defaults to False.
         """
         self._list_path = list_path
-        self._attributes = attributes
+        self._h5_location = h5_location
         self._master_file = master_file
         self._master_dict = {}
         self._h5_tensor_list, self._h5_attr_list, self._h5_file_list = [], [], []
@@ -27,14 +27,17 @@ class Paths:
         self._open_h5_file = None
         self._attribute_holding = {}
         self._number_of_events = 1
-        self._is_multi_event = is_multi_event
         self._executing_mode = executing_mode
         
         #FIXME: should be variables of sbatch scripts
-        self._image_location = 'entry/data/data'
-        self._camera_length_location = '/instrument/Detector-Distance_mm/'
-        self._photon_energy_location = '/photon_energy_eV/'
-        self._hit_parameter_location = '/control/hit/'
+        self._image_location = self._h5_location['image']
+        self._camera_length_location = self._h5_location['camera length'] #i think these might be the problem
+        self._photon_energy_location = self._h5_location['photon energy']
+        self._hit_parameter_location = self._h5_location['peak']
+        self._image_location="/images"
+        self._camera_length_location='/detector-distance'
+        self._photon_energy_location='/wavelength'
+        self._hit_parameter_location='/hit'
         
     def run_paths(self) -> None:
         self.set_up_files()
@@ -79,8 +82,8 @@ class Paths:
         self._dim_and_shape_array = np.array(self._dim_and_shape_list)
         
         self._total_num_images = np.sum(self._dim_and_shape_array[:,0])
-        self._height = 2069 #FIXME
-        self._width = 2163 #FIXME
+        self._height = 512 
+        self._width = 512
         self._image_shape = (self._total_num_images, 1, self._height, self._width) #getting rid of (num_images, 1, height, width)
         self._attr_shape = (self._total_num_images, 1) #change shape to (1,1)
         
@@ -110,7 +113,7 @@ class Paths:
                         vsource_image = h5.VirtualSource(f[self._image_location])
                         vsource_camera_length = h5.VirtualSource(f[self._camera_length_location]) 
                         vsource_photon_energy = h5.VirtualSource(f[self._photon_energy_location])
-                        
+                        print("VSOURCE IMAGE",vsource_image.shape)
                         self._image_layout[i, 0, :, :] = vsource_image # so if there are multiple images in here, then i think i would need to do things like vsource_image[0], vsource_image[1] etc
                         
 #* I think I need a different variable to keep track of the number of which image is being looked at 
@@ -157,9 +160,8 @@ class Paths:
                 vds_file.create_virtual_dataset('vsource_hit_parameter', self._hit_parameter_layout)
 
     def add_file_to_list(self, numbered_file: str, i: int) -> None:
-        if self._is_multi_event:
-            pic_num = i % self._number_of_events
-            numbered_file =f'{numbered_file}_{str(pic_num)}'
+        pic_num = i % self._number_of_events
+        numbered_file =f'{numbered_file}_{str(pic_num)}'
         self._h5_file_list.append(numbered_file)
             
     def get_vds(self) -> str:

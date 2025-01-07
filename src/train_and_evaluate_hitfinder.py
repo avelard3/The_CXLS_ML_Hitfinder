@@ -28,13 +28,13 @@ def arguments(parser) -> argparse.ArgumentParser:
     parser.add_argument('-c', '--criterion', type=str, help='Training loss function.')
     parser.add_argument('-lr', '--learning_rate', type=float, help='Training inital learning rate.')
     
+    parser.add_argument('-im', '--image_location', type=str, help='Attribute name for the image')
     parser.add_argument('-cl', '--camera_length', type=str, help='Attribute name for the camera length parameter.')
     parser.add_argument('-pe', '--photon_energy', type=str, help='Attribute name for the photon energy parameter.')
-    parser.add_argument('-pk', '--peaks', type=str, help='Attribute name for is there are peaks present.')
+    parser.add_argument('-pk', '--peaks', type=str, help='Attribute name for is there are peaks present.') #aka hit_parameter
     
     parser.add_argument('-tl', '--transfer_learn', type=str, default=None, help='File path to state dict file for transfer learning.' )
     parser.add_argument('-at', '--apply_transform', type=bool, default = False, help = 'Apply transform to images (true or false)')
-    parser.add_argument('-me', '--multievent', type=str, help='True or false value for if the input .h5 files are multievent or not.')
     parser.add_argument('-mf', '--master_file', type=str, default=None, help='File path to the master file containing the .lst files.')
     
     try:
@@ -82,13 +82,13 @@ def main() -> None:
     criterion = args.criterion
     learning_rate = args.learning_rate
     
-    camera_length = args.camera_length
-    photon_energy = args.photon_energy
-    peaks = args.peaks
+    image_location = args.image_location
+    camera_length_location = args.camera_length
+    photon_energy_location = args.photon_energy
+    peaks_location = args.peaks
     
     transfer_learning_state_dict = args.transfer_learn
     transform = args.apply_transform # Parameter for Data class
-    multievent = args.multievent
     
     
     #temperary holding
@@ -106,10 +106,11 @@ def main() -> None:
         transfer_learning_state_dict = None
     
         
-    attributes = {
-        'camera length': camera_length,
-        'photon energy': photon_energy,
-        'peak': peaks
+    h5_locations = {
+        'image': image_location,
+        'camera length': camera_length_location,
+        'photon energy': photon_energy_location,
+        'peak': peaks_location
     }
     
     cfg = {
@@ -126,11 +127,11 @@ def main() -> None:
     
     
     executing_mode = 'training'
-    path_manager = load_paths.Paths(h5_file_list, attributes, executing_mode, master_file, multievent)
+    path_manager = load_paths.Paths(h5_file_list, h5_locations, executing_mode, master_file)
 
     path_manager.run_paths()
     
-    training_manager = train_model.TrainModel(cfg, attributes, transfer_learning_state_dict)
+    training_manager = train_model.TrainModel(cfg, h5_locations, transfer_learning_state_dict)
     training_manager.make_training_instances()
     training_manager.load_model_state_dict()
 

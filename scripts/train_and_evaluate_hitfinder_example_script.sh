@@ -57,6 +57,8 @@ criterion=
 # float value of the learning rate to use for the hitfinder model
 learning_rate=
 
+# string of location of image parameter in h5 file
+image_parameter=
 # the string name of the camera length parameter to use for the hitfinder model, this can be a single string if from attribute manager, or a path if not using attribute manager or using master file
 camera_length_parameter=
 # the string name of the photon energy parameter to use for the hitfinder model, this can be a single string if from attribute manager, or a path if not using attribute manager or using master file
@@ -76,5 +78,5 @@ if [ "$transfer_learning" != "None" ]; then
 fi
 
 # Run the Python script with arguments
-python ${absoloute_path}${script_name} -l ${path_to_input_lst_file}${lst_file_name} -m ${model_class} -o ${path_to_training_results} -d ${path_to_trained_model_state_dict_output}${trained_model_state_dict} -e ${num_epochs} -b ${batch_size} -op ${optimizer} -s ${scheduler} -c ${criterion} -lr ${learning_rate} -cl ${camera_length_parameter} -pe ${photon_energy_parameter} -pk ${hit_parameter} -tl ${transfer_learning} -at ${apply_transform}
+python ${absoloute_path}${script_name} -l ${path_to_input_lst_file}${lst_file_name} -m ${model_class} -o ${path_to_training_results} -d ${path_to_trained_model_state_dict_output}${trained_model_state_dict} -e ${num_epochs} -b ${batch_size} -op ${optimizer} -s ${scheduler} -c ${criterion} -lr ${learning_rate} -im ${image_parameter} -cl ${camera_length_parameter} -pe ${photon_energy_parameter} -pk ${hit_parameter} -tl ${transfer_learning} -at ${apply_transform}
 

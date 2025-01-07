@@ -41,6 +41,8 @@ model_state_dict=
 # the file path string to the output lst files to save the hitfinder model results
 path_to_output_lst_files=
 
+# location of parameter in h5 file
+image_parameter=
 # the string name of the camera length parameter to use for the hitfinder model, this can be a single string if from attribute manager, or a path if not using attribute manager or using master file
 camera_length_parameter=
 # the string name of the photon energy parameter to use for the hitfinder model, this can be a single string if from attribute manager, or a path if not using attribute manager or using master file
@@ -49,12 +51,9 @@ photon_energy_parameter=
 # integer value of the batch size to use for the hitfinder model
 batch_size=
 
-# string boolean value of whether to use multievent or not for the hitfinder model
-multievent=
-
 # the string name of the master file being used for metadata or None if not using a master file
 master_file=None
 
 # Run the Python script with arguments
-python ${path_to_script}${script_name} -l ${path_to_input_lst_file}${input_lst_name} -m ${model_class} -d ${path_to_model_state_dict}${model_state_dict} -o ${path_to_output_lst_files} -cl ${camera_length_parameter} -pe ${photon_energy_parameter} -b ${batch_size} -me ${multievent} -mf ${master_file}
+python ${path_to_script}${script_name} -l ${path_to_input_lst_file}${input_lst_name} -m ${model_class} -d ${path_to_model_state_dict}${model_state_dict} -o ${path_to_output_lst_files} -im ${image_parameter} -cl ${camera_length_parameter} -pe ${photon_energy_parameter} -b ${batch_size} -mf ${master_file}
 
