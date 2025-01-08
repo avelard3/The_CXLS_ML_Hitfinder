@@ -155,7 +155,7 @@ def main() -> None:
     trained_model = training_manager.get_model()
     
     # Checking and reporting accuracy of model
-    evaluation_manager = evaluate_model.ModelEvaluation(cfg, attributes, trained_model, test_loader) 
+    evaluation_manager = evaluate_model.ModelEvaluation(cfg, h5_locations, trained_model, test_loader) 
     evaluation_manager.run_testing_set()
     evaluation_manager.make_classification_report()
     evaluation_manager.plot_confusion_matrix(training_results)

@@ -213,9 +213,6 @@ class TrainModel:
 
                     loss = self.criterion(score, truth)
                     running_loss_test += loss.item()
-                    
-                        
-                        
 
                     predictions = (torch.sigmoid(score) > 0.5).long()
                     accuracy_test += (predictions == truth).float().sum()

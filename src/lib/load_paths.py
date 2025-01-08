@@ -34,10 +34,10 @@ class Paths:
         self._camera_length_location = self._h5_location['camera length'] #i think these might be the problem
         self._photon_energy_location = self._h5_location['photon energy']
         self._hit_parameter_location = self._h5_location['peak']
-        self._image_location="/images"
-        self._camera_length_location='/detector-distance'
-        self._photon_energy_location='/wavelength'
-        self._hit_parameter_location='/hit'
+        self._image_location="/entry/data/data/"
+        self._camera_length_location='/instrument/Detector-Distance_mm/'
+        self._photon_energy_location='/photon_energy_eV/'
+        self._hit_parameter_location='/control/hit/'
         
     def run_paths(self) -> None:
         self.set_up_files()
@@ -80,12 +80,12 @@ class Paths:
                 f.close()
         lst_file.close()
         self._dim_and_shape_array = np.array(self._dim_and_shape_list)
-        
+        print("DIM AND SHAPE ARRAY SHAPE",self._dim_and_shape_array.shape)
         self._total_num_images = np.sum(self._dim_and_shape_array[:,0])
-        self._height = 512 
-        self._width = 512
+        self._height = 2069 #! 512
+        self._width = 2163 #! 512
         self._image_shape = (self._total_num_images, 1, self._height, self._width) #getting rid of (num_images, 1, height, width)
-        self._attr_shape = (self._total_num_images, 1) #change shape to (1,1)
+        self._attr_shape = (self._total_num_images, 1) #removing paranthesis didn't help
         
         #! self.add_files_to_list(file_names_only, self._dim_and_shape_array)
         #! need to deal with file list
@@ -111,10 +111,14 @@ class Paths:
                         # Image data source
                         # I think you can declare these in the beginning together
                         vsource_image = h5.VirtualSource(f[self._image_location])
-                        vsource_camera_length = h5.VirtualSource(f[self._camera_length_location]) 
+                        vsource_camera_length = h5.VirtualSource(f[self._camera_length_location])  #moving this down didn't help
                         vsource_photon_energy = h5.VirtualSource(f[self._photon_energy_location])
                         print("VSOURCE IMAGE",vsource_image.shape)
                         self._image_layout[i, 0, :, :] = vsource_image # so if there are multiple images in here, then i think i would need to do things like vsource_image[0], vsource_image[1] etc
+                        
+                        print("self._dim_and_shape_array[i,1]", self._dim_and_shape_array[i,1])
+                        print("len(vsource_camera_length)", self._attr_shape)
+                        print("DIM AND SHAPE ARRAY", self._dim_and_shape_array)
                         
 #* I think I need a different variable to keep track of the number of which image is being looked at 
                         if self._dim_and_shape_array[i,1] == 2: #if it's single event
@@ -122,30 +126,34 @@ class Paths:
                             self._camera_length_layout[i] = vsource_camera_length
                             self._photon_energy_layout[i] = vsource_photon_energy
                             
-                        elif self._dim_and_shape_array[i,1] == 2 and len(vsource_camera_length) == 1: # if it's multievent with shared metadata
-                            for j in range(self._dim_and_shape_array[i,0]):
-                                print("vsource cam length in load_paths", len(vsource_camera_length))
+                        elif self._dim_and_shape_array[i,1] == 3 and self._attr_shape == 1: # if it's multievent with shared metadata
+                            for j in range(self._dim_and_shape_array[i]):
+                                print("vsource cam length in load_paths", self._attr_shape)
                                 print("i+j in load_paths", (i+j))
                                 self.add_file_to_list(self._source_file, j+1)
-                                self._camera_length_layout[i+j] = vsource_camera_length
-                                self._photon_energy_layout[i+j] = vsource_photon_energy
+                                self._camera_length_layout[(i+j)] = vsource_camera_length
+                                self._photon_energy_layout[(i+j)] = vsource_photon_energy
                                 
-                        elif self._dim_and_shape_array[i,1] == 2 and len(vsource_camera_length) > 1: # if it's multievent with indiv metadata
+                        elif self._dim_and_shape_array[i,1] == 3 and self._attr_shape > 1: # if it's multievent with indiv metadata
                             for j in range(self._dim_and_shape_array[i,0]):
                                 print("i+j in load_paths", (i+j))
                                 self.add_file_to_list(self._source_file, j+1)
                             
-                            print("vsource cam length in load_paths", len(vsource_camera_length))
-                            self._camera_length_layout[i] = vsource_camera_length #i think this still needs to be different than single event but idk
+                            print("vsource cam length in load_paths", self._attr_shape)
+                            print("vsource_camera_length", vsource_camera_length)
+                            print("vsource_camera_length.shape", vsource_camera_length.shape)
+                            self._camera_length_layout[i] = vsource_camera_length # removing colon didn't help #casting to tuple did nothing
                             self._photon_energy_layout[i] = vsource_photon_energy
                             
                         else:
                             print("ERROR: adding metadata to virtual datasets")
                         
                         #if we're training
+                        print("EXECUTING MODE", self._executing_mode)
                         if self._executing_mode == 'training':
                             print("Created hit_parameter VDS")
                             vsource_hit_parameter = h5.VirtualSource(f[self._hit_parameter_location])
+                            print("Vsource_hit_parameter", vsource_hit_parameter)
                             self._hit_parameter_layout[i] = vsource_hit_parameter
 
                         f.close()
