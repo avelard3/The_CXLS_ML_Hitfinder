@@ -34,10 +34,10 @@ class Paths:
         self._camera_length_location = self._h5_location['camera length'] #i think these might be the problem
         self._photon_energy_location = self._h5_location['photon energy']
         self._hit_parameter_location = self._h5_location['peak']
-        self._image_location="/entry/data/data/"
-        self._camera_length_location='/instrument/Detector-Distance_mm/'
-        self._photon_energy_location='/photon_energy_eV/'
-        self._hit_parameter_location='/control/hit/'
+        self._image_location= '/images/'#! "/entry/data/data/"
+        self._camera_length_location= '/detector_distance/' #!'/instrument/Detector-Distance_mm/'
+        self._photon_energy_location= '/photon_energy_eV/'
+        self._hit_parameter_location= '/hit/' #!'/control/hit/'
         
     def run_paths(self) -> None:
         self.set_up_files()
@@ -82,9 +82,9 @@ class Paths:
         self._dim_and_shape_array = np.array(self._dim_and_shape_list)
         print("DIM AND SHAPE ARRAY SHAPE",self._dim_and_shape_array.shape)
         self._total_num_images = np.sum(self._dim_and_shape_array[:,0])
-        self._height = 2069 #! 512
-        self._width = 2163 #! 512
-        self._image_shape = (self._total_num_images, 1, self._height, self._width) #getting rid of (num_images, 1, height, width)
+        self._height = 512 #! 2069 #! 512
+        self._width = 512 #! 2163 #! 512
+        self._image_shape = (self._total_num_images, 1, self._height, self._width) #!DEFINITELY needs to be this shape, but IDK WHY (num_images, 1, height, width)
         self._attr_shape = (self._total_num_images, 1) #removing paranthesis didn't help
         
         #! self.add_files_to_list(file_names_only, self._dim_and_shape_array)
@@ -114,7 +114,6 @@ class Paths:
                         vsource_camera_length = h5.VirtualSource(f[self._camera_length_location])  #moving this down didn't help
                         vsource_photon_energy = h5.VirtualSource(f[self._photon_energy_location])
                         print("VSOURCE IMAGE",vsource_image.shape)
-                        self._image_layout[i, 0, :, :] = vsource_image # so if there are multiple images in here, then i think i would need to do things like vsource_image[0], vsource_image[1] etc
                         
                         print("self._dim_and_shape_array[i,1]", self._dim_and_shape_array[i,1])
                         print("len(vsource_camera_length)", self._attr_shape)
@@ -122,19 +121,34 @@ class Paths:
                         
 #* I think I need a different variable to keep track of the number of which image is being looked at 
                         if self._dim_and_shape_array[i,1] == 2: #if it's single event
+                            print("Single event in load_paths")
                             self.add_file_to_list(self._source_file, 1)
+                            self._image_layout[i, 0, :, :] = vsource_image
                             self._camera_length_layout[i] = vsource_camera_length
                             self._photon_energy_layout[i] = vsource_photon_energy
+                            if self._executing_mode == 'training':
+                                vsource_hit_parameter = h5.VirtualSource(f[self._hit_parameter_location])
+                                print("Vsource_hit_parameter", vsource_hit_parameter)
+                                self._hit_parameter_layout[i] = vsource_hit_parameter
                             
-                        elif self._dim_and_shape_array[i,1] == 3 and self._attr_shape == 1: # if it's multievent with shared metadata
+                        elif self._dim_and_shape_array[i,1] == 3 and self._attr_shape[0] == 1: # if it's multievent with shared metadata
+                            print("Multievent with shared metadata in load_paths... NOT CHECKED YET ERROR ERROR ERROR")
+                            self._image_layout[i:, 0, :, :] = vsource_image
                             for j in range(self._dim_and_shape_array[i]):
                                 print("vsource cam length in load_paths", self._attr_shape)
                                 print("i+j in load_paths", (i+j))
                                 self.add_file_to_list(self._source_file, j+1)
                                 self._camera_length_layout[(i+j)] = vsource_camera_length
                                 self._photon_energy_layout[(i+j)] = vsource_photon_energy
+                                if self._executing_mode == 'training':
+                                    print("Created hit_parameter VDS")
+                                    vsource_hit_parameter = h5.VirtualSource(f[self._hit_parameter_location])
+                                    print("Vsource_hit_parameter", vsource_hit_parameter)
+                                    self._hit_parameter_layout[(i+j)] = vsource_hit_parameter
                                 
-                        elif self._dim_and_shape_array[i,1] == 3 and self._attr_shape > 1: # if it's multievent with indiv metadata
+                        elif self._dim_and_shape_array[i,1] == 3 and self._attr_shape[0] > 1: # if it's multievent with indiv metadata
+                            print("Multievent with individual metadata in load_paths")
+                            self._image_layout[i:, 0, :, :] = vsource_image
                             for j in range(self._dim_and_shape_array[i,0]):
                                 print("i+j in load_paths", (i+j))
                                 self.add_file_to_list(self._source_file, j+1)
@@ -142,19 +156,20 @@ class Paths:
                             print("vsource cam length in load_paths", self._attr_shape)
                             print("vsource_camera_length", vsource_camera_length)
                             print("vsource_camera_length.shape", vsource_camera_length.shape)
-                            self._camera_length_layout[i] = vsource_camera_length # removing colon didn't help #casting to tuple did nothing
-                            self._photon_energy_layout[i] = vsource_photon_energy
+                            self._camera_length_layout[i:,0] = vsource_camera_length # removing colon didn't help #casting to tuple did nothing
+                            self._photon_energy_layout[i:,0] = vsource_photon_energy
+                            if self._executing_mode == 'training':
+                                print("Created hit_parameter VDS")
+                                vsource_hit_parameter = h5.VirtualSource(f[self._hit_parameter_location])
+                                print("Vsource_hit_parameter", vsource_hit_parameter)
+                                self._hit_parameter_layout[i:,0] = vsource_hit_parameter
                             
                         else:
                             print("ERROR: adding metadata to virtual datasets")
                         
                         #if we're training
                         print("EXECUTING MODE", self._executing_mode)
-                        if self._executing_mode == 'training':
-                            print("Created hit_parameter VDS")
-                            vsource_hit_parameter = h5.VirtualSource(f[self._hit_parameter_location])
-                            print("Vsource_hit_parameter", vsource_hit_parameter)
-                            self._hit_parameter_layout[i] = vsource_hit_parameter
+
 
                         f.close()
                 lst_file.close()

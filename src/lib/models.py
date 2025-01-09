@@ -70,7 +70,7 @@ class HeatmapCNN(nn.Module):
         return x
     
 class Binary_Classification_With_Parameters(nn.Module):
-    def __init__(self, input_channels=1, output_channels=1, input_size=(2163, 2069)):
+    def __init__(self, input_channels=1, output_channels=1, input_size=(512, 512)):
         super(Binary_Classification_With_Parameters, self).__init__()
         self.kernel_size1 = 10
         self.stride1 = 1
