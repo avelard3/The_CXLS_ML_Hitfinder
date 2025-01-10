@@ -110,7 +110,6 @@ def main():
     create_data_loader.inference_data_loader()
 
     data_loader = create_data_loader.get_inference_data_loader()
-    print(f"data_loader shape from run_hitfinder_model {data_loader}")
 
     process_data.classify_data(data_loader) 
    

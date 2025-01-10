@@ -82,7 +82,6 @@ class RunModel:
                     phot_en = torch.Tensor(photon_energy).to(self.device, dtype=torch.float32).squeeze(1)                    
 
                     score = self.model(inputs, cam_len, phot_en)
-                    print(f'>>>>>>>>>>>>>>>>>>>>>>> {score} <<<<<<<<<<<<<<<<<<<<<<<<<<<')
                     prediction = (torch.sigmoid(score) > 0.5).long()
                     
                     assert len(prediction) == len(paths), "Prediction and paths length mismatch."

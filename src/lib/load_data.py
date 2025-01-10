@@ -40,7 +40,6 @@ class Data(Dataset):
         
         # If transforms will be used, then it creates the pytorch object that will be used to transform future data
         if self.use_transform:
-            print("status of transform load data line 43", self.use_transform)
             self.make_transform()
         
     def __len__(self) -> int:
@@ -90,9 +89,8 @@ class Data(Dataset):
         If the transfom flag is true, this function creates the global variable for the transform for image data. 
         This part doesn't interact with the actual data; it just stores pytorch object data for a future transform.
         """
-        print("well it's def trying to do a transform load data line 98")
         self.transforms = transforms.Compose([
-            transforms.Resize(300) #Resize transform doesn't work for hitfinder, but transforms in general do work
+            transforms.Resize(512) #Resize transform doesn't work for hitfinder, but transforms in general do work
         ])
 
         

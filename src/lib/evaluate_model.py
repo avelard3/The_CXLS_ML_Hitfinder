@@ -44,20 +44,8 @@ class ModelEvaluation:
         This function creates arrays of labels and predictions to compare against each other for metrics. 
         """
         print(f'Running evaluation on model: {self.model.__class__.__name__}')
-        
-
-                  
-        for _, camera_length, photon_energy, _, _ in self.test_loader:             
-            cam_len = np.array(camera_length)                    
-            print("shape of cam_len in test_loader, evaluate_model, run_test_set, before model.eval", cam_len.shape)
-            
-            
         self.model.eval()
-        
-        for _, camera_length, photon_energy, _, _ in self.test_loader:             
-            cam_len = np.array(camera_length)                    
-            print("shape of cam_len in test_loader, evaluate_model, run_test_set, after model.eval", cam_len.shape)
-            
+
         try:
             with torch.no_grad():
                 for images, camera_length, photon_energy, hit_parameter, _ in self.test_loader:
@@ -91,8 +79,6 @@ class ModelEvaluation:
         """
         try:
             print('Creating classification report...')
-            print("classification report self.all_labels in evaluate model", self.all_labels)
-            print("classification report self.all_predictions in evaluate model", self.all_predictions)
             self.classification_report_dict = classification_report(self.all_labels, self.all_predictions, output_dict=True)
             print('Classification Matrix: ')
             [print(f"{key}: {value}") for key, value in self.classification_report_dict.items()]

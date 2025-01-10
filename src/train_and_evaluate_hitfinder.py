@@ -142,7 +142,7 @@ def main() -> None:
     
     create_data_loader = load_data.CreateDataLoader(data_manager, batch_size)
 
-    create_data_loader.split_training_data() #?
+    create_data_loader.split_training_data() 
     train_loader, test_loader = create_data_loader.get_training_data_loaders() 
                 
     training_manager.assign_new_data(train_loader, test_loader)

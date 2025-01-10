@@ -120,9 +120,7 @@ class ScatteringMatrix():
         # Find the range in the x and y direction of the panels and convert it into pixels 
         self._final_array_x_len = int(np.ceil((self._max_x - self._min_x)/self._pixel_length_x)) +2
         self._final_array_y_len = int(np.ceil((self._max_y - self._min_y)/self._pixel_length_y)) +2 
-        
-        print("self._final_array_x_len", ((self._final_array_x_len)))
-        print("self._final_array_y_len", ((self._final_array_y_len)))
+
 
 
     def insert_data_into_new_matrix(self, all_data_array: np.array):        
@@ -132,7 +130,6 @@ class ScatteringMatrix():
         # Create the final array for the pixel data using the dimensions from create_new_array
         self._final_array = np.zeros((self._num_trials_in_data ,self._final_array_y_len, self._final_array_x_len)) # shape (num_trials_in_data (ex 82), fs * num_panels, x or ss)
         
-        print("_all_data_array.shape", self._all_data_array.shape)
         
         # FIXME add an if statement to correlate which dimension or axis goes with fs or ss
         #This is conditional on size and shape of data file
@@ -150,24 +147,7 @@ class ScatteringMatrix():
 
         # Find the tv_vec for each panel; tv vec is the lowest, leftmost v_vector (and what we previously were assuming the t-vec was)
         # Need to change the fs and ss vectors into pixels so it can be rearranged. 
-        # Can I do the same thing as the 64 reshaping, but for each pixel
-        
-        # xv_vec = self._v_vec[:,0,:,:]
-        # yv_vec = self._v_vec[:,1,:,:]
 
-        # xv_min = np.min(xv_vec, axis = 1)
-        # yv_min = np.min(yv_vec, axis = 2)
-
-        # # Get the global minimums across xv and yv for each panel
-        # min_xv_over_yv = np.min(xv_min, axis=1)  # Shape (panels,)
-        # min_yv_over_xv = np.min(yv_min, axis=1)  # Shape (panels,)
-
-        # # Combine them into a single array of shape (panels, 2)
-        # self._tv_vec = np.column_stack((min_xv_over_yv, min_yv_over_xv))
-
-        # # i_ns and j_ns are the bottom leftmost pixel of each panel in pixel space. where i is the leftmost pixel in a panel (x) and j is the bottom (y)
-        # self._i_ns = (self._tv_vec[:,0] + ((self._max_x - self._min_x)/2))/self._pixel_length_x 
-        # self._j_ns = (self._tv_vec[:,1] + ((self._max_y - self._min_y)/2))/self._pixel_length_y
         
         self._i_ns = (self._t_vec_arr[:,0] + ((self._max_x - self._min_x)/2))/self._pixel_length_x 
         self._j_ns = (self._t_vec_arr[:,1] + ((self._max_y - self._min_y)/2))/self._pixel_length_y
@@ -187,7 +167,6 @@ class ScatteringMatrix():
             if self._fs_vec_arr[num,0] > 0 and self._ss_vec_arr[num,0] > 0: #if theyre both positive
                 #no rotation
                 #top left
-
                 self._final_array[:, int(np.ceil(self._j_ns[num])) : int(np.ceil(self._j_ns[num] + self._n_fs_int)), int(np.ceil(self._i_ns[num])) : int(np.ceil(self._i_ns[num] + self._n_ss_int))] = self._all_data_array_reshape[:, :, :, num]
              
             if self._fs_vec_arr[num,0] > 0 and self._ss_vec_arr[num,0] < 0: #fs pos and ss neg
@@ -344,8 +323,6 @@ class ReshapeData():
         end_y = start_y + self._crop_height
         start_x = center_x - self._crop_width // 2
         end_x = start_x + self._crop_width
-
-        #? Do we need to worry about odd numbers (when %2 != 0)
         
         data_array = data_array[:, start_y:end_y, start_x:end_x]
         

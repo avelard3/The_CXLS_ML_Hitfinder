@@ -160,6 +160,9 @@ class TrainModel:
                 truth = hit_parameter.reshape(-1, 1).float().to(self.device)
                 
                 loss = self.criterion(score, truth)
+                loss.backward()
+                self.optimizer.step()
+
                 running_loss_train += loss.item()
                 
                 predictions = (torch.sigmoid(score) > 0.5).long()
@@ -192,17 +195,12 @@ class TrainModel:
  
         self.model.eval()
 
-            
-        #things are looking good here with empty parameter set
-            
         try:
             print("Test in train_model")
             with torch.no_grad():
                 
                 for images, camera_length, photon_energy, hit_parameter, _ in self.test_loader:
-    
-                    
-                    
+
                     # inputs = inputs.unsqueeze(1).to(self.device, dtype=torch.float32)
                     inputs = torch.Tensor(images).to(self.device, dtype=torch.float32)
                     cam_len = torch.Tensor(camera_length).to(self.device, dtype=torch.float32).squeeze(1)                    

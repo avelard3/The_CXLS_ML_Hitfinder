@@ -51,15 +51,11 @@ class SpecialCaseFunctions:
             data_array (np.ndarray): The input data array to be reshaped.
 
         """
-        print("inside beginning of reshape")
         new_height, new_width = conf.eiger_4m_image_size
-        print("after new height and new width")
         batch_size, height, width  = data_array.shape
-        print("after batch size height width")
 
         if new_height < height or new_width < width:
             # Calculate the center of the images
-            print("inside cropping!")
             center_y, center_x = height // 2, width // 2
             
             # Calculate the start and end indices for the crop
@@ -67,32 +63,22 @@ class SpecialCaseFunctions:
             end_y = start_y + new_height
             start_x = center_x - new_width // 2
             end_x = start_x + new_width
-            print("before entered data array")
             data_array = data_array[:, start_y:end_y, start_x:end_x]
-            print("after entered data array")
             print(f'Cropped input data array from {height}, {width} to {new_height}, {new_width}.')
             
         if new_height > height or new_width > width:
-            print("inside padding")
-            print("data_array.shape", data_array.shape)
             current_panel, current_height, current_width = data_array.shape
-            print("apple")
             
             # Calculate padding needed for each dimension
             pad_height = (new_height - current_height) // 2
             pad_width = (new_width - current_width) // 2
-            print("banana")
             # Handle odd differences in desired vs. current size
             pad_height_extra = (new_height - current_height) % 2
             pad_width_extra = (new_width - current_width) % 2
             
-            print("before pad array")
             data_array = np.pad(data_array, pad_width=((0,0), (pad_height, pad_height + pad_height_extra), (pad_width, pad_width + pad_width_extra)), mode='constant', constant_values=0) 
-            print("after pad data")
             print(f'Padded input data array from {height}, {width} to {new_height}, {new_width}.') 
             data_array = np.array(data_array)
-            print("done casting to array")
-        print("end reshape input data")
         return data_array
     
     

@@ -96,27 +96,16 @@ class Binary_Classification_With_Parameters(nn.Module):
     def calculate_output_dimension(self, input_dim, kernel_size, stride, padding):
         return ((input_dim + 2 * padding - kernel_size) // stride) + 1
     def forward(self, x, camera_length, photon_energy):
-        print("erntering forward in models.py")
         x = self.pool1(F.relu(self.gn1(self.conv1(x))))
-        print("after pool1 models.py")
         x = F.relu(self.gn2(self.conv2(x)))
-        print("after relu models.py")
         x = x.view(x.size(0), -1)
-        print("after x.view models.py")
         x = F.relu(self.fc1(x))
-        print("after another relu in models.py")
         device = x.device
-        print("models device", device)
         camera_length = camera_length.to(device).float()
-        print("models camera length shape", camera_length.shape)
         photon_energy = photon_energy.to(device).float()
-        print("models photon energy shape", photon_energy.shape)
         params = torch.stack((camera_length, photon_energy), dim=1) #error 12/17 3:33, but it seems to be bc cam_len & phot_en are empty
-        print("models params shape", params.shape)
         x = torch.cat((x, params), dim=1)
-        print("after torch cat")
         x = self.fc2(x)
-        print("after fc2")
         return x
 
 
@@ -128,10 +117,8 @@ class Linear(nn.Module):
         self.fc = nn.Linear(self.fc_size, 3)
     
     def forward(self, x):
-
         x = x.view(-1, self.fc_size)  
         x = self.fc(x)
-        
         return x
 
 
