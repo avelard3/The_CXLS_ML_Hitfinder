@@ -109,44 +109,58 @@ class Binary_Classification_With_Parameters(nn.Module):
         return x
 
 #*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#
-class Binary_Classification_With_Parameters(nn.Module):
+class Simple_3_Layer_CNN(nn.Module):
     def __init__(self, input_channels=1, output_channels=1, input_size=(512, 512)):
-        super(Binary_Classification_With_Parameters, self).__init__()
+        super(Simple_3_Layer_CNN, self).__init__()
         self.kernel_size1 = 10
         self.stride1 = 1
         self.padding1 = 1
         self.kernel_size2 = 3
         self.stride2 = 1
         self.padding2 = 1
-        num_groups1 = 4
-        num_groups2 = 4
+
         self.conv1 = nn.Conv2d(input_channels, 8, kernel_size=self.kernel_size1, stride=self.stride1, padding=self.padding1)
-        self.gn1 = nn.GroupNorm(num_groups=num_groups1, num_channels=8)
         self.pool1 = nn.MaxPool2d(2, 2)
         self.conv2 = nn.Conv2d(8, 16, kernel_size=self.kernel_size2, stride=self.stride2, padding=self.padding2)
-        self.gn2 = nn.GroupNorm(num_groups=num_groups2, num_channels=16)
+        self.pool2 = nn.MaxPool2d(2,2)
+        self.conv3 = nn.Conv2d(16, 32, kernel_size=self.kernel_size2, stride=self.stride2, padding=self.padding2)
+        self.pool3 = nn.MaxPool2d(2,2)
         out_height1 = self.calculate_output_dimension(input_size[0], self.kernel_size1, self.stride1, self.padding1)
         out_width1 = self.calculate_output_dimension(input_size[1], self.kernel_size1, self.stride1, self.padding1)
         out_height2 = self.calculate_output_dimension(out_height1 // 2, self.kernel_size2, self.stride2, self.padding2)
         out_width2 = self.calculate_output_dimension(out_width1 // 2, self.kernel_size2, self.stride2, self.padding2)
-        self.fc_size_1 = 16 * out_height2 * out_width2
+        self.fc_size_1 = 16 * out_height2 * out_width2 #fully connected layer
         self.fc_size_2 = (out_height2 * out_width2) // 23782
         self.fc1 = nn.Linear(self.fc_size_1, self.fc_size_2)
         self.fc2 = nn.Linear(self.fc_size_2 + 2, output_channels)
     def calculate_output_dimension(self, input_dim, kernel_size, stride, padding):
         return ((input_dim + 2 * padding - kernel_size) // stride) + 1
     def forward(self, x, camera_length, photon_energy):
-        x = self.pool1(F.relu(self.gn1(self.conv1(x))))
-        x = F.relu(self.gn2(self.conv2(x)))
+        print("Starting convolutions")
+        x = self.conv1(x)
+        x = F.relu(x)
+        x = self.pool1(x)
+        print("One convolution")
+        x = self.conv2(x)
+        x = F.relu(x)
+        x = self.pool2(x)
+        print("Two convolutions")
+        x = self.conv3(x)
+        x = F.relu(x)
+        x = self.pool3(x)
+        print("Three convolutions")
         x = x.view(x.size(0), -1)
-        x = F.relu(self.fc1(x))
-        device = x.device
-        camera_length = camera_length.to(device).float()
-        photon_energy = photon_energy.to(device).float()
-        params = torch.stack((camera_length, photon_energy), dim=1) #error 12/17 3:33, but it seems to be bc cam_len & phot_en are empty
-        x = torch.cat((x, params), dim=1)
+        x = self.fc1(x)
+        x = F.relu(x)
         x = self.fc2(x)
+        print("Done with convolutions")
         return x
+    
+    # convolve, relu, pool 3x
+    # vectorize the image
+    # then do a linear layer that reduces that vector to dimension 1
+    # no group norm
+    # no sigmoid
     
 #*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#
 
