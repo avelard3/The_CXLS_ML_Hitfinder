@@ -130,9 +130,7 @@ class Simple_3_Layer_CNN(nn.Module):
         out_height2 = self.calculate_output_dimension(out_height1 // 2, self.kernel_size2, self.stride2, self.padding2)
         out_width2 = self.calculate_output_dimension(out_width1 // 2, self.kernel_size2, self.stride2, self.padding2)
         self.fc_size_1 = 16 * out_height2 * out_width2 #fully connected layer
-        self.fc_size_2 = (out_height2 * out_width2) // 23782
-        self.fc1 = nn.Linear(self.fc_size_1, self.fc_size_2)
-        self.fc2 = nn.Linear(self.fc_size_2 + 2, output_channels)
+        self.fc1 = nn.Linear(254016, output_channels)
     def calculate_output_dimension(self, input_dim, kernel_size, stride, padding):
         return ((input_dim + 2 * padding - kernel_size) // stride) + 1
     def forward(self, x, camera_length, photon_energy):
@@ -145,14 +143,15 @@ class Simple_3_Layer_CNN(nn.Module):
         x = F.relu(x)
         x = self.pool2(x)
         print("Two convolutions")
-        x = self.conv3(x)
-        x = F.relu(x)
-        x = self.pool3(x)
-        print("Three convolutions")
+        # x = self.conv3(x)
+        # x = F.relu(x)
+        # x = self.pool3(x)
+        # print("Three convolutions")
         x = x.view(x.size(0), -1)
+        print("after x.view")
         x = self.fc1(x)
+        print("after fc1")
         x = F.relu(x)
-        x = self.fc2(x)
         print("Done with convolutions")
         return x
     
