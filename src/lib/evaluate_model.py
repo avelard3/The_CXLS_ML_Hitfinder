@@ -80,6 +80,8 @@ class ModelEvaluation:
         try:
             print('Creating classification report...')
             self.classification_report_dict = classification_report(self.all_labels, self.all_predictions, output_dict=True)
+            print("all labels", self.all_labels)
+            print("all predictions", self.all_predictions)
             print('Classification Matrix: ')
             [print(f"{key}: {value}") for key, value in self.classification_report_dict.items()]
         except Exception as e:

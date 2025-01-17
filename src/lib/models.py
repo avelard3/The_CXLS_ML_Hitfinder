@@ -112,25 +112,25 @@ class Binary_Classification_With_Parameters(nn.Module):
 class Simple_3_Layer_CNN(nn.Module):
     def __init__(self, input_channels=1, output_channels=1, input_size=(512, 512)):
         super(Simple_3_Layer_CNN, self).__init__()
-        self.kernel_size1 = 10
+        self.kernel_size1 = 3
         self.stride1 = 1
         self.padding1 = 1
         self.kernel_size2 = 3
         self.stride2 = 1
         self.padding2 = 1
 
-        self.conv1 = nn.Conv2d(input_channels, 8, kernel_size=self.kernel_size1, stride=self.stride1, padding=self.padding1)
+        self.conv1 = nn.Conv2d(input_channels, 4, kernel_size=self.kernel_size1, stride=self.stride1, padding=self.padding1)
         self.pool1 = nn.MaxPool2d(2, 2)
-        self.conv2 = nn.Conv2d(8, 16, kernel_size=self.kernel_size2, stride=self.stride2, padding=self.padding2)
+        self.conv2 = nn.Conv2d(4, 8, kernel_size=self.kernel_size2, stride=self.stride2, padding=self.padding2)
         self.pool2 = nn.MaxPool2d(2,2)
-        self.conv3 = nn.Conv2d(16, 32, kernel_size=self.kernel_size2, stride=self.stride2, padding=self.padding2)
+        self.conv3 = nn.Conv2d(8, 16, kernel_size=self.kernel_size2, stride=self.stride2, padding=self.padding2)
         self.pool3 = nn.MaxPool2d(2,2)
         out_height1 = self.calculate_output_dimension(input_size[0], self.kernel_size1, self.stride1, self.padding1)
         out_width1 = self.calculate_output_dimension(input_size[1], self.kernel_size1, self.stride1, self.padding1)
         out_height2 = self.calculate_output_dimension(out_height1 // 2, self.kernel_size2, self.stride2, self.padding2)
         out_width2 = self.calculate_output_dimension(out_width1 // 2, self.kernel_size2, self.stride2, self.padding2)
-        self.fc_size_1 = 16 * out_height2 * out_width2 #fully connected layer
-        self.fc1 = nn.Linear(254016, output_channels)
+        self.fc_size_1 =16 * out_height2 * out_width2 #fully connected layer
+        self.fc1 = nn.Linear(65536, output_channels)
     def calculate_output_dimension(self, input_dim, kernel_size, stride, padding):
         return ((input_dim + 2 * padding - kernel_size) // stride) + 1
     def forward(self, x, camera_length, photon_energy):
@@ -143,10 +143,10 @@ class Simple_3_Layer_CNN(nn.Module):
         x = F.relu(x)
         x = self.pool2(x)
         print("Two convolutions")
-        # x = self.conv3(x)
-        # x = F.relu(x)
-        # x = self.pool3(x)
-        # print("Three convolutions")
+        x = self.conv3(x)
+        x = F.relu(x)
+        x = self.pool3(x)
+        print("Three convolutions")
         x = x.view(x.size(0), -1)
         print("after x.view")
         x = self.fc1(x)
