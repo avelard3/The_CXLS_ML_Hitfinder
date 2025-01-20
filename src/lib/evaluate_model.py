@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import numpy as np
-from sklearn.metrics import confusion_matrix, classification_report
+from sklearn.metrics import confusion_matrix, classification_report, RocCurveDisplay
 import matplotlib.pyplot as plt
 from torch.cuda.amp import autocast
 import datetime
@@ -80,8 +80,6 @@ class ModelEvaluation:
         try:
             print('Creating classification report...')
             self.classification_report_dict = classification_report(self.all_labels, self.all_predictions, output_dict=True)
-            print("all labels", self.all_labels)
-            print("all predictions", self.all_predictions)
             print('Classification Matrix: ')
             [print(f"{key}: {value}") for key, value in self.classification_report_dict.items()]
         except Exception as e:
@@ -125,9 +123,28 @@ class ModelEvaluation:
                 print(f'Confustion matrix saved to: {path}')
         except Exception as e:
             print(f"An error occurred while plotting confusion matrix: {e}")
-
-
-
+###############################################
+    def plot_roc_curve(self, path:str=None) -> None:
+        try:
+            print('Creating ROC curve...')
+            roc_display = RocCurveDisplay.from_predictions(self.all_labels, self.all_predictions)
+            _ = roc_display.ax_.set(
+                xlabel="False Positive Rate",
+                ylabel="True Positive Rate",
+                title="ROC Curve",
+            )
+            
+            if path != None:
+                now = datetime.datetime.now()
+                formatted_date_time = now.strftime("%m%d%y-%H%M")
+                path = path + '/' + formatted_date_time + '-' + 'roc_curve.png'
+                plt.savefig(path)
+                
+                print(f'Confustion matrix saved to: {path}')
+        except Exception as e:
+            print(f"An error occurred while creating the confusion matrix: {e}")       
+        # Plotting the confusion matrix
+        
     def get_confusion_matrix(self) -> np.ndarray:
         """ 
         This function returns the confusion matrix of the testing set.

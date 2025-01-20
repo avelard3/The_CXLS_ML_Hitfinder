@@ -159,6 +159,7 @@ def main() -> None:
     evaluation_manager.run_testing_set()
     evaluation_manager.make_classification_report()
     evaluation_manager.plot_confusion_matrix(training_results)
+    evaluation_manager.plot_roc_curve(training_results)
     
 
 if __name__ == '__main__':
