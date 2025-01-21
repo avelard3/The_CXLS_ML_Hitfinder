@@ -129,8 +129,8 @@ class Simple_3_Layer_CNN(nn.Module):
         out_width1 = self.calculate_output_dimension(input_size[1], self.kernel_size1, self.stride1, self.padding1)
         out_height2 = self.calculate_output_dimension(out_height1 // 2, self.kernel_size2, self.stride2, self.padding2)
         out_width2 = self.calculate_output_dimension(out_width1 // 2, self.kernel_size2, self.stride2, self.padding2)
-        self.fc_size_1 =16 * out_height2 * out_width2 #fully connected layer
-        self.fc1 = nn.Linear(65536, output_channels)
+        self.fc_size_1 = 0.25 * out_height2 * out_width2 #fully connected layer
+        self.fc1 = nn.Linear(self.fc_size_1, output_channels)
     def calculate_output_dimension(self, input_dim, kernel_size, stride, padding):
         return ((input_dim + 2 * padding - kernel_size) // stride) + 1
     def forward(self, x, camera_length, photon_energy):
