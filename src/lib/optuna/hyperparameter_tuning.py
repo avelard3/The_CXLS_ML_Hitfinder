@@ -248,26 +248,43 @@ def objective(self, trial):
 def define_model(self, trial):
     # We optimize the number of layers, hidden units and dropout ratio in each layer.
     
-    n_layers = trial.suggest_int("n_layers", 1, 3)
+    n_layers = trial.suggest_int("n_layers", 1, 3) #currently we've only been doing it 3 times
     layers = []
 
     # Assuming that input_channels & output_channels = 1 and input_size = (512, 512)
+    input_size = (512,512)
     input_channels = 1 # should this include the input_size????
     output_channels = 1
     for i in range(n_layers):
         #*Things that should vary inside this loop*#
         self.kernel_size = 0
         self.stride = 0
+        self.padding = 0
         self.pool_kernel_size = 0
         
         #**#
         
         ouput_channels = trial.suggest_int("n_units_l{}".format(i), 4, 128) #the 4,8,16 variable.... num_conv_channels?
-        layers.append(nn.Conv2d(input_channels, output_channels, kernel_size=self.kernel_size1, stride=self.stride1, padding=self.padding1)) # layers.append(nn.Linear(in_features, out_features))
+        layers.append(nn.Conv2d(input_channels, output_channels, kernel_size=self.kernel_size, stride=self.stride, padding=self.padding)) # layers.append(nn.Linear(in_features, out_features))
         layers.append(F.relu()) #does this need an input?? like relu(x).... is that maybe why it was nn.ReLU or whtever?
+        layers.append(nn.MaxPool2d(self.pool_kernel_size, self.pool_kernel_size))
         
         # p = trial.suggest_float("dropout_l{}".format(i), 0.2, 0.5) #* dropout!!!
         # layers.append(nn.Dropout(p))
+        
+        
+    #need to keep track of kernel,size, pad and number of layers in order to do next part
+    out_height1 = self.calculate_output_dimension(input_size[0], self.kernel_size1, self.stride1, self.padding1)
+    out_width1 = self.calculate_output_dimension(input_size[1], self.kernel_size1, self.stride1, self.padding1)
+    out_height2 = self.calculate_output_dimension(out_height1 // 2, self.kernel_size2, self.stride2, self.padding2)
+    out_width2 = self.calculate_output_dimension(out_width1 // 2, self.kernel_size2, self.stride2, self.padding2)
+    self.fc_size_1 = 0.25 * out_height2 * out_width2 #fully connected layer
+    self.fc1 = nn.Linear(self.fc_size_1, output_channels)
+    
+    #but with layers . append down there
+    x = x.view(x.size(0), -1)
+    x = self.fc1(x)
+    x = F.relu(x)
 
         input_channels = output_channels
     layers.append(nn.Linear(input_channels, CLASSES))
@@ -275,19 +292,7 @@ def define_model(self, trial):
 
     return nn.Sequential(*layers)
 
-    self.kernel_size1 = 3
-     self.stride1 = 1
-    self.padding1 = 1
-    self.kernel_size2 = 3
-    self.stride2 = 1
-    self.padding2 = 1
-#below here should just be one time and it can decide the optimal numbwer of layers inside the for loop
-    # self.conv1 = nn.Conv2d(input_channels, 4, kernel_size=self.kernel_size1, stride=self.stride1, padding=self.padding1)
-    self.pool1 = nn.MaxPool2d(2, 2)
-    self.conv2 = nn.Conv2d(4, 8, kernel_size=self.kernel_size2, stride=self.stride2, padding=self.padding2)
-    self.pool2 = nn.MaxPool2d(2,2)
-    self.conv3 = nn.Conv2d(8, 16, kernel_size=self.kernel_size2, stride=self.stride2, padding=self.padding2)
-    self.pool3 = nn.MaxPool2d(2,2)
+
     out_height1 = self.calculate_output_dimension(input_size[0], self.kernel_size1, self.stride1, self.padding1)
     out_width1 = self.calculate_output_dimension(input_size[1], self.kernel_size1, self.stride1, self.padding1)
     out_height2 = self.calculate_output_dimension(out_height1 // 2, self.kernel_size2, self.stride2, self.padding2)
