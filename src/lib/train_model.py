@@ -71,7 +71,7 @@ class TrainModel:
         try:
             self.model = getattr(m, self.model)().to(self.device)
             self.optimizer = getattr(optim, self.optimizer)(self.model.parameters(), lr=self.learning_rate)
-            self.scheduler = getattr(lrs, self.scheduler)(self.optimizer, mode='min', factor=0.1, patience=3, threshold=0.1)
+            self.scheduler = getattr(lrs, self.scheduler)(self.optimizer, mode='min', factor=0.1, patience=3, threshold=0.1) # learning rate scheduler
             self.criterion = getattr(nn, self.criterion)()
             
             print('All training objects have been created.')

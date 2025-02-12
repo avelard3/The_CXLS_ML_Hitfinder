@@ -45,7 +45,6 @@ def define_model(trial):
 
         in_features = out_features
     layers.append(nn.Linear(in_features, CLASSES))
-    layers.append(nn.LogSoftmax(dim=1))
 
     return nn.Sequential(*layers)
 
