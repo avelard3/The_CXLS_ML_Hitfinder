@@ -183,6 +183,7 @@ class Simple_3_Layer_CNN(nn.Module):
         return ((input_dim + 2 * padding - kernel_size) // stride) + 1
     def hyperparam_variables(self):
         print("hi")
+        
     def forward(self, x, camera_length, photon_energy):
         
         x = self.conv1(x)
@@ -198,7 +199,6 @@ class Simple_3_Layer_CNN(nn.Module):
         x = self.fc1(x)
         x = F.relu(x)
         return x
-
 
 
 #?#?#?#?#?#?#?#?#?#?#?#?#?#?#?#?#?#?#?#?#?#?#?#?#

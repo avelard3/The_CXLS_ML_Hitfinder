@@ -37,17 +37,17 @@ def arguments(parser) -> argparse.ArgumentParser:
     parser.add_argument('-at', '--apply_transform', type=bool, default = False, help = 'Apply transform to images (true or false)')
     parser.add_argument('-mf', '--master_file', type=str, default=None, help='File path to the master file containing the .lst files.')
     
-    
-    parser.add_argument('-ccs1', '--convolution_channel_size_1', type=tuple, default=[2,8,2], help='Lower and upper limit and step size of the final size of first convolution') #model
-    parser.add_argument('-ccs2', '--convolution_channel_size_2', type=tuple, default=[2,8,2], help='Lower and upper limit and step size of the final size of second convolution') #model
-    parser.add_argument('-cks', '--convolution_kernel_size', type=tuple, default=[3,3,0], help='Lower and upper limit and step size of convolution kernel size') #model
-    parser.add_argument('-pks', '--pool_kernel_size', type=tuple, default=[2,2,0], help='Lower and upper limit and step size of pool kernel size') #model
-    parser.add_argument('-lrr', '--learning_rate_range', type=tuple, default=[0.0001,0.001,0.0001], help='Lower and upper limit and step size of learning rate') #optimizer
-    parser.add_argument('-er', '--epoch_range', type=tuple, default=[5,100,5], help='Lower and upper limit and step size of number of epochs') #optimizer
-    parser.add_argument('-doll', '--num_dropout_linear_layers', type=tuple, default=[0,3,1], help='Lower and upper limit and step size of number of dropout layers and linear layers') #model
-    parser.add_argument('-dop', '--dropout_probability', type=tuple, default=[0.5,0.8,0.1], help='Lower and upper limit and step size of dropout popularity') #model
+    #FIXME: Need to add all the hyperparameters, thre are some missing rn
+    parser.add_argument('-ccs1', '--convolution_channel_size_1_var', type=tuple, default=[2,8], help='Lower and upper limit and step size of the final size of first convolution') #model
+    parser.add_argument('-ccs2', '--convolution_channel_size_2_var', type=tuple, default=[2,8], help='Lower and upper limit and step size of the final size of second convolution') #model
+    parser.add_argument('-cks', '--convolution_kernel_size_var', type=tuple, default=[3,3], help='Lower and upper limit and step size of convolution kernel size') #model
+    parser.add_argument('-pks', '--pool_kernel_size_var', type=tuple, default=[2,2], help='Lower and upper limit and step size of pool kernel size') #model
+    parser.add_argument('-lrr', '--learning_rate_range_var', type=tuple, default=[0.0001,0.001], help='Lower and upper limit and step size of learning rate') #optimizer
+    parser.add_argument('-er', '--epoch_range_var', type=tuple, default=[5,100], help='Lower and upper limit and step size of number of epochs') #optimizer
+    parser.add_argument('-doll', '--num_dropout_linear_layers_var', type=tuple, default=[0,3], help='Lower and upper limit and step size of number of dropout layers and linear layers') #max=3 #model
+    parser.add_argument('-dop', '--dropout_probability', type=tuple, default=[0.5,0.8], help='Lower and upper limit and step size of dropout popularity') #model
     # parser.add_argument('-lrsp', '--learning_rate_scheduler', type=tuple, defualt=[])
-    # adam parameters (optimizer) #not doing this
+    # adam parameters (optimizer) 
     # linear layer in & out features (model)
     # learning rate scheduler parameters (other?? mytery place) #reduce no LR plateu
     
@@ -95,6 +95,7 @@ def main() -> None:
     scheduler = args.scheduler
     criterion = args.criterion
     learning_rate = args.learning_rate
+
     
     image_location = args.image_location
     camera_length_location = args.camera_length
@@ -112,7 +113,7 @@ def main() -> None:
     if master_file == 'None' or master_file == 'none':
         master_file = None
         
-    # hyperparameter tuning
+    # hyperparameter tuning #? maybe add them all to a dictionary here
     conv_channel_size_1 = args.convolution_channel_size_1    
     conv_channel_size_2 = args.convolution_channel_size_2
     conv_kernel_size = args.convolution_kernel_size
@@ -122,7 +123,6 @@ def main() -> None:
     num_dropout_lin_layers = args.num_dropout_lin_layers
     droupout_probability = args.droupout_probability
     
-        
         
     # Transfer learning (yes or no)
     # FIXME: There should be a way to get bool to work for this?
@@ -149,13 +149,27 @@ def main() -> None:
     #     'model': model_arch
     # }
     
+    #do i need to define the guessing beforehand
+    # which i think means that def objective(trial) needs to start here?
+    # does it even need to be called objective or can main be the equivalent of objective and it just doesn't matter
     
-    ###############################################################################################?
+    cfg_optuna = {
+        'batch size': batch_size,
+        'device': device,
+        'epochs': epoch_range,
+        'optimizer': optimizer,
+        'scheduler': scheduler,
+        'criterion': criterion
+    }
+    
+    #TODO: Add function with the choosing of each optuna variable
+    
     executing_mode = 'training'
     path_manager = load_paths.Paths(h5_file_list, h5_locations, executing_mode, master_file)
 
     path_manager.run_paths()
     
+    #so i think if i change cfg those would be the inputs that need to be changed
     training_manager = train_model.TrainModel(cfg, h5_locations, transfer_learning_state_dict)
     training_manager.make_training_instances()
     training_manager.load_model_state_dict()
@@ -186,6 +200,13 @@ def main() -> None:
     evaluation_manager.plot_confusion_matrix(training_results)
     evaluation_manager.plot_roc_curve(training_results)
     
+def objective(trial, hyperparam_dict: dict): #learning rate is a log=true!?
+    hpd = hyperparam_dict
+    conv_channel_size_1 = trial.suggest_int('conv_channel_size_1', hpd["conv_channel_size_1_range"][0], hpd["conv_channel_size_1_range"][1])
+    conv_channel_size_2 = trial.suggest_int('conv_channel_size_2', hpd["conv_channel_size_2_range"][0], hpd["conv_channel_size_2_range"][1])
+    conv_kernel_size = trial.suggest_int('conv_kernel_size', hpd['conv_kernel_size_range'][0], hpd['conv_kernel_size_range'][1]) #?
+    pool_kernel_size = trial.suggest_int('pool_kernel_size', hpd['pool_kernel_size_range'][0], hpd['pool_kernel_size_range'][1])
+
 
 if __name__ == '__main__':
     main()

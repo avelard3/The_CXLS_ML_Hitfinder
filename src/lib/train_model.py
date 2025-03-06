@@ -57,7 +57,6 @@ class TrainModel:
         self.train_loader = train
         self.test_loader = test
 
-
         
     def make_training_instances(self) -> None:
         """
@@ -70,8 +69,8 @@ class TrainModel:
         """
         try:
             self.model = getattr(m, self.model)().to(self.device)
-            self.optimizer = getattr(optim, self.optimizer)(self.model.parameters(), lr=self.learning_rate)
-            self.scheduler = getattr(lrs, self.scheduler)(self.optimizer, mode='min', factor=0.1, patience=3, threshold=0.1) # learning rate scheduler
+            self.optimizer = getattr(optim, self.optimizer)(self.model.parameters(), lr=self.learning_rate) #arguments of adam (optim.adam(arguments,arguments))
+            self.scheduler = getattr(lrs, self.scheduler)(self.optimizer, mode='min', factor=0.1, patience=3, threshold=0.1) # learning rate scheduler #probably specific to optimizer
             self.criterion = getattr(nn, self.criterion)()
             
             print('All training objects have been created.')
@@ -117,7 +116,7 @@ class TrainModel:
             except Exception as e:
                 print(f"An unexpected error occurred: {e}")
         else:
-            print(f'There is nno model state dict to load into: {self.model.__class__.__name__}')
+            print(f'There is no model state dict to load into: {self.model.__class__.__name__}')
     
     def epoch_loop(self) -> None: 
         """
