@@ -11,9 +11,9 @@ from torch.utils.data import DataLoader
 from . import models as m
 from . import conf
 
-class TrainModel:
+class TuneModel:
     
-    def __init__(self, cfg: dict, attributes: dict, transfer_learning_state_dict: str) -> None:
+    def __init__(self, cfg: dict, hpd: dict, attributes: dict, transfer_learning_state_dict: str) -> None:
         """
         This constructor breaks up the training configuration infomation dictionary and h5 metadata key dictionary.
         In addition, a logging object is created and global list are created for storing infomation about the training loss and accuracy. 
@@ -33,12 +33,27 @@ class TrainModel:
         self.test_loader = None
         self.batch_size = cfg['batch size']
         self.device = cfg['device']
-        self.epochs = cfg['epochs']
         self.optimizer = cfg['optimizer']
         self.scheduler = cfg['scheduler']
         self.criterion = cfg['criterion']
-        self.learning_rate = cfg['learning rate']
         self.model = cfg['model']
+        
+        self.epochs = hpd['epoch']
+        self.learning_rate = hpd['learning_rate']
+        self.lr_param_factor = hpd['lr_param_factor']
+        self.lr_param_patience = hpd['lr_param_patience']
+        self.lr_param_threshold = hpd['lr_param_threshold']
+        
+        # needed in models.py
+        self.conv_channel_size_1 = hpd['conv_channel_size_1'] 
+        self.conv_channel_size_2 = hpd['conv_channel_size_2']
+        self.conv_kernel_size = hpd['conv_kernel_size']
+        self.pool_kernel_size = hpd['pool_kernel_size']
+        self.num_linear_dropout_layers = hpd['num_linear_dropout_layers']
+        self.linear_layer_size_1 = hpd['linear_layer_size_1']
+        self.linear_layer_size_2 = hpd['linear_layer_size_2']
+        self.dropout_probability = hpd['dropout_probability']
+        
         
         self.plot_train_accuracy = np.zeros(self.epochs)
         self.plot_train_loss = np.zeros(self.epochs)
@@ -161,6 +176,8 @@ class TrainModel:
                 loss = self.criterion(score, truth)
                 loss.backward()
                 self.optimizer.step()
+                
+            return loss.item()
 
                 running_loss_train += loss.item()
                 
@@ -283,3 +300,4 @@ class TrainModel:
             nn.Module: The trained model object. 
         """
         return self.model
+

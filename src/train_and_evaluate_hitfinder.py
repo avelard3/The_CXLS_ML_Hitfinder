@@ -123,9 +123,7 @@ def main() -> None:
         'learning rate': learning_rate,
         'model': model_arch
     }
-    
-    
-    
+
     executing_mode = 'training'
     path_manager = load_paths.Paths(h5_file_list, h5_locations, executing_mode, master_file)
 
