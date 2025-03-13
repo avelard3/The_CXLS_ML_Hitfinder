@@ -72,7 +72,6 @@ class Paths:
                         self._dim_and_shape_list.append([dataset_shape[0], image_file_dim])
                     else:
                         print("ERROR: dimensions of dataset must be 2 or 3, but instead it was ", image_file_dim)
-                    print(f'File {source_file} contains {total_images} images.')
                 f.close()
         lst_file.close()
         self._dim_and_shape_array = np.array(self._dim_and_shape_list) #shape is [num_images_in_file, 2 or 3 for multievent]

@@ -13,7 +13,7 @@ from . import conf
 
 class TuneModel:
     
-    def __init__(self, cfg: dict, hpd: dict, attributes: dict, transfer_learning_state_dict: str) -> None:
+    def __init__(self, cfg: dict, hpd_train: dict, hpd_model:dict, attributes: dict, transfer_learning_state_dict: str) -> None:
         """
         This constructor breaks up the training configuration infomation dictionary and h5 metadata key dictionary.
         In addition, a logging object is created and global list are created for storing infomation about the training loss and accuracy. 
@@ -38,21 +38,13 @@ class TuneModel:
         self.criterion = cfg['criterion']
         self.model = cfg['model']
         
-        self.epochs = hpd['epoch']
-        self.learning_rate = hpd['learning_rate']
-        self.lr_param_factor = hpd['lr_param_factor']
-        self.lr_param_patience = hpd['lr_param_patience']
-        self.lr_param_threshold = hpd['lr_param_threshold']
-        
-        # needed in models.py
-        self.conv_channel_size_1 = hpd['conv_channel_size_1'] 
-        self.conv_channel_size_2 = hpd['conv_channel_size_2']
-        self.conv_kernel_size = hpd['conv_kernel_size']
-        self.pool_kernel_size = hpd['pool_kernel_size']
-        self.num_linear_dropout_layers = hpd['num_linear_dropout_layers']
-        self.linear_layer_size_1 = hpd['linear_layer_size_1']
-        self.linear_layer_size_2 = hpd['linear_layer_size_2']
-        self.dropout_probability = hpd['dropout_probability']
+        self.epochs = hpd_train['epoch']
+        self.learning_rate = hpd_train['learning_rate']
+        self.lr_param_factor = hpd_train['lr_param_factor']
+        self.lr_param_patience = hpd_train['lr_param_patience']
+        self.lr_param_threshold = hpd_train['lr_param_threshold']
+
+        self.model_hpd = hpd_model
         
         
         self.plot_train_accuracy = np.zeros(self.epochs)
@@ -85,7 +77,7 @@ class TuneModel:
         try:
             self.model = getattr(m, self.model)().to(self.device)
             self.optimizer = getattr(optim, self.optimizer)(self.model.parameters(), lr=self.learning_rate) #arguments of adam (optim.adam(arguments,arguments))
-            self.scheduler = getattr(lrs, self.scheduler)(self.optimizer, mode='min', factor=0.1, patience=3, threshold=0.1) # learning rate scheduler #probably specific to optimizer
+            self.scheduler = getattr(lrs, self.scheduler)(self.optimizer, mode='min', factor=self.lr_param_factor, patience=self.lr_param_patience, threshold=self.lr_param_threshold) # learning rate scheduler #probably specific to optimizer
             self.criterion = getattr(nn, self.criterion)() # loss function. should probably leave that alone for now
             
             print('All training objects have been created.')
@@ -170,7 +162,7 @@ class TuneModel:
 
                 self.optimizer.zero_grad()
                 
-                score = self.model(inputs, cam_len, phot_en) 
+                score = self.model(inputs, cam_len, phot_en, self.model_hpd) 
                 truth = hit_parameter.reshape(-1, 1).float().to(self.device)
                 
                 loss = self.criterion(score, truth)
@@ -179,18 +171,18 @@ class TuneModel:
                 
             return loss.item()
 
-                running_loss_train += loss.item()
+            #     running_loss_train += loss.item()
                 
-                predictions = (torch.sigmoid(score) > 0.5).long()
-                accuracy_train += (predictions == truth).float().sum()
-                total_predictions += torch.numel(truth)
+            #     predictions = (torch.sigmoid(score) > 0.5).long()
+            #     accuracy_train += (predictions == truth).float().sum()
+            #     total_predictions += torch.numel(truth)
 
-            loss_train = running_loss_train / len(self.train_loader)  
-            self.plot_train_loss[epoch] = loss_train
-            print(f'Train loss: {loss_train}')
-            accuracy_train /= total_predictions
-            self.plot_train_accuracy[epoch] = accuracy_train
-            print(f'Train accuracy: {accuracy_train}')
+            # loss_train = running_loss_train / len(self.train_loader)  
+            # self.plot_train_loss[epoch] = loss_train
+            # print(f'Train loss: {loss_train}')
+            # accuracy_train /= total_predictions
+            # self.plot_train_accuracy[epoch] = accuracy_train
+            # print(f'Train accuracy: {accuracy_train}')
 
         except RuntimeError as e:
             print(f"RuntimeError during training: {e}")  
