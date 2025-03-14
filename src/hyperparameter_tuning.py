@@ -34,7 +34,6 @@ def arguments(parser) -> argparse.ArgumentParser:
     parser.add_argument('-at', '--apply_transform', type=bool, default = False, help = 'Apply transform to images (true or false)')
     parser.add_argument('-mf', '--master_file', type=str, default=None, help='File path to the master file containing the .lst files.')
     
-    nargs=2,
     #FIXME: Need to add all the hyperparameters, thre are some missing rn
     parser.add_argument('-er', '--epoch_range', type=int, nargs=2, default=[5,100], help='Lower and upper limit of number of epochs') #optimizer
     parser.add_argument('-lrr', '--learning_rate_range', type=float, nargs=2, default=[0.0001,0.001], help='Lower and upper limit of learning rate') #optimizer

@@ -11,6 +11,11 @@ from torch.utils.data import DataLoader
 from . import models as m
 from . import conf
 
+
+import optuna
+
+from torchvision import datasets, transforms
+
 class TuneModel:
     
     def __init__(self, cfg: dict, hpd_train: dict, hpd_model:dict, attributes: dict, transfer_learning_state_dict: str) -> None:
@@ -75,6 +80,34 @@ class TuneModel:
         - the loss criterion
         """
         try:
+            # Debugging print statements before assigning self.model
+            print(f"Before getattr: self.model = {self.model}")
+
+            # Check if `m` contains the model class
+            print(f"Available attributes in m: {dir(m)}")
+
+            # Try to retrieve the model class
+            model_class = getattr(m, self.model, None)
+            if model_class is None:
+                raise AttributeError(f"'{self.model}' is not found in module {m}.")
+
+            print(f"Retrieved model class: {model_class}")
+
+            # Ensure the retrieved class is callable (a model, not a string or invalid type)
+            if not callable(model_class):
+                raise TypeError(f"'{self.model}' is not a callable class in module {m}.")
+
+            # Instantiate the model
+            model_instance = model_class()
+            print(f"Model instance: {model_instance}, type: {type(model_instance)}")
+
+            # Check if `.to(self.device)` is valid
+            if not hasattr(model_instance, "to"):
+                raise AttributeError(f"The retrieved model instance does not have a `.to()` method.")
+
+            # Finally, assign self.model
+            self.model = model_instance.to(self.device)
+            print("Model successfully assigned and moved to device.")
             self.model = getattr(m, self.model)().to(self.device)
             self.optimizer = getattr(optim, self.optimizer)(self.model.parameters(), lr=self.learning_rate) #arguments of adam (optim.adam(arguments,arguments))
             self.scheduler = getattr(lrs, self.scheduler)(self.optimizer, mode='min', factor=self.lr_param_factor, patience=self.lr_param_patience, threshold=self.lr_param_threshold) # learning rate scheduler #probably specific to optimizer
