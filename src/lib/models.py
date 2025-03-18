@@ -162,8 +162,9 @@ class Simple_3_Layer_CNN(nn.Module):
 #?#?#?#?#?#?#?#?#?#?#?#?#?#?#?#?#?#?#?#?#?#?#?#?#
 class Optuna_Simple_CNN(nn.Module): #
     def __init__(self, input_channels=1, output_channels=1, input_size=(512, 512), hpd=None):
-        super(Simple_3_Layer_CNN, self).__init__()
-                
+        super(Optuna_Simple_CNN, self).__init__()
+        if hpd is None:
+            raise ValueError("Hyperparameter dictionary (hpd) cannot be None")        
         # needed in models.py
         self.conv_channel_size_1 = hpd['conv_channel_size_1'] 
         self.conv_channel_size_2 = hpd['conv_channel_size_2']

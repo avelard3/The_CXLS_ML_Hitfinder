@@ -145,7 +145,6 @@ class Paths:
                             self._camera_length_layout[k:(k+self._dim_and_shape_array[i,0]),0] = vsource_camera_length # removing colon didn't help #casting to tuple did nothing
                             self._photon_energy_layout[k:(k+self._dim_and_shape_array[i,0]),0] = vsource_photon_energy
                             if self._executing_mode == 'training':
-                                print("Created hit_parameter VDS")
                                 vsource_hit_parameter = h5.VirtualSource(f[self._hit_parameter_location])
                                 self._hit_parameter_layout[k:(k+self._dim_and_shape_array[i,0]),0] = vsource_hit_parameter
                             

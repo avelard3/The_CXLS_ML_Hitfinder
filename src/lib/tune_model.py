@@ -195,7 +195,7 @@ class TuneModel:
 
                 self.optimizer.zero_grad()
                 
-                score = self.model(inputs, cam_len, phot_en, self.model_hpd) 
+                score = self.model(inputs, cam_len, phot_en, hpd=self.model_hpd) 
                 truth = hit_parameter.reshape(-1, 1).float().to(self.device)
                 
                 loss = self.criterion(score, truth)
