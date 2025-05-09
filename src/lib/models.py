@@ -119,9 +119,6 @@ class Simple_3_Layer_CNN(nn.Module):
         self.stride2 = 1
         self.padding2 = 1
 
-
-
-
         self.conv1 = nn.Conv2d(input_channels, 4, kernel_size=self.kernel_size1, stride=self.stride1, padding=self.padding1)
         self.pool1 = nn.MaxPool2d(2, 2)
         self.conv2 = nn.Conv2d(4, 8, kernel_size=self.kernel_size2, stride=self.stride2, padding=self.padding2)
@@ -132,30 +129,37 @@ class Simple_3_Layer_CNN(nn.Module):
         out_width1 = self.calculate_output_dimension(input_size[1], self.kernel_size1, self.stride1, self.padding1)
         out_height2 = self.calculate_output_dimension(out_height1 // 2, self.kernel_size2, self.stride2, self.padding2)
         out_width2 = self.calculate_output_dimension(out_width1 // 2, self.kernel_size2, self.stride2, self.padding2)
-        self.fc_size_1 = 0.25 * out_height2 * out_width2 #fully connected layer
+        self.fc_size_1 = out_height2 * out_width2 #fully connected layer
         self.fc1 = nn.Linear(self.fc_size_1, output_channels)
     def calculate_output_dimension(self, input_dim, kernel_size, stride, padding):
         return ((input_dim + 2 * padding - kernel_size) // stride) + 1
     def forward(self, x, camera_length, photon_energy):
         x = self.conv1(x)
+        print('1', x.shape)
         x = F.relu(x)
+        print('2', x.shape)
         x = self.pool1(x)
+        print('3', x.shape)
         x = self.conv2(x)
+        print('4', x.shape)
         x = F.relu(x)
+        print('5', x.shape)
         x = self.pool2(x)
+        print('6', x.shape)
         x = self.conv3(x)
+        print('7', x.shape)
         x = F.relu(x)
+        print('8', x.shape)
         x = self.pool3(x)
+        print('9', x.shape)
+        print("right before where size is i think")
         x = x.view(x.size(0), -1)
+        print('10', x.shape)
         x = self.fc1(x)
+        print('11', x.shape)
         x = F.relu(x)
+        print('12', x.shape)
         return x
-    
-    # convolve, relu, pool 3x
-    # vectorize the image
-    # then do a linear layer that reduces that vector to dimension 1
-    # no group norm
-    # no sigmoid
     
 #*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#
 
@@ -163,53 +167,79 @@ class Simple_3_Layer_CNN(nn.Module):
 class Optuna_Simple_CNN(nn.Module): #
     def __init__(self, input_channels=1, output_channels=1, input_size=(512, 512), hpd=None):
         super(Optuna_Simple_CNN, self).__init__()
+        self.hpd = hpd
+        print("IN MODELS checking to see if the model_hpd has something in it", self.hpd)
         if hpd is None:
-            raise ValueError("Hyperparameter dictionary (hpd) cannot be None")        
+            raise ValueError("Hyperparameter dictionary (hpd) cannot be None -av")        
         # needed in models.py
-        self.conv_channel_size_1 = hpd['conv_channel_size_1'] 
-        self.conv_channel_size_2 = hpd['conv_channel_size_2']
-        self.conv_kernel_size = hpd['conv_kernel_size']
-        self.pool_kernel_size = hpd['pool_kernel_size']
-        self.num_linear_dropout_layers = hpd['num_linear_dropout_layers']
-        self.linear_layer_size_1 = hpd['linear_layer_size_1']
-        self.linear_layer_size_2 = hpd['linear_layer_size_2']
-        self.dropout_probability = hpd['dropout_probability'] #not implemented yet
+        self.conv_channel_size_1 = self.hpd['conv_channel_size_1'] 
+        self.conv_channel_size_2 = self.hpd['conv_channel_size_2']
+        self.conv_kernel_size = self.hpd['conv_kernel_size']
+        self.pool_kernel_size = self.hpd['pool_kernel_size']
+        self.num_linear_dropout_layers = self.hpd['num_linear_dropout_layers']
+        self.linear_layer_size_1 = self.hpd['linear_layer_size_1']
+        self.linear_layer_size_2 = self.hpd['linear_layer_size_2']
+        self.dropout_probability = self.hpd['dropout_probability'] #not implemented yet
         
         self.stride = 1
         self.padding = 1
 
         self.conv1 = nn.Conv2d(input_channels, self.conv_channel_size_1, kernel_size=self.conv_kernel_size, stride=self.stride, padding=self.padding)
         self.conv2 = nn.Conv2d(self.conv_channel_size_1, self.conv_channel_size_2, kernel_size=self.conv_kernel_size, stride=self.stride, padding=self.padding)
-        self.conv3 = nn.Conv2d(self.conv_channel_size_1, output_channels, kernel_size=self.conv_kernel_size, stride=self.stride, padding=self.padding)        
+        self.conv3 = nn.Conv2d(self.conv_channel_size_2, output_channels, kernel_size=self.conv_kernel_size, stride=self.stride, padding=self.padding)        
+        #this is fine?
+        print(self.conv1)
+        print(self.conv2)
+        print(self.conv3)
         
         self.pool = nn.MaxPool2d(self.pool_kernel_size, self.pool_kernel_size)
+        print(self.pool)
         
         out_height1 = self.calculate_output_dimension(input_size[0], self.conv_kernel_size, self.stride, self.padding)
+        print(out_height1)
         out_width1 = self.calculate_output_dimension(input_size[1], self.conv_kernel_size, self.stride, self.padding)
+        print(out_width1)
         out_height2 = self.calculate_output_dimension(out_height1 // 2, self.conv_kernel_size, self.stride, self.padding)
+        print(out_height2)
         out_width2 = self.calculate_output_dimension(out_width1 // 2, self.conv_kernel_size, self.stride, self.padding)
-        
-        self.fc_size = (self.conv_channel_size_1/output_channels) * out_height2 * out_width2 #fully connected layer #i think that 0.25 is conv_channel_size_1/output_channels.... based on the other cnn
+        print(out_width2)
+        self.fc_size = int((1/16) * out_height2 * out_width2) #fully connected layer #i think that 0.25 is conv_channel_size_1/output_channels.... based on the other cnn
+        print(self.fc_size)
         self.fc = nn.Linear(self.fc_size, output_channels)
+        print(self.fc)
 
+    def calculate_output_dimension(self, input_dim, kernel_size, stride, padding):
+        return ((input_dim + 2 * padding - kernel_size) // stride) + 1
     def forward(self, x, camera_length, photon_energy):
+        print("forward")
         x = self.conv1(x)
+        print(x.shape) #1
         x = F.relu(x)
+        print(x.shape) #2
         x = self.pool(x)
+        print(x.shape) #3
         
         x = self.conv2(x)
+        print(x.shape) #4
         x = F.relu(x)
+        print(x.shape) #5
         x = self.pool(x)
+        print(x.shape) #6
         
         x = self.conv3(x)
+        print(x.shape) #7
         x = F.relu(x)
-        x = self.pool3(x)
+        print(x.shape) #8
+        x = self.pool(x)
+        print(x.shape) #9
         
-        #add dropout and linear layer
-        
-        x = x.view(x.size(0), -1)
-        x = self.fc(x)
+        #TODO: add dropout and linear layer
+        x = x.view(x.size(0), -1) #reshaping it to a vector
+        print(x.shape) #10
+        x = self.fc(x) #! the error happened at this step, which is not surprising
+        print(x.shape) #11
         x = F.relu(x)
+        print(x.shape) #12
         return x
 
 

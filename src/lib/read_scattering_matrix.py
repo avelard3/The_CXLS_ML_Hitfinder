@@ -128,8 +128,9 @@ class ScatteringMatrix():
         self._num_trials_in_data = self._all_data_array.shape[0]
         
         # Create the final array for the pixel data using the dimensions from create_new_array
+        print("read_scattering_matrix131")
         self._final_array = np.zeros((self._num_trials_in_data ,self._final_array_y_len, self._final_array_x_len)) # shape (num_trials_in_data (ex 82), fs * num_panels, x or ss)
-        
+        print("read_scattering_matrix133")
         
         # FIXME add an if statement to correlate which dimension or axis goes with fs or ss
         #This is conditional on size and shape of data file

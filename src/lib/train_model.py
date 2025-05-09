@@ -152,9 +152,9 @@ class TrainModel:
                 inputs = torch.Tensor(images).to(self.device, dtype=torch.float32)
                 cam_len = torch.Tensor(camera_length).to(self.device, dtype=torch.float32).squeeze(1)                    
                 phot_en = torch.Tensor(photon_energy).to(self.device, dtype=torch.float32).squeeze(1)                    
-
+                print("train_model155")
                 self.optimizer.zero_grad()
-                
+                print("train_model157")
                 score = self.model(inputs, cam_len, phot_en) 
                 truth = hit_parameter.reshape(-1, 1).float().to(self.device)
                 

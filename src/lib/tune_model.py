@@ -80,37 +80,44 @@ class TuneModel:
         - the loss criterion
         """
         try:
-            # Debugging print statements before assigning self.model
-            print(f"Before getattr: self.model = {self.model}")
+            # # Debugging print statements before assigning self.model
+            # print(f"Before getattr: self.model = {self.model}")
 
-            # Check if `m` contains the model class
-            print(f"Available attributes in m: {dir(m)}")
+            # # Check if `m` contains the model class
 
-            # Try to retrieve the model class
-            model_class = getattr(m, self.model, None)
-            if model_class is None:
-                raise AttributeError(f"'{self.model}' is not found in module {m}.")
+            # # Try to retrieve the model class
+            # model_class = getattr(m, self.model, None) #? What does the None stand for?
+            # if model_class is None:
+            #     raise AttributeError(f"'{self.model}' is not found in module {m}.")
 
-            print(f"Retrieved model class: {model_class}")
+            # # Ensure the retrieved class is callable (a model, not a string or invalid type)
+            # if not callable(model_class):
+            #     raise TypeError(f"'{self.model}' is not a callable class in module {m}.")
 
-            # Ensure the retrieved class is callable (a model, not a string or invalid type)
-            if not callable(model_class):
-                raise TypeError(f"'{self.model}' is not a callable class in module {m}.")
+            # # Instantiate the model
+            # model_instance = model_class() #? WHY AM I DOING THIS?
+            # print('tune_model_line102')
+            # print(f"Model instance: {model_instance}, type: {type(model_instance)}")
 
-            # Instantiate the model
-            model_instance = model_class()
-            print(f"Model instance: {model_instance}, type: {type(model_instance)}")
+            # # Check if `.to(self.device)` is valid
+            # if not hasattr(model_instance, "to"):
+            #     raise AttributeError(f"The retrieved model instance does not have a `.to()` method.")
 
-            # Check if `.to(self.device)` is valid
-            if not hasattr(model_instance, "to"):
-                raise AttributeError(f"The retrieved model instance does not have a `.to()` method.")
+            # # Finally, assign self.model
+            # self.model = model_instance.to(self.device)
+            # print("Model successfully assigned and moved to device.")
+            print("DEBUG: About to create model with:")
+            print("  self.model_hpd =", self.model_hpd)
+            print("  getattr(m, self.model) =", getattr(m, self.model))
+            print("  type(self.model_hpd) =", type(self.model_hpd))
 
-            # Finally, assign self.model
-            self.model = model_instance.to(self.device)
-            print("Model successfully assigned and moved to device.")
-            self.model = getattr(m, self.model)().to(self.device)
+            # Now actually instantiate the model
+            self.model = getattr(m, self.model)(hpd=self.model_hpd).to(self.device) #*
+            print("self.model done")
             self.optimizer = getattr(optim, self.optimizer)(self.model.parameters(), lr=self.learning_rate) #arguments of adam (optim.adam(arguments,arguments))
+            print("self.optimizer")
             self.scheduler = getattr(lrs, self.scheduler)(self.optimizer, mode='min', factor=self.lr_param_factor, patience=self.lr_param_patience, threshold=self.lr_param_threshold) # learning rate scheduler #probably specific to optimizer
+            print(self.scheduler)
             self.criterion = getattr(nn, self.criterion)() # loss function. should probably leave that alone for now
             
             print('All training objects have been created.')
@@ -195,7 +202,7 @@ class TuneModel:
 
                 self.optimizer.zero_grad()
                 
-                score = self.model(inputs, cam_len, phot_en, hpd=self.model_hpd) 
+                score = self.model(inputs, cam_len, phot_en) 
                 truth = hit_parameter.reshape(-1, 1).float().to(self.device)
                 
                 loss = self.criterion(score, truth)

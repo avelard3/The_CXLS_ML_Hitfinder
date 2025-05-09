@@ -125,27 +125,33 @@ def main() -> None:
     }
 
     executing_mode = 'training'
+    print("a")
     path_manager = load_paths.Paths(h5_file_list, h5_locations, executing_mode, master_file)
-
+    print("b")
     path_manager.run_paths()
-    
+    print("c")
     training_manager = train_model.TrainModel(cfg, h5_locations, transfer_learning_state_dict)
+    print("d")
     training_manager.make_training_instances()
+    print("e")
     training_manager.load_model_state_dict()
-
+    print("f")
     vds_dataset = path_manager.get_vds()
+    print("g")
     h5_file_paths = path_manager.get_file_names()
-    
+    print("h")
     data_manager = load_data.Data(vds_dataset, h5_file_paths, executing_mode, transform, master_file)
-    
+    print("i")
     create_data_loader = load_data.CreateDataLoader(data_manager, batch_size)
-
+    print("j")
     create_data_loader.split_training_data() 
+    print("k")
     train_loader, test_loader = create_data_loader.get_training_data_loaders() 
-                
+    print("l")            
     training_manager.assign_new_data(train_loader, test_loader)
-    
-    training_manager.epoch_loop()
+    print("m")
+    training_manager.epoch_loop() #here to self.train(epoch) to self.model.train() but there could have been a problem before
+    print("n")
     training_manager.plot_loss_accuracy(training_results)
         
     # Saving model

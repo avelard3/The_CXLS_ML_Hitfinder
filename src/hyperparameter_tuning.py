@@ -178,26 +178,36 @@ def objective(trial): #learning rate is a log=true!?
     }
     
     executing_mode = 'training'
+    print("hpt_line 181")
     path_manager = load_paths.Paths(h5_file_list, h5_locations, executing_mode, master_file)
+    print("hpt_line183")
 
     path_manager.run_paths()
-    
+    print("hpt_line186")
     #so i think if i change cfg those would be the inputs that need to be changed
+    #Instantiate TuneModel class
     tuning_manager = tune_model.TuneModel(cfg, hyperparam_dict_train, hyperparam_dict_model, h5_locations, transfer_learning_state_dict)
-    tuning_manager.make_training_instances()
+    print("hpt_line189")
+    tuning_manager.make_training_instances() #! current problem here
+    print("hpt_line191")
     tuning_manager.load_model_state_dict()
-
+    print("hpt_line193")
     vds_dataset = path_manager.get_vds()
+    print("hpt_line195")
     h5_file_paths = path_manager.get_file_names()
-    
+    print("hpt_line197")
     data_manager = load_data.Data(vds_dataset, h5_file_paths, executing_mode, transform, master_file)
+    print("hpt199")
     create_data_loader = load_data.CreateDataLoader(data_manager, batch_size)
+    print("hpt201")
     create_data_loader.split_training_data() 
+    print("hpt203)")
     train_loader, test_loader = create_data_loader.get_training_data_loaders() 
-    
+    print("hpt205")
     tuning_manager.assign_new_data(train_loader, test_loader)
+    print("hpt207")
     tuning_manager.epoch_loop()
-    
+    print("hpt209")
 
     #! add adam parameters
     #consolidate
