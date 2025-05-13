@@ -73,7 +73,6 @@ class Data(Dataset):
                 #if statement with return only one thing in masterfile metadata #! 
                 #*
                 if self.executing_mode == "running":
-                    print("its running running whyyyyy")
                     self.hit_parameter = np.empty(self.camera_length.shape)
                     
                 if self._master_file != None:

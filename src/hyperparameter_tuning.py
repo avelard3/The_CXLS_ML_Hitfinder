@@ -5,6 +5,7 @@ import datetime
 from queue import Queue
 import numpy as np
 import optuna
+import plotly
 
 def arguments(parser) -> argparse.ArgumentParser:
     """
@@ -143,9 +144,12 @@ def objective(trial): #learning rate is a log=true!?
     # needed in train_model.py
     epoch = trial.suggest_int('epoch', epoch_range[0], epoch_range[1]) #not model
     learning_rate = trial.suggest_float('learning_rate', learning_rate_range[0], learning_rate_range[1], log=True) #not model
+    print("The suggested learning rate parameter is", learning_rate)
     lr_param_factor = trial.suggest_float('lr_param_factor', lr_param_factor_range[0], lr_param_factor_range[1]) #not model
+    print("The learning rate parameter factor is", lr_param_factor)
     lr_param_patience = trial.suggest_int('lr_param_patience', lr_param_patience_range[0], lr_param_patience_range[1]) #not model
     lr_param_threshold = trial.suggest_float('lr_param_threshold', lr_param_threshold_range[0], lr_param_threshold_range[1]) #not model
+    print("The learning rate parameter threshold is", lr_param_threshold)
     
     # needed in models.py
     conv_channel_size_1 = trial.suggest_int('conv_channel_size_1', conv_channel_size_1_range[0], conv_channel_size_1_range[1]) 
@@ -156,6 +160,7 @@ def objective(trial): #learning rate is a log=true!?
     linear_layer_size_1 = trial.suggest_int('linear_layer_size_1', linear_layer_size_1_range[0], linear_layer_size_1_range[1])
     linear_layer_size_2 = trial.suggest_int('linear_layer_size_2', linear_layer_size_2_range[0], linear_layer_size_2_range[1])
     dropout_probability = trial.suggest_float('dropout_probability', dropout_probability_range[0], dropout_probability_range[1]) 
+    print("The dropout probability is", dropout_probability)
     
     hyperparam_dict_train = {
         "epoch" : epoch,
@@ -178,42 +183,143 @@ def objective(trial): #learning rate is a log=true!?
     }
     
     executing_mode = 'training'
-    print("hpt_line 181")
+    print("Creating Paths object")
     path_manager = load_paths.Paths(h5_file_list, h5_locations, executing_mode, master_file)
-    print("hpt_line183")
-
+    print("Running load paths")
     path_manager.run_paths()
-    print("hpt_line186")
-    #so i think if i change cfg those would be the inputs that need to be changed
-    #Instantiate TuneModel class
+    print("Creating TuneModel object")
     tuning_manager = tune_model.TuneModel(cfg, hyperparam_dict_train, hyperparam_dict_model, h5_locations, transfer_learning_state_dict)
-    print("hpt_line189")
+    print("Create training instance")
     tuning_manager.make_training_instances() #! current problem here
-    print("hpt_line191")
+    print("Loading model state dictionary")
     tuning_manager.load_model_state_dict()
-    print("hpt_line193")
+    print("Getting VDS")
     vds_dataset = path_manager.get_vds()
-    print("hpt_line195")
+    print("Get file names")
     h5_file_paths = path_manager.get_file_names()
-    print("hpt_line197")
+    print("Creating Data object")
     data_manager = load_data.Data(vds_dataset, h5_file_paths, executing_mode, transform, master_file)
-    print("hpt199")
+    print("Creating DataLoader")
     create_data_loader = load_data.CreateDataLoader(data_manager, batch_size)
-    print("hpt201")
+    print("Split training data")
     create_data_loader.split_training_data() 
-    print("hpt203)")
+    print("Getting train and test loader")
     train_loader, test_loader = create_data_loader.get_training_data_loaders() 
-    print("hpt205")
+    print("Assigning new data")
     tuning_manager.assign_new_data(train_loader, test_loader)
-    print("hpt207")
-    tuning_manager.epoch_loop()
-    print("hpt209")
-
+    print("Epoch loop starting")
+    train_loss_from_epoch = tuning_manager.epoch_loop(trial)
+    print("After epoch loop the train loss is", train_loss_from_epoch)
+    return train_loss_from_epoch
     #! add adam parameters
     #consolidate
+
+def create_optimization_history_plot(study, path:str=None) -> None:
+        try:
+            print('Creating optimization history plot...')
+            optimization_history = optuna.visualization.plot_optimization_history(study)
+            
+            if path != None:
+                now = datetime.datetime.now()
+                formatted_date_time = now.strftime("%m%d%y-%H%M")
+                path = path + '/' + formatted_date_time + '-' + 'optimization_history.png'
+                optimization_history.savefig(path)
+                
+                print(f'Optimization history plot saved to: {path}')
+        except Exception as e:
+            print(f"An error occurred while creating the optimization history plot: {e}")  
+            
+            
+def create_intermediate_values_plot(study, path:str=None) -> None:
+        try:
+            print('Creating intermediate values plot...')
+            intermediate_values = optuna.visualization.plot_intermediate_values(study)
+            
+            if path != None:
+                now = datetime.datetime.now()
+                formatted_date_time = now.strftime("%m%d%y-%H%M")
+                path = path + '/' + formatted_date_time + '-' + 'intermediate_values.png'
+                intermediate_values.savefig(path)
+                
+                print(f'Intermediate values plot saved to: {path}')
+        except Exception as e:
+            print(f"An error occurred while creating the intermediate values plot: {e}")  
+            
+
+def create_slice_plot(study, path:str=None) -> None:
+        try:
+            print('Creating slice plot...')
+            slice = optuna.visualization.plot_slice(study)
+            
+            if path != None:
+                now = datetime.datetime.now()
+                formatted_date_time = now.strftime("%m%d%y-%H%M")
+                path = path + '/' + formatted_date_time + '-' + 'slice.png'
+                slice.savefig(path)
+                
+                print(f'Slice plot saved to: {path}')
+        except Exception as e:
+            print(f"An error occurred while creating the slice plot: {e}")  
+
+def create_param_importances_plot(study, path:str=None) -> None:
+        try:
+            print('Creating param importances plot...')
+            param_importances = optuna.visualization.plot_param_importances(study)
+            
+            if path != None:
+                now = datetime.datetime.now()
+                formatted_date_time = now.strftime("%m%d%y-%H%M")
+                path = path + '/' + formatted_date_time + '-' + 'param_importances.png'
+                param_importances.savefig(path)
+                
+                print(f'Param importances plot saved to: {path}')
+        except Exception as e:
+            print(f"An error occurred while creating the param importances plot: {e}")  
+            
+def create_edf_plot(study, path:str=None) -> None:
+        try:
+            print('Creating edf plot...')
+            edf = optuna.visualization.plot_edf(study)
+            
+            if path != None:
+                now = datetime.datetime.now()
+                formatted_date_time = now.strftime("%m%d%y-%H%M")
+                path = path + '/' + formatted_date_time + '-' + 'edf.png'
+                edf.savefig(path)
+                
+                print(f'Edf plot saved to: {path}')
+        except Exception as e:
+            print(f"An error occurred while creating the edf plot: {e}")  
+            
+def create_timeline_plot(study, path:str=None) -> None:
+        try:
+            print('Creating timeline plot...')
+            timeline = optuna.visualization.plot_timeline(study)
+            
+            if path != None:
+                now = datetime.datetime.now()
+                formatted_date_time = now.strftime("%m%d%y-%H%M")
+                path = path + '/' + formatted_date_time + '-' + 'timeline.png'
+                timeline.savefig(path)
+                
+                print(f'Timeline plot saved to: {path}')
+        except Exception as e:
+            print(f"An error occurred while creating the timeline plot: {e}")  
+
+
 
 
 if __name__ == '__main__':
     study = optuna.create_study(direction='minimize')
-    study.optimize(objective, n_trials=10)
+    study.optimize(objective, n_trials=3) 
+    
+    image_path_save = '/scratch/avelard3/big_files/pics_from_optuna_5_9'
+    create_optimization_history_plot(study, image_path_save)
+    create_intermediate_values_plot(study, image_path_save)
+    create_slice_plot(study, image_path_save)
+    create_param_importances_plot(study, image_path_save)
+    create_edf_plot(study, image_path_save)
+    create_timeline_plot(study, image_path_save)
+    
+    
     print("Best Hyperparameters:", study.best_params)

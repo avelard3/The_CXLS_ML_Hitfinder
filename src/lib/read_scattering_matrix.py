@@ -128,9 +128,7 @@ class ScatteringMatrix():
         self._num_trials_in_data = self._all_data_array.shape[0]
         
         # Create the final array for the pixel data using the dimensions from create_new_array
-        print("read_scattering_matrix131")
         self._final_array = np.zeros((self._num_trials_in_data ,self._final_array_y_len, self._final_array_x_len)) # shape (num_trials_in_data (ex 82), fs * num_panels, x or ss)
-        print("read_scattering_matrix133")
         
         # FIXME add an if statement to correlate which dimension or axis goes with fs or ss
         #This is conditional on size and shape of data file
@@ -356,4 +354,5 @@ if __name__ == "__main__":
     open_h5_file = h5.File('/scratch/sbotha/2024-hitfinder-data/epix10k2M-data/mfxly0020-r0130_294.cxi', 'r')
         
     all_data_array = np.array(open_h5_file['entry_1/data_1/data']).astype(np.float32)
+    print("all_data_array from read_scattering_matrix was done. I don't think this should run though", all_data_array.size())
     ScatteringMatrix("epix10k_geometry.json", "/scratch/avelard3/big_files/geom_data/", all_data_array)

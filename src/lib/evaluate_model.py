@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 from torch.cuda.amp import autocast
 import datetime
 from torch.utils.data import DataLoader
+import optuna
 
 from . import conf
 
@@ -49,7 +50,6 @@ class ModelEvaluation:
         try:
             with torch.no_grad():
                 for images, camera_length, photon_energy, hit_parameter, _ in self.test_loader:
-                    
                     inputs = torch.Tensor(images).to(self.device, dtype=torch.float32)
                     cam_len = torch.Tensor(camera_length).to(self.device, dtype=torch.float32).squeeze(1)                    
                     phot_en = torch.Tensor(photon_energy).to(self.device, dtype=torch.float32).squeeze(1)                    

@@ -168,7 +168,6 @@ class Optuna_Simple_CNN(nn.Module): #
     def __init__(self, input_channels=1, output_channels=1, input_size=(512, 512), hpd=None):
         super(Optuna_Simple_CNN, self).__init__()
         self.hpd = hpd
-        print("IN MODELS checking to see if the model_hpd has something in it", self.hpd)
         if hpd is None:
             raise ValueError("Hyperparameter dictionary (hpd) cannot be None -av")        
         # needed in models.py
@@ -188,58 +187,35 @@ class Optuna_Simple_CNN(nn.Module): #
         self.conv2 = nn.Conv2d(self.conv_channel_size_1, self.conv_channel_size_2, kernel_size=self.conv_kernel_size, stride=self.stride, padding=self.padding)
         self.conv3 = nn.Conv2d(self.conv_channel_size_2, output_channels, kernel_size=self.conv_kernel_size, stride=self.stride, padding=self.padding)        
         #this is fine?
-        print(self.conv1)
-        print(self.conv2)
-        print(self.conv3)
         
         self.pool = nn.MaxPool2d(self.pool_kernel_size, self.pool_kernel_size)
-        print(self.pool)
         
         out_height1 = self.calculate_output_dimension(input_size[0], self.conv_kernel_size, self.stride, self.padding)
-        print(out_height1)
         out_width1 = self.calculate_output_dimension(input_size[1], self.conv_kernel_size, self.stride, self.padding)
-        print(out_width1)
         out_height2 = self.calculate_output_dimension(out_height1 // 2, self.conv_kernel_size, self.stride, self.padding)
-        print(out_height2)
         out_width2 = self.calculate_output_dimension(out_width1 // 2, self.conv_kernel_size, self.stride, self.padding)
-        print(out_width2)
         self.fc_size = int((1/16) * out_height2 * out_width2) #fully connected layer #i think that 0.25 is conv_channel_size_1/output_channels.... based on the other cnn
-        print(self.fc_size)
         self.fc = nn.Linear(self.fc_size, output_channels)
-        print(self.fc)
 
     def calculate_output_dimension(self, input_dim, kernel_size, stride, padding):
         return ((input_dim + 2 * padding - kernel_size) // stride) + 1
     def forward(self, x, camera_length, photon_energy):
-        print("forward")
         x = self.conv1(x)
-        print(x.shape) #1
         x = F.relu(x)
-        print(x.shape) #2
         x = self.pool(x)
-        print(x.shape) #3
         
         x = self.conv2(x)
-        print(x.shape) #4
         x = F.relu(x)
-        print(x.shape) #5
         x = self.pool(x)
-        print(x.shape) #6
         
         x = self.conv3(x)
-        print(x.shape) #7
         x = F.relu(x)
-        print(x.shape) #8
         x = self.pool(x)
-        print(x.shape) #9
         
         #TODO: add dropout and linear layer
         x = x.view(x.size(0), -1) #reshaping it to a vector
-        print(x.shape) #10
-        x = self.fc(x) #! the error happened at this step, which is not surprising
-        print(x.shape) #11
+        x = self.fc(x) 
         x = F.relu(x)
-        print(x.shape) #12
         return x
 
 

@@ -19,7 +19,7 @@ def arguments(parser) -> argparse.ArgumentParser:
     parser.add_argument('-l', '--list', type=str, help='File path to the .lst file containing file paths to the .h5 file to run through the model.')
     parser.add_argument('-m', '--model', type=str, help='Name of the model architecture class found in models.py that corresponds to the model state dict.')
     parser.add_argument('-o', '--output', type=str, help='Output file path only for training confusion matrix and results.')
-    parser.add_argument('-d', '--dict', type=str, help='Output state dict for the traIined model that can be used to load the trained model later.')
+    parser.add_argument('-d', '--dict', type=str, help='Output state dict for the trained model that can be used to load the trained model later.')
     
     parser.add_argument('-e', '--epoch', type=int, help='Number of training epochs.')
     parser.add_argument('-b', '--batch', type=int, help='Batch size per epoch for training.')
@@ -90,7 +90,6 @@ def main() -> None:
     transfer_learning_state_dict = args.transfer_learn
     transform = args.apply_transform # Parameter for Data class
     
-    
     #temperary holding
     transform = False
     
@@ -100,8 +99,6 @@ def main() -> None:
         
         
     # Transfer learning (yes or no)
-    # FIXME: There should be a way to get bool to work for this?
-    
     if transfer_learning_state_dict == 'None' or transfer_learning_state_dict == 'none':
         transfer_learning_state_dict = None
     
@@ -125,33 +122,27 @@ def main() -> None:
     }
 
     executing_mode = 'training'
-    print("a")
     path_manager = load_paths.Paths(h5_file_list, h5_locations, executing_mode, master_file)
-    print("b")
+    
     path_manager.run_paths()
-    print("c")
+    
     training_manager = train_model.TrainModel(cfg, h5_locations, transfer_learning_state_dict)
-    print("d")
     training_manager.make_training_instances()
-    print("e")
     training_manager.load_model_state_dict()
-    print("f")
+    
     vds_dataset = path_manager.get_vds()
-    print("g")
     h5_file_paths = path_manager.get_file_names()
-    print("h")
+    
     data_manager = load_data.Data(vds_dataset, h5_file_paths, executing_mode, transform, master_file)
-    print("i")
+    
     create_data_loader = load_data.CreateDataLoader(data_manager, batch_size)
-    print("j")
+    
     create_data_loader.split_training_data() 
-    print("k")
     train_loader, test_loader = create_data_loader.get_training_data_loaders() 
-    print("l")            
+    
     training_manager.assign_new_data(train_loader, test_loader)
-    print("m")
-    training_manager.epoch_loop() #here to self.train(epoch) to self.model.train() but there could have been a problem before
-    print("n")
+    
+    training_manager.epoch_loop() 
     training_manager.plot_loss_accuracy(training_results)
         
     # Saving model

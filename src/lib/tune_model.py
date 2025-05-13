@@ -80,44 +80,16 @@ class TuneModel:
         - the loss criterion
         """
         try:
-            # # Debugging print statements before assigning self.model
-            # print(f"Before getattr: self.model = {self.model}")
 
-            # # Check if `m` contains the model class
-
-            # # Try to retrieve the model class
-            # model_class = getattr(m, self.model, None) #? What does the None stand for?
-            # if model_class is None:
-            #     raise AttributeError(f"'{self.model}' is not found in module {m}.")
-
-            # # Ensure the retrieved class is callable (a model, not a string or invalid type)
-            # if not callable(model_class):
-            #     raise TypeError(f"'{self.model}' is not a callable class in module {m}.")
-
-            # # Instantiate the model
-            # model_instance = model_class() #? WHY AM I DOING THIS?
-            # print('tune_model_line102')
-            # print(f"Model instance: {model_instance}, type: {type(model_instance)}")
-
-            # # Check if `.to(self.device)` is valid
-            # if not hasattr(model_instance, "to"):
-            #     raise AttributeError(f"The retrieved model instance does not have a `.to()` method.")
-
-            # # Finally, assign self.model
-            # self.model = model_instance.to(self.device)
-            # print("Model successfully assigned and moved to device.")
-            print("DEBUG: About to create model with:")
+            print("About to create model with:")
             print("  self.model_hpd =", self.model_hpd)
             print("  getattr(m, self.model) =", getattr(m, self.model))
             print("  type(self.model_hpd) =", type(self.model_hpd))
 
             # Now actually instantiate the model
             self.model = getattr(m, self.model)(hpd=self.model_hpd).to(self.device) #*
-            print("self.model done")
             self.optimizer = getattr(optim, self.optimizer)(self.model.parameters(), lr=self.learning_rate) #arguments of adam (optim.adam(arguments,arguments))
-            print("self.optimizer")
             self.scheduler = getattr(lrs, self.scheduler)(self.optimizer, mode='min', factor=self.lr_param_factor, patience=self.lr_param_patience, threshold=self.lr_param_threshold) # learning rate scheduler #probably specific to optimizer
-            print(self.scheduler)
             self.criterion = getattr(nn, self.criterion)() # loss function. should probably leave that alone for now
             
             print('All training objects have been created.')
@@ -165,7 +137,7 @@ class TuneModel:
         else:
             print(f'There is no model state dict to load into: {self.model.__class__.__name__}')
     
-    def epoch_loop(self) -> None: 
+    def epoch_loop(self, trial): 
         """
         This function loops through the training and testing functions by the number of epochs iterations.
         The train and test function are used back to back per epoch to optimize then perfom a second evalution on the perfomance of the model. 
@@ -176,14 +148,21 @@ class TuneModel:
         for epoch in range(self.epochs):
             print('-- epoch '+str(epoch)) 
             print('Training ...')
-            self.train(epoch)
-            print('Evaluating ...')
-            self.test(epoch)
+            train_loss_value = self.train(epoch)
             
+            # from optuna examples
+            trial.report(train_loss_value, epoch)
+            if trial.should_prune():
+                print("an exception was reached")
+                raise optuna.exceptions.TrialPruned()
+            # end from optuna examples
+            
+            
+        return train_loss_value
             # print(f"-- learning rate : {self.scheduler.get_last_lr()}")
 
             
-    def train(self, epoch:int) -> None:
+    def train(self, epoch:int) :
         
         """
         This function trains the model and prints the loss and accuracy of the training sets per epoch.
@@ -197,9 +176,8 @@ class TuneModel:
             print("Train in train_model")
             for images, camera_length, photon_energy, hit_parameter, _ in self.train_loader: 
                 inputs = torch.Tensor(images).to(self.device, dtype=torch.float32)
-                cam_len = torch.Tensor(camera_length).to(self.device, dtype=torch.float32).squeeze(1)                    
+                cam_len = torch.Tensor(camera_length).to(self.device, dtype=torch.float32).squeeze(1)
                 phot_en = torch.Tensor(photon_energy).to(self.device, dtype=torch.float32).squeeze(1)                    
-
                 self.optimizer.zero_grad()
                 
                 score = self.model(inputs, cam_len, phot_en) 
@@ -209,20 +187,17 @@ class TuneModel:
                 loss.backward()
                 self.optimizer.step()
                 
-            return loss.item()
-
-            #     running_loss_train += loss.item()
+                running_loss_train += loss.item()
                 
-            #     predictions = (torch.sigmoid(score) > 0.5).long()
-            #     accuracy_train += (predictions == truth).float().sum()
-            #     total_predictions += torch.numel(truth)
+                predictions = (torch.sigmoid(score) > 0.5).long()
+                accuracy_train += (predictions == truth).float().sum()
+                total_predictions += torch.numel(truth)
 
-            # loss_train = running_loss_train / len(self.train_loader)  
-            # self.plot_train_loss[epoch] = loss_train
-            # print(f'Train loss: {loss_train}')
-            # accuracy_train /= total_predictions
-            # self.plot_train_accuracy[epoch] = accuracy_train
-            # print(f'Train accuracy: {accuracy_train}')
+            loss_train = running_loss_train / len(self.train_loader)  
+            self.plot_train_loss[epoch] = loss_train
+            print(f'Train loss: {loss_train}')
+
+            return loss_train
 
         except RuntimeError as e:
             print(f"RuntimeError during training: {e}")  
@@ -272,6 +247,7 @@ class TuneModel:
 
             print(f'Test loss: {loss_test}')
             print(f'Test accuracy: {accuracy_test}')
+            return loss_test
 
         except RuntimeError as e:
             print(f"RuntimeError during testing: {e}")

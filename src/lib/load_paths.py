@@ -74,7 +74,6 @@ class Paths:
                         print("ERROR: dimensions of dataset must be 2 or 3, but instead it was ", image_file_dim)
                 f.close()
         lst_file.close()
-        print("load_paths77")
         self._dim_and_shape_array = np.array(self._dim_and_shape_list) #shape is [num_images_in_file, 2 or 3 for multievent]
         self._total_num_images = np.sum(self._dim_and_shape_array[:,0])
         self._height = 512 #! 2069 #! 512
