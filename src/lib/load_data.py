@@ -41,25 +41,11 @@ class Data(Dataset):
         # If transforms will be used, then it creates the pytorch object that will be used to transform future data
         if self.use_transform:
             self.make_transform()
-        
-    def __len__(self) -> int:
-        """
-        Return the number of samples in the dataset.
 
-        Returns:
-            int: Number of samples in the dataset.
-        """
-        return self.images.shape[0]
     
     def __getitem__(self, idx: int) -> tuple:
         """
-        Get a sample from the dataset at the given index.
-
-        Args:
-            idx (int): Index of the sample to retrieve.
-
-        Returns:
-            tuple: A tuple containing the image data and the metadata at the given index.
+        Get a sample from the dataset (tuple of image data and metadata) at the given index.
         """
                 
         # Check if a transform needs to be applied and apply it
@@ -107,9 +93,6 @@ class CreateDataLoader():
     def split_training_data(self) -> None:
         """
         Split the data into training and testing datasets and create data loaders for them.
-
-        Args:
-            _batch_size (int): The size of the batches to be used by the data loaders.
         """
         try:
             num_items = len(self._hitfinder_dataset)  
@@ -144,18 +127,12 @@ class CreateDataLoader():
     def get_training_data_loaders(self) -> tuple:
         """
         Get the training and testing data loaders.
-
-        Returns:
-            tuple: A tuple containing the training and testing data loaders.
         """
         return self._train_loader, self._test_loader
     
     def inference_data_loader(self) -> None: 
         """
         Puts the inference data into a dataloader for batch processing.
-
-        Args:
-            _batch_size (int): The size of the batches to be used by the data loaders.
         """
         print('Making data loader...')
         try:
@@ -177,9 +154,6 @@ class CreateDataLoader():
             
     def get_inference_data_loader(self) -> DataLoader:
         """
-        This function returns the inference data loader.
-
-        Returns:
-            DataLoader: The data loader for putting through the trained model. 
+        Returns the inference data loader for putting through the trained model. 
         """
         return self.inference_loader

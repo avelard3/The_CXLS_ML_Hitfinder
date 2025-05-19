@@ -38,17 +38,13 @@ def arguments(parser) -> argparse.ArgumentParser:
     #FIXME: Need to add all the hyperparameters, thre are some missing rn
     parser.add_argument('-er', '--epoch_range', type=int, nargs=2, default=[5,100], help='Lower and upper limit of number of epochs') #optimizer
     parser.add_argument('-lrr', '--learning_rate_range', type=float, nargs=2, default=[0.0001,0.001], help='Lower and upper limit of learning rate') #optimizer
-    parser.add_argument('-lrpf', '--lr_param_factor_range', type=float, nargs=2, default=[0.1,0.1], help="")
     parser.add_argument('-lrpp', '--lr_param_patience_range', type=int, nargs=2, default=[3,100], help="")
     parser.add_argument('-lrpt', '--lr_param_threshold_range', type=float, nargs=2, default=[0.1, 0.1], help="")
     
-    parser.add_argument('-ccs1', '--conv_channel_size_1_range', type=int, nargs=2, default=[2,8], help='Lower and upper limit of the final size of first convolution') #model
-    parser.add_argument('-ccs2', '--conv_channel_size_2_range', type=int, nargs=2, default=[2,8], help='Lower and upper limit of the final size of second convolution') #model
+    parser.add_argument('-ccs', '--conv_channel_size_range', type=int, nargs=2, default=[2,8], help='Lower and upper limit of the final size of first convolution') #model
     parser.add_argument('-cks', '--conv_kernel_size_range', type=int, nargs=2, default=[3,3], help='Lower and upper limit of convolution kernel size') #model
-    parser.add_argument('-pks', '--pool_kernel_size_range', type=int, nargs=2, default=[2,2], help='Lower and upper limit of pool kernel size') #model
     parser.add_argument('-ldl', '--num_linear_dropout_layers_range', type=int, nargs=2, default=[0,3], help='Lower and upper limit of number of dropout layers and linear layers') #max=3 #model    
-    parser.add_argument('-lls1', '--linear_layer_size_1_range', type=int, nargs=2, default=[2,2], help="")
-    parser.add_argument('-lls2', '--linear_layer_size_2_range', type=int, nargs=2, default=[2,2], help="")
+    parser.add_argument('-lls', '--linear_layer_size_range', type=int, nargs=2, default=[2,2], help="")
     parser.add_argument('-dop', '--dropout_probability_range', type=float, nargs=2, default=[0.5,0.8], help='Lower and upper limit of dropout popularity') #model
     # adam parameters (optimizer) 
     
@@ -110,17 +106,13 @@ def objective(trial): #learning rate is a log=true!?
     # hyperparameter tuning #? maybe add them all to a dictionary here
     epoch_range = tuple(args.epoch_range)
     learning_rate_range = tuple(args.learning_rate_range)
-    lr_param_factor_range = tuple(args.lr_param_factor_range)
     lr_param_patience_range = tuple(args.lr_param_patience_range)
     lr_param_threshold_range = tuple(args.lr_param_threshold_range)
     
-    conv_channel_size_1_range = tuple(args.conv_channel_size_1_range)    
-    conv_channel_size_2_range = tuple(args.conv_channel_size_2_range)
+    conv_channel_size_range = tuple(args.conv_channel_size_range)    
     conv_kernel_size_range = tuple(args.conv_kernel_size_range)
-    pool_kernel_size_range = tuple(args.pool_kernel_size_range)
     num_linear_dropout_layers_range = tuple(args.num_linear_dropout_layers_range)
-    linear_layer_size_1_range = tuple(args.linear_layer_size_1_range)
-    linear_layer_size_2_range = tuple(args.linear_layer_size_2_range)
+    linear_layer_size_range = tuple(args.linear_layer_size_range)
     dropout_probability_range = tuple(args.dropout_probability_range)
 
 
@@ -144,41 +136,30 @@ def objective(trial): #learning rate is a log=true!?
     # needed in train_model.py
     epoch = trial.suggest_int('epoch', epoch_range[0], epoch_range[1]) #not model
     learning_rate = trial.suggest_float('learning_rate', learning_rate_range[0], learning_rate_range[1], log=True) #not model
-    print("The suggested learning rate parameter is", learning_rate)
-    lr_param_factor = trial.suggest_float('lr_param_factor', lr_param_factor_range[0], lr_param_factor_range[1]) #not model
-    print("The learning rate parameter factor is", lr_param_factor)
     lr_param_patience = trial.suggest_int('lr_param_patience', lr_param_patience_range[0], lr_param_patience_range[1]) #not model
     lr_param_threshold = trial.suggest_float('lr_param_threshold', lr_param_threshold_range[0], lr_param_threshold_range[1]) #not model
-    print("The learning rate parameter threshold is", lr_param_threshold)
     
     # needed in models.py
-    conv_channel_size_1 = trial.suggest_int('conv_channel_size_1', conv_channel_size_1_range[0], conv_channel_size_1_range[1]) 
-    conv_channel_size_2 = trial.suggest_int('conv_channel_size_2', conv_channel_size_2_range[0], conv_channel_size_2_range[1])
+    conv_channel_size = trial.suggest_int('conv_channel_size', conv_channel_size_range[0], conv_channel_size_range[1]) 
     conv_kernel_size = trial.suggest_int('conv_kernel_size', conv_kernel_size_range[0], conv_kernel_size_range[1]) #?
-    pool_kernel_size = trial.suggest_int('pool_kernel_size', pool_kernel_size_range[0], pool_kernel_size_range[1])
     num_linear_dropout_layers = trial.suggest_int('num_linear_dropout_layers', num_linear_dropout_layers_range[0], num_linear_dropout_layers_range[1])
-    linear_layer_size_1 = trial.suggest_int('linear_layer_size_1', linear_layer_size_1_range[0], linear_layer_size_1_range[1])
-    linear_layer_size_2 = trial.suggest_int('linear_layer_size_2', linear_layer_size_2_range[0], linear_layer_size_2_range[1])
+    linear_layer_size = trial.suggest_int('linear_layer_size', linear_layer_size_range[0], linear_layer_size_range[1])
     dropout_probability = trial.suggest_float('dropout_probability', dropout_probability_range[0], dropout_probability_range[1]) 
     print("The dropout probability is", dropout_probability)
     
     hyperparam_dict_train = {
         "epoch" : epoch,
         "learning_rate" : learning_rate,
-        "lr_param_factor" : lr_param_factor,
         "lr_param_patience" : lr_param_patience,
         "lr_param_threshold" : lr_param_threshold
         
         
     }
     hyperparam_dict_model = {
-        "conv_channel_size_1" : conv_channel_size_1,  
-        "conv_channel_size_2" : conv_channel_size_2,
+        "conv_channel_size" : conv_channel_size,  
         "conv_kernel_size" : conv_kernel_size,
-        "pool_kernel_size" : pool_kernel_size,
         "num_linear_dropout_layers" : num_linear_dropout_layers,
-        "linear_layer_size_1" : linear_layer_size_1,
-        "linear_layer_size_2" : linear_layer_size_2,
+        "linear_layer_size" : linear_layer_size,
         "dropout_probability" : dropout_probability
     }
     
@@ -223,7 +204,7 @@ def create_optimization_history_plot(study, path:str=None) -> None:
                 now = datetime.datetime.now()
                 formatted_date_time = now.strftime("%m%d%y-%H%M")
                 path = path + '/' + formatted_date_time + '-' + 'optimization_history.png'
-                optimization_history.savefig(path)
+                optimization_history.write_image(path)
                 
                 print(f'Optimization history plot saved to: {path}')
         except Exception as e:
@@ -239,7 +220,7 @@ def create_intermediate_values_plot(study, path:str=None) -> None:
                 now = datetime.datetime.now()
                 formatted_date_time = now.strftime("%m%d%y-%H%M")
                 path = path + '/' + formatted_date_time + '-' + 'intermediate_values.png'
-                intermediate_values.savefig(path)
+                intermediate_values.write_image(path)
                 
                 print(f'Intermediate values plot saved to: {path}')
         except Exception as e:
@@ -255,7 +236,7 @@ def create_slice_plot(study, path:str=None) -> None:
                 now = datetime.datetime.now()
                 formatted_date_time = now.strftime("%m%d%y-%H%M")
                 path = path + '/' + formatted_date_time + '-' + 'slice.png'
-                slice.savefig(path)
+                slice.write_image(path)
                 
                 print(f'Slice plot saved to: {path}')
         except Exception as e:
@@ -270,7 +251,7 @@ def create_param_importances_plot(study, path:str=None) -> None:
                 now = datetime.datetime.now()
                 formatted_date_time = now.strftime("%m%d%y-%H%M")
                 path = path + '/' + formatted_date_time + '-' + 'param_importances.png'
-                param_importances.savefig(path)
+                param_importances.write_image(path)
                 
                 print(f'Param importances plot saved to: {path}')
         except Exception as e:
@@ -285,7 +266,7 @@ def create_edf_plot(study, path:str=None) -> None:
                 now = datetime.datetime.now()
                 formatted_date_time = now.strftime("%m%d%y-%H%M")
                 path = path + '/' + formatted_date_time + '-' + 'edf.png'
-                edf.savefig(path)
+                edf.write_image(path)
                 
                 print(f'Edf plot saved to: {path}')
         except Exception as e:
@@ -300,7 +281,7 @@ def create_timeline_plot(study, path:str=None) -> None:
                 now = datetime.datetime.now()
                 formatted_date_time = now.strftime("%m%d%y-%H%M")
                 path = path + '/' + formatted_date_time + '-' + 'timeline.png'
-                timeline.savefig(path)
+                timeline.write_image(path)
                 
                 print(f'Timeline plot saved to: {path}')
         except Exception as e:
@@ -311,7 +292,7 @@ def create_timeline_plot(study, path:str=None) -> None:
 
 if __name__ == '__main__':
     study = optuna.create_study(direction='minimize')
-    study.optimize(objective, n_trials=3) 
+    study.optimize(objective, n_trials=2) 
     
     image_path_save = '/scratch/avelard3/big_files/pics_from_optuna_5_9'
     create_optimization_history_plot(study, image_path_save)

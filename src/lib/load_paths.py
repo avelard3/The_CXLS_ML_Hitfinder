@@ -5,7 +5,7 @@ from typing import Optional
 from torch.utils.data import Dataset
 import datetime
 # from .The_CXLS_ML_Hitfinder.src.lib.utils import SpecialCaseFunctions
-# from .The_CXLS_ML_Hitfinder.src.lib import conf
+from . import conf
 # from .The_CXLS_ML_Hitfinder.src.lib import read_scattering_matrix
 class Paths:
     def __init__(self, list_path: list, h5_location: dict, executing_mode: str, master_file: Optional[str] = None, is_multi_event: bool = False) -> None:
@@ -29,15 +29,11 @@ class Paths:
         self._number_of_events = 1
         self._executing_mode = executing_mode
         
-        #FIXME: should be variables of sbatch scripts
         self._image_location = self._h5_location['image']
-        self._camera_length_location = self._h5_location['camera length'] #i think these might be the problem
+        self._camera_length_location = self._h5_location['camera length'] 
         self._photon_energy_location = self._h5_location['photon energy']
         self._hit_parameter_location = self._h5_location['peak']
-        self._image_location= '/images/'#! "/entry/data/data/"
-        self._camera_length_location= '/detector_distance/' #!'/instrument/Detector-Distance_mm/'
-        self._photon_energy_location= '/photon_energy_eV/'
-        self._hit_parameter_location= '/hit/' #!'/control/hit/'
+
         
     def run_paths(self) -> None:
         self.set_up_files()
@@ -76,8 +72,7 @@ class Paths:
         lst_file.close()
         self._dim_and_shape_array = np.array(self._dim_and_shape_list) #shape is [num_images_in_file, 2 or 3 for multievent]
         self._total_num_images = np.sum(self._dim_and_shape_array[:,0])
-        self._height = 512 #! 2069 #! 512
-        self._width = 512 #! 2163 #! 512
+        self._height, self._width = conf.required_image_size
         self._image_shape = (self._total_num_images, 1, self._height, self._width) #!DEFINITELY needs to be this shape, but IDK WHY (num_images, 1, height, width)
         self._attr_shape = (self._total_num_images, 1) 
         

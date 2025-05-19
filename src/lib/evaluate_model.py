@@ -14,14 +14,12 @@ class ModelEvaluation:
     
     def __init__(self, cfg: dict, attributes: dict, trained_model: nn.Module, testing_data: DataLoader) -> None:
         """
-        This constructor breaks out important dictonaries, takes in the trained model, creates a logger object, and creates parameters to store evaluation metrics. 
+        Breaks out important dictonaries, takes in the trained model, creates a logger object, and creates parameters to store evaluation metrics. 
 
         Args:
-            cfg (dict): Dictionary containing important information for training including: data loaders, batch size, training device, number of epochs, the optimizer, the scheduler, the criterion, the learning rate, and the model class. 
-            Everything besides the data loaders and device are arguments in the sbatch script.
-            Not all parameters are relevant for evaluation and therefore are not given variables. 
-            attributes (dict): Dictionary containing the names of the metadata contained in the h5 image files. These names could change depending on whom created the metadata, so the specific names are arguments in the sbatch script. 
-            trained_model (nn.Module): This is a trained model taken from the training class. 
+            cfg (dict): Dictionary containing important information for training including 
+            attributes (dict): Dictionary containing the names of the metadata contained in the h5 image files
+            trained_model (nn.Module): Trained model taken from the training class. 
         """
         
         self.test_loader = testing_data
@@ -41,8 +39,7 @@ class ModelEvaluation:
 
     def run_testing_set(self) -> None:
         """ 
-        This function runs the trained model in evaluation mode.
-        This function creates arrays of labels and predictions to compare against each other for metrics. 
+        Runs the trained model in evaluation mode, by creating arrays of labels and predictions to compare against each other for metrics. 
         """
         print(f'Running evaluation on model: {self.model.__class__.__name__}')
         self.model.eval()
@@ -75,7 +72,7 @@ class ModelEvaluation:
         
     def make_classification_report(self) -> None:
         """
-        This function creates a classification report for the model and prints it.
+        Creates a classification report for the model and prints it.
         """
         try:
             print('Creating classification report...')
@@ -87,17 +84,14 @@ class ModelEvaluation:
         
     def get_classification_report(self) -> dict:
         """
-        This function returns the classification report for the model.
-        
-        Returns:
-            dict: The classification report in the form of a dictionary. 
+        Returns the classification report for the model.
         """
         return self.classification_report_dict
 
         
     def plot_confusion_matrix(self, path:str = None) -> None:
         """ 
-        This function plots the confusion matrix of the testing set.
+        Plots the confusion matrix of the testing set.
         The values in this matrix are done so that the rows total to 1. 
         """
         
@@ -125,6 +119,10 @@ class ModelEvaluation:
             print(f"An error occurred while plotting confusion matrix: {e}")
 ###############################################
     def plot_roc_curve(self, path:str=None) -> None:
+        """
+        Plots the ROC (Reciever Operating Characteristic) Curve of the testing set.
+        The x-axis is the false positive rate and the y-axis is the true positive rate
+        """
         try:
             print('Creating ROC curve...')
             roc_display = RocCurveDisplay.from_predictions(self.all_labels, self.all_predictions)
@@ -140,16 +138,12 @@ class ModelEvaluation:
                 path = path + '/' + formatted_date_time + '-' + 'roc_curve.png'
                 plt.savefig(path)
                 
-                print(f'Confustion matrix saved to: {path}')
+                print(f'ROC curve saved to: {path}')
         except Exception as e:
-            print(f"An error occurred while creating the confusion matrix: {e}")       
-        # Plotting the confusion matrix
+            print(f"An error occurred while creating the ROC curve: {e}")       
         
     def get_confusion_matrix(self) -> np.ndarray:
         """ 
-        This function returns the confusion matrix of the testing set.
-        
-        Returns:
-            np.darray: The numpy array of the values in the confusion matrix.
+        Returns the confusion matrix of the testing set as a numpy array.
         """
         return self.cm

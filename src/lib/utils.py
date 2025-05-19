@@ -51,7 +51,7 @@ class SpecialCaseFunctions:
             data_array (np.ndarray): The input data array to be reshaped.
 
         """
-        new_height, new_width = conf.eiger_4m_image_size
+        new_height, new_width = conf.required_image_size
         batch_size, height, width  = data_array.shape
 
         if new_height < height or new_width < width:

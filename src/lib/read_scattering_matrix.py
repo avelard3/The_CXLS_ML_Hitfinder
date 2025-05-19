@@ -27,9 +27,7 @@ class ScatteringMatrix():
         # Vectors from geom file
 
         self._fs_vec = [entry['fs_vec'] for entry in data] # fast scan vector
-
         self._ss_vec = [entry['ss_vec'] for entry in data] # slow scan vector
-
         self._t_vec = [entry['t_vec'] for entry in data] # center of first pixel vector
 
 
@@ -295,8 +293,8 @@ class ReshapeData():
             data_array (np.ndarray): The input data array to be reshaped.
 
         """
-        eiger_4m_image_size = (2163, 2069)
-        self._crop_height, self._crop_width = eiger_4m_image_size
+        required_image_size = (512, 512) #FIXME
+        self._crop_height, self._crop_width = required_image_size
         
         self._batch_size, self._height, self._width  = data_array.shape
         

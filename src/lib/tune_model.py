@@ -45,7 +45,6 @@ class TuneModel:
         
         self.epochs = hpd_train['epoch']
         self.learning_rate = hpd_train['learning_rate']
-        self.lr_param_factor = hpd_train['lr_param_factor']
         self.lr_param_patience = hpd_train['lr_param_patience']
         self.lr_param_threshold = hpd_train['lr_param_threshold']
 
@@ -89,7 +88,7 @@ class TuneModel:
             # Now actually instantiate the model
             self.model = getattr(m, self.model)(hpd=self.model_hpd).to(self.device) #*
             self.optimizer = getattr(optim, self.optimizer)(self.model.parameters(), lr=self.learning_rate) #arguments of adam (optim.adam(arguments,arguments))
-            self.scheduler = getattr(lrs, self.scheduler)(self.optimizer, mode='min', factor=self.lr_param_factor, patience=self.lr_param_patience, threshold=self.lr_param_threshold) # learning rate scheduler #probably specific to optimizer
+            self.scheduler = getattr(lrs, self.scheduler)(self.optimizer, mode='min', factor=0.1, patience=self.lr_param_patience, threshold=self.lr_param_threshold) # learning rate scheduler #probably specific to optimizer
             self.criterion = getattr(nn, self.criterion)() # loss function. should probably leave that alone for now
             
             print('All training objects have been created.')
