@@ -22,10 +22,7 @@ class TrainModel:
             cfg (dict): Dictionary containing important information for training including: data loaders, batch size, training device, number of epochs, the optimizer, the scheduler, the criterion, the learning rate, and the model class. Everything besides the data loaders and device are arguments in the sbatch script.
             attributes (dict): Dictionary containing the names of the metadata contained in the h5 image files. These names could change depending on whom created the metadata, so the specific names are arguments in the sbatch script. 
         """
-        
-        self.camera_length = conf.camera_length_key
-        self.photon_energy = conf.photon_energy_key
-        self.peak = conf.present_peaks_key
+
         
         self.model_path = transfer_learning_state_dict
 
@@ -47,12 +44,7 @@ class TrainModel:
         
     def assign_new_data(self, train: DataLoader, test: DataLoader) -> None:
         """
-        This function assigns new data loaders.
-
-        Args:
-            train (DataLoader): The training data loader.
-            test (DataLoader): The testing data loader.
-
+        Assigns new data loaders. (Train is training data loader and test is testing data loader.)
         """
         self.train_loader = train
         self.test_loader = test

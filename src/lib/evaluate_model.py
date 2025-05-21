@@ -26,10 +26,7 @@ class ModelEvaluation:
         self.batch_size = cfg['batch size']
         self.device = cfg['device']
         self.model = trained_model
-        
-        self.camera_length = conf.camera_length_key
-        self.photon_energy = conf.photon_energy_key
-        self.peak = conf.present_peaks_key
+
         
         self.cm = None
         self.all_labels = []

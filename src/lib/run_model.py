@@ -22,9 +22,7 @@ class RunModel:
         self.model_arch = cfg['model']
         self.model_path = cfg['model_path']
         self.save_output_list = cfg['save_output_list']
-        
-        self.camera_length = conf.camera_length_key
-        self.photon_energy = conf.photon_energy_key
+
         
         self.list_containing_peaks = []
         self.list_not_containing_peaks = []
@@ -138,10 +136,7 @@ class RunModel:
         
     def output_verification(self, size: int, events: int) -> None:
         """
-        Verify that the number of input file paths matches the sum of the output file paths.
-
-        This function compares the size of the input file path list to the sum of the sizes of the two output file path lists and logs the result.
-
+        Verify that the number of input file paths matches the sum of the output file paths by comparing the size of input file list to sum of two output file lists.
         """
         if size == len(self.list_containing_peaks) // events + len(self.list_not_containing_peaks) // events:
             print("There is the same amount of input files as output files.")
