@@ -34,9 +34,6 @@ class RunModel:
     def make_model_instance(self) -> None:
         """
         Create an instance of the model class specified by the model architecture.
-
-        Returns:
-            class instance: An instance of the specified model class.
         """
         try:
             self.model = getattr(models, self.model_arch)()
@@ -100,10 +97,7 @@ class RunModel:
                 
     def get_classification_results(self) -> tuple:
         """
-        Get the classification results from the model.
-
-        Returns:
-            tuple: A tuple containing two lists - one with file paths containing peaks and one without peaks.
+        Return the classification results as a tuple containing two lists (one with file paths with peaks and the other not) from the model.
         """
         return (self.list_containing_peaks, self.list_not_containing_peaks)
     
@@ -147,9 +141,7 @@ class RunModel:
         Verify that the number of input file paths matches the sum of the output file paths.
 
         This function compares the size of the input file path list to the sum of the sizes of the two output file path lists and logs the result.
-        
-        Args:
-            size (int): The size of the input file path queue.
+
         """
         if size == len(self.list_containing_peaks) // events + len(self.list_not_containing_peaks) // events:
             print("There is the same amount of input files as output files.")

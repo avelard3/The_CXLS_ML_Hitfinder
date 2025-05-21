@@ -42,6 +42,11 @@ class Data(Dataset):
         if self.use_transform:
             self.make_transform()
 
+    def __len__(self) -> int:
+        """
+        Return the number of samples in the dataset.
+        """
+        return self.images.shape[0]
     
     def __getitem__(self, idx: int) -> tuple:
         """

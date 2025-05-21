@@ -292,7 +292,7 @@ def create_timeline_plot(study, path:str=None) -> None:
 
 if __name__ == '__main__':
     study = optuna.create_study(direction='minimize')
-    study.optimize(objective, n_trials=2) 
+    study.optimize(objective, n_trials=5) 
     
     image_path_save = '/scratch/avelard3/big_files/pics_from_optuna_5_9'
     create_optimization_history_plot(study, image_path_save)

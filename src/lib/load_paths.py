@@ -13,7 +13,8 @@ class Paths:
         Constructor for Paths class that handles both single and multi-event files.
         Args:
             list_path (list): Path to an lst file with h5 file paths.
-            attributes (dict): Dictionary with metadata attributes to read from hdf5 files.
+            h5_location (dict): The image or hyperparameter path name in the h5 file
+            executing_mode (str): if it's running or training mode
             master_file (Optional[str], optional): Path to master file for metadata. Defaults to None.
             is_multi_event (bool, optional): Flag to distinguish between single and multi-event processing. Defaults to False.
         """
@@ -36,10 +37,16 @@ class Paths:
 
         
     def run_paths(self) -> None:
+        """
+        Calls the function that sets up the files to b read and then maps the dataset to a virtual dataset (VDS)
+        """
         self.set_up_files()
         self.map_dataset_to_vds()
             
     def set_up_files(self) -> None:
+        """
+        Prepares files to be entered into VDS by checking dimensions/shape and storing this information in a vds file
+        """
         # add decorators
         now = datetime.datetime.now()
         formatted_date_time = now.strftime('%m%d%y-%H:%M')
@@ -81,6 +88,9 @@ class Paths:
 
         
     def map_dataset_to_vds(self) -> None:
+        """
+        Maps the images and metadata into a virtual dataset (with different methods depending on training/running and data format)
+        """
         with h5.File(self.vds_name, 'w') as vds_file: #start creating vds file
             # Virtual layout for images
             self._image_layout = h5.VirtualLayout(shape=self._image_shape, dtype='float32')
@@ -104,7 +114,7 @@ class Paths:
                         vsource_camera_length = h5.VirtualSource(f[self._camera_length_location])  #moving this down didn't help
                         vsource_photon_energy = h5.VirtualSource(f[self._photon_energy_location])
 
-                        #! add path to wear vds is saved
+                        #! add path to where vds is saved
 #* I think I need a different variable to keep track of the number of which image is being looked at 
                         if self._dim_and_shape_array[i,1] == 2: #if it's single event #change to Ks!!!!!!!!!!!!!!!!!!!!!#!
                             print("Single event in load_paths")
@@ -159,11 +169,22 @@ class Paths:
                 vds_file.create_virtual_dataset('vsource_hit_parameter', self._hit_parameter_layout)
 
     def add_file_to_list(self, numbered_file: str, i: int) -> None:
+        """
+        Adds h5 file name into list of images for use in output file later
+        """
         pic_num = i % self._number_of_events
         numbered_file =f'{numbered_file}_{str(pic_num)}'
         self._h5_file_list.append(numbered_file)
             
     def get_vds(self) -> str:
+        """
+        Returns vds
+        """
         return self.vds_name
-    def get_file_names(self) -> list:  
+    
+    
+    def get_file_names(self) -> list: 
+        """
+        Returns list of file names put into h5 file
+        """ 
         return self._h5_file_list

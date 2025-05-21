@@ -9,6 +9,14 @@ import matplotlib.colors as colors
 
 class ScatteringMatrix():
     def  __init__(self, file_name:str, file_path:str, data_file_path_name:np.array) -> None:
+        """
+        Has functions to read the geometry files, calculate the q_vector, create a new array and insert the data into new matrix using that information
+
+        Args:
+            file_name (str): name of file that stores geometry information
+            file_path (str): path to file that stores geometry information
+            data_file_path_name (np.array): all images in an array
+        """
         self._current_geom_file =  file_name
         self._current_geom_file_path = file_path
 
@@ -21,6 +29,9 @@ class ScatteringMatrix():
         
 
     def read_geom_file(self):
+        """
+        Read geometry file information
+        """
         with open(self._current_geom_file_path + self._current_geom_file, 'r') as file:
             data = json.load(file)
 
@@ -59,7 +70,9 @@ class ScatteringMatrix():
         
 
     def calculate_q_vec(self):
-
+        """
+        Calculate q_vector based on file geometry
+        """
         
         # The following is made more complicated due to the fact that we're not using for loops
         
@@ -101,6 +114,9 @@ class ScatteringMatrix():
 
 
     def create_new_array(self):
+        """
+        Create new array that's the correct size for the new image
+        """
         # Calculate the dimensions in real space and pixel space to determine the necessary size array to hold all the panels from the detector
 
         # Find the average length of a pixel in real space "units"
@@ -121,7 +137,13 @@ class ScatteringMatrix():
 
 
 
-    def insert_data_into_new_matrix(self, all_data_array: np.array):        
+    def insert_data_into_new_matrix(self, all_data_array: np.array):
+        """
+        Entering all the parts of the image data array into a cohesive image
+
+        Args:
+            all_data_array (np.array): all images in an array
+        """
         self._all_data_array = all_data_array
         self._num_trials_in_data = self._all_data_array.shape[0]
         
@@ -284,6 +306,7 @@ class ScatteringMatrix():
         plt.savefig("/scratch/avelard3/cxls_hitfinder_joblogs/z_best_scattering_and_vector.png")
    
 # Methods for padding annd cropping data (the class is defined below but its called in ScatteringMatrix graph_padded_data())     
+#FIXME: I think I need to change this so that it stretches the image rather than adds space between
 class ReshapeData():
     def __init__(self,data_array: np.ndarray):
         """
