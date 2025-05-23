@@ -175,7 +175,7 @@ def objective(trial): #learning rate is a log=true!?
     print("Loading model state dictionary")
     tuning_manager.load_model_state_dict()
     print("Getting VDS")
-    vds_dataset = path_manager.get_vds()
+    vds_dataset = '/scratch/avelard3/vds_051925-20:53.h5'
     print("Get file names")
     h5_file_paths = path_manager.get_file_names()
     print("Creating Data object")

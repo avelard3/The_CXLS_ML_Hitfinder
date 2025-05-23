@@ -187,10 +187,7 @@ class TuneModel:
                 self.optimizer.step()
                 
                 running_loss_train += loss.item()
-                
-                predictions = (torch.sigmoid(score) > 0.5).long()
-                accuracy_train += (predictions == truth).float().sum()
-                total_predictions += torch.numel(truth)
+
 
             loss_train = running_loss_train / len(self.train_loader)  
             self.plot_train_loss[epoch] = loss_train
@@ -207,55 +204,6 @@ class TuneModel:
         except Exception as e:
             print(f"An unexpected error occurred during training: {e}")
         
-    def test(self, epoch:int) -> None:
-        
-        """ 
-        This function test the model in evaluation mode and prints the loss and accuracy of the testing sets per epoch.
-        """
-        
-        running_loss_test, accuracy_test, predictions, total = 0.0, 0.0, 0.0, 0.0
- 
-        self.model.eval()
-
-        try:
-            print("Test in train_model")
-            with torch.no_grad():
-                
-                for images, camera_length, photon_energy, hit_parameter, _ in self.test_loader:
-
-                    # inputs = inputs.unsqueeze(1).to(self.device, dtype=torch.float32)
-                    inputs = torch.Tensor(images).to(self.device, dtype=torch.float32)
-                    cam_len = torch.Tensor(camera_length).to(self.device, dtype=torch.float32).squeeze(1)                    
-                    phot_en = torch.Tensor(photon_energy).to(self.device, dtype=torch.float32).squeeze(1)      
-
-                    score = self.model(inputs, cam_len, phot_en)
-                    truth = hit_parameter.reshape(-1, 1).float().to(self.device)
-
-                    loss = self.criterion(score, truth)
-                    running_loss_test += loss.item()
-
-                    predictions = (torch.sigmoid(score) > 0.5).long()
-                    accuracy_test += (predictions == truth).float().sum()
-                    total += torch.numel(truth)
-
-            loss_test = running_loss_test / len(self.test_loader)
-            self.scheduler.step(loss_test)
-            self.plot_test_loss[epoch] = loss_test
-            accuracy_test /= total
-            self.plot_test_accuracy[epoch] = accuracy_test
-
-            print(f'Test loss: {loss_test}')
-            print(f'Test accuracy: {accuracy_test}')
-            return loss_test
-
-        except RuntimeError as e:
-            print(f"RuntimeError during testing: {e}")
-        except AttributeError as e:
-            print(f"AttributeError during testing: {e}")
-        except TypeError as e:
-            print(f"TypeError during testing: {e}")
-        except Exception as e:
-            print(f"An unexpected error occurred during testing: {e}")
         
     def plot_loss_accuracy(self, path:str = None) -> None:
         """ 
