@@ -6,6 +6,9 @@ from queue import Queue
 import numpy as np
 import optuna
 import plotly
+import logging
+import sys
+import pickle
 
 def arguments(parser) -> argparse.ArgumentParser:
     """
@@ -43,7 +46,7 @@ def arguments(parser) -> argparse.ArgumentParser:
     
     parser.add_argument('-ccs', '--conv_channel_size_range', type=int, nargs=2, default=[2,8], help='Lower and upper limit of the final size of first convolution') #model
     parser.add_argument('-cks', '--conv_kernel_size_range', type=int, nargs=2, default=[3,3], help='Lower and upper limit of convolution kernel size') #model
-    parser.add_argument('-ldl', '--num_linear_dropout_layers_range', type=int, nargs=2, default=[0,3], help='Lower and upper limit of number of dropout layers and linear layers') #max=3 #model    
+    parser.add_argument('-ldl', '--num_linear_dropout_layers_range', type=int, nargs=2, default=[1,3], help='Lower and upper limit of number of dropout layers and linear layers') #max=3 #model    
     parser.add_argument('-lls', '--linear_layer_size_range', type=int, nargs=2, default=[2,2], help="")
     parser.add_argument('-dop', '--dropout_probability_range', type=float, nargs=2, default=[0.5,0.8], help='Lower and upper limit of dropout popularity') #model
     # adam parameters (optimizer) 
@@ -145,16 +148,27 @@ def objective(trial): #learning rate is a log=true!?
     num_linear_dropout_layers = trial.suggest_int('num_linear_dropout_layers', num_linear_dropout_layers_range[0], num_linear_dropout_layers_range[1])
     linear_layer_size = trial.suggest_int('linear_layer_size', linear_layer_size_range[0], linear_layer_size_range[1])
     dropout_probability = trial.suggest_float('dropout_probability', dropout_probability_range[0], dropout_probability_range[1]) 
-    print("The dropout probability is", dropout_probability)
+    beta1 = trial.suggest_float('beta1', 0.1000, 1.0000)
+    beta2 = trial.suggest_float('beta2', 0.1000, 1.0000)
+    
+    weight_decay = trial.suggest_categorical("weight_decay", [0, 1e-6, 1e-5, 1e-4, 1e-3, 1e-2])
+
+     #FIXME Tehcnically this should be in the sbatch script but I'm just trying to get it done at this point and i dont anticipate it needing to be any different because i'm researching this so much
+    
+    
     
     hyperparam_dict_train = {
         "epoch" : epoch,
         "learning_rate" : learning_rate,
         "lr_param_patience" : lr_param_patience,
-        "lr_param_threshold" : lr_param_threshold
-        
-        
+        "lr_param_threshold" : lr_param_threshold,
+        "beta1" : beta1,
+        "beta2" : beta2,
+        "weight_decay" : weight_decay,
     }
+    
+    print(hyperparam_dict_train)
+    
     hyperparam_dict_model = {
         "conv_channel_size" : conv_channel_size,  
         "conv_kernel_size" : conv_kernel_size,
@@ -171,7 +185,7 @@ def objective(trial): #learning rate is a log=true!?
     print("Creating TuneModel object")
     tuning_manager = tune_model.TuneModel(cfg, hyperparam_dict_train, hyperparam_dict_model, h5_locations, transfer_learning_state_dict)
     print("Create training instance")
-    tuning_manager.make_training_instances() #! current problem here
+    tuning_manager.make_training_instances() 
     print("Loading model state dictionary")
     tuning_manager.load_model_state_dict()
     print("Getting VDS")
@@ -192,7 +206,6 @@ def objective(trial): #learning rate is a log=true!?
     train_loss_from_epoch = tuning_manager.epoch_loop(trial)
     print("After epoch loop the train loss is", train_loss_from_epoch)
     return train_loss_from_epoch
-    #! add adam parameters
     #consolidate
 
 def create_optimization_history_plot(study, path:str=None) -> None:
@@ -291,8 +304,13 @@ def create_timeline_plot(study, path:str=None) -> None:
 
 
 if __name__ == '__main__':
-    study = optuna.create_study(direction='minimize')
-    study.optimize(objective, n_trials=5) 
+    study_name = "the-cxls-ml-hitfinder_optuna_official_run1"  # Unique identifier of the study.
+    storage_name = "sqlite:///{}.db".format(study_name)
+    
+    study = optuna.create_study(study_name=study_name, storage=storage_name, load_if_exists=True)
+
+    study.optimize(objective, n_trials=2) 
+
     
     image_path_save = '/scratch/avelard3/big_files/pics_from_optuna_5_9'
     create_optimization_history_plot(study, image_path_save)

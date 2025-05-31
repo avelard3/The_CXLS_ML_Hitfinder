@@ -47,6 +47,9 @@ class TuneModel:
         self.learning_rate = hpd_train['learning_rate']
         self.lr_param_patience = hpd_train['lr_param_patience']
         self.lr_param_threshold = hpd_train['lr_param_threshold']
+        self.beta1 = hpd_train['beta1']
+        self.beta2 = hpd_train['beta2']
+        self.weight_decay = hpd_train['weight_decay']
 
         self.model_hpd = hpd_model
         
@@ -84,10 +87,11 @@ class TuneModel:
             print("  self.model_hpd =", self.model_hpd)
             print("  getattr(m, self.model) =", getattr(m, self.model))
             print("  type(self.model_hpd) =", type(self.model_hpd))
-
             # Now actually instantiate the model
             self.model = getattr(m, self.model)(hpd=self.model_hpd).to(self.device) #*
-            self.optimizer = getattr(optim, self.optimizer)(self.model.parameters(), lr=self.learning_rate) #arguments of adam (optim.adam(arguments,arguments))
+            
+            self.optimizer = getattr(optim, self.optimizer)(self.model.parameters(), lr=self.learning_rate, betas=[self.beta1,self.beta2], weight_decay=self.weight_decay) #arguments of adam (optim.adam(arguments,arguments))
+            
             self.scheduler = getattr(lrs, self.scheduler)(self.optimizer, mode='min', factor=0.1, patience=self.lr_param_patience, threshold=self.lr_param_threshold) # learning rate scheduler #probably specific to optimizer
             self.criterion = getattr(nn, self.criterion)() # loss function. should probably leave that alone for now
             
@@ -152,7 +156,7 @@ class TuneModel:
             # from optuna examples
             trial.report(train_loss_value, epoch)
             if trial.should_prune():
-                print("an exception was reached")
+                print("an exception was reached and it should be pruned")
                 raise optuna.exceptions.TrialPruned()
             # end from optuna examples
             
@@ -172,11 +176,10 @@ class TuneModel:
         self.model.train()
         
         try:
-            print("Train in train_model")
             for images, camera_length, photon_energy, hit_parameter, _ in self.train_loader: 
                 inputs = torch.Tensor(images).to(self.device, dtype=torch.float32)
                 cam_len = torch.Tensor(camera_length).to(self.device, dtype=torch.float32).squeeze(1)
-                phot_en = torch.Tensor(photon_energy).to(self.device, dtype=torch.float32).squeeze(1)                    
+                phot_en = torch.Tensor(photon_energy).to(self.device, dtype=torch.float32).squeeze(1)           
                 self.optimizer.zero_grad()
                 
                 score = self.model(inputs, cam_len, phot_en) 
