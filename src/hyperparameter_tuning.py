@@ -150,8 +150,9 @@ def objective(trial): #learning rate is a log=true!?
     dropout_probability = trial.suggest_float('dropout_probability', dropout_probability_range[0], dropout_probability_range[1]) 
     beta1 = trial.suggest_float('beta1', 0.1000, 1.0000)
     beta2 = trial.suggest_float('beta2', 0.1000, 1.0000)
-    
     weight_decay = trial.suggest_categorical("weight_decay", [0, 1e-6, 1e-5, 1e-4, 1e-3, 1e-2])
+    momentum_2d = trial.suggest_float('momentum_2d', 0.001, 0.99)
+    momentum_1d = trial.suggest_float('momentum_1d', 0.001, 0.99)
 
      #FIXME Tehcnically this should be in the sbatch script but I'm just trying to get it done at this point and i dont anticipate it needing to be any different because i'm researching this so much
     
@@ -174,7 +175,9 @@ def objective(trial): #learning rate is a log=true!?
         "conv_kernel_size" : conv_kernel_size,
         "num_linear_dropout_layers" : num_linear_dropout_layers,
         "linear_layer_size" : linear_layer_size,
-        "dropout_probability" : dropout_probability
+        "dropout_probability" : dropout_probability,
+        "momentum_2d" : momentum_2d,
+        "momentum_1d" : momentum_1d
     }
     
     executing_mode = 'training'
@@ -304,7 +307,7 @@ def create_timeline_plot(study, path:str=None) -> None:
 
 
 if __name__ == '__main__':
-    study_name = "the-cxls-ml-hitfinder_optuna_official_run1"  # Unique identifier of the study.
+    study_name = "the-cxls-ml-hitfinder"  # Unique identifier of the study.
     storage_name = "sqlite:///{}.db".format(study_name)
     
     study = optuna.create_study(study_name=study_name, storage=storage_name, load_if_exists=True)
