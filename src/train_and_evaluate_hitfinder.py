@@ -34,8 +34,9 @@ def arguments(parser) -> argparse.ArgumentParser:
     parser.add_argument('-pk', '--peaks', type=str, help='Attribute name for is there are peaks present.') #aka hit_parameter
     
     parser.add_argument('-tl', '--transfer_learn', type=str, default=None, help='File path to state dict file for transfer learning.' )
-    parser.add_argument('-at', '--apply_transform', type=bool, default = False, help = 'Apply transform to images (true or false)')
+    parser.add_argument('-at', '--apply_transform', type=str, default="False", help = 'Apply transform to images (true or false)')
     parser.add_argument('-mf', '--master_file', type=str, default=None, help='File path to the master file containing the .lst files.')
+    parser.add_argument('-citcs', '--crop_image_to_correct_size', type=str, default="False", help="Crop image at random position into correct size")
     
     try:
         args = parser.parse_args()
@@ -89,19 +90,27 @@ def main() -> None:
     
     transfer_learning_state_dict = args.transfer_learn
     transform = args.apply_transform # Parameter for Data class
-    
-    #temperary holding
-    transform = False
-    
     master_file = args.master_file
-    if master_file == 'None' or master_file == 'none':
-        master_file = None
-        
-        
+    crop_image  = args.crop_image_to_correct_size
+    
+            
     # Transfer learning (yes or no)
     if transfer_learning_state_dict == 'None' or transfer_learning_state_dict == 'none':
         transfer_learning_state_dict = None
     
+    if master_file == 'None' or master_file == 'none':
+        master_file = None
+        
+    if transform == 'False':
+        transform = False
+    if transform == 'True':
+        transform = True
+        
+    if crop_image == 'False':
+        crop_image = False
+    if crop_image  == 'True':
+        crop_image = True
+        
         
     h5_locations = {
         'image': image_location,
@@ -132,8 +141,8 @@ def main() -> None:
     
     vds_dataset = path_manager.get_vds()
     h5_file_paths = path_manager.get_file_names()
-    
-    data_manager = load_data.Data(vds_dataset, h5_file_paths, executing_mode, transform, master_file)
+    print("train and eval crop image", crop_image)
+    data_manager = load_data.Data(vds_dataset, h5_file_paths, executing_mode, transform, crop_image, master_file)
     
     create_data_loader = load_data.CreateDataLoader(data_manager, batch_size)
     

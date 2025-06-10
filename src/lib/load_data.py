@@ -10,7 +10,7 @@ import numpy as np
 
 class Data(Dataset):
     
-    def __init__(self, vds_path: str, file_list: list, executing_mode: str, use_transform: bool, master_file: Optional[str] = None,) -> None:
+    def __init__(self, vds_path: str, file_list: list, executing_mode: str, use_transform: bool, crop_image_to_correct_size: bool, master_file: Optional[str] = None) -> None:
         """
         Initialize the Data object with classification and attribute data.
 
@@ -30,6 +30,7 @@ class Data(Dataset):
         
         self.camera_length = self.file['vsource_camera_length']
         self.photon_energy = self.file['vsource_photon_energy']
+        
         if self.executing_mode == "training":
             self.hit_parameter = self.file['vsource_hit_parameter']
         
@@ -37,6 +38,11 @@ class Data(Dataset):
         self.use_transform = use_transform
         self.transforms = None #initialize
         self._master_file = master_file
+        self.crop_image_to_correct_size = crop_image_to_correct_size
+        print("in load data crop image", self.crop_image_to_correct_size)
+        
+        if self.crop_image_to_correct_size:
+            self.make_crop()
         
         # If transforms will be used, then it creates the pytorch object that will be used to transform future data
         if self.use_transform:
@@ -55,27 +61,34 @@ class Data(Dataset):
                 
         # Check if a transform needs to be applied and apply it
         try:
+            if self.crop_image_to_correct_size:
+                print("Cropping oversized image", self.crop_image_to_correct_size)
+                image = self.crop(self.images[idx][0])
+            else:
+                image = self.images[idx]
+            
             if self.use_transform:
                 print("You tried to use a transform when transforms don't work")
-                image = self.transforms(self.image_data[idx])
-                return image, self.meta_data[idx], self.file_paths[idx]
-            else:
+                image = self.transforms(self.images[idx])
+                return image, self.meta_data[idx], self.file_paths[idx] #FIXME
 
-                #if statement with return only one thing in masterfile metadata #! 
-                #*
-                if self.executing_mode == "running":
-                    self.hit_parameter = np.empty(self.camera_length.shape)
+            #if statement with return only one thing in masterfile metadata #! 
+            
+            if self.executing_mode == "running":
+                # Making hit_param empty so that no errors happen when returning values
+                self.hit_parameter = np.empty(self.camera_length.shape)
                     
-                if self._master_file != None:
-                    return self.images[idx], self.camera_length[0], self.photon_energy[0], self.hit_parameter[0], self.file_list[idx]
-                else:
-                    return self.images[idx], self.camera_length[idx], self.photon_energy[idx], self.hit_parameter[idx], self.file_list[idx] #change
+            if self._master_file != None:
+                # If there is a master file, then images and file_list is treated like normal, but cam_len, phot_en and hit_param are all the same
+                return image, self.camera_length[0], self.photon_energy[0], self.hit_parameter[0], self.file_list[idx]
+            else:
+                # Most classic case where images, cam_len, phot_en, hit_param and file_list are per image
+                return image, self.camera_length[idx], self.photon_energy[idx], self.hit_parameter[idx], self.file_list[idx] #change
 
-                #*
         except Exception as e:
             print(f"An unexpected error occurred while getting item at index {idx}: {e}")
             
-    def make_(self) -> None:
+    def make_transform(self) -> None:
         """
         If the transfom flag is true, this function creates the global variable for the transform for image data. 
         This part doesn't interact with the actual data; it just stores pytorch object data for a future transform.
@@ -83,6 +96,13 @@ class Data(Dataset):
         self.transforms = transforms.Compose([
             transforms.Resize(512) #Resize transform doesn't work for hitfinder, but transforms in general do work
         ])
+    
+    def make_crop(self) -> None:
+        self.crop = transforms.Compose([
+            transforms.ToTensor(), 
+            transforms.RandomCrop(size=(512,512))
+        ])
+        
 
         
 class CreateDataLoader():

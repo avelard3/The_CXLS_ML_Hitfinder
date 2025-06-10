@@ -307,7 +307,7 @@ def create_timeline_plot(study, path:str=None) -> None:
 
 
 if __name__ == '__main__':
-    study_name = "the-cxls-ml-hitfinder"  # Unique identifier of the study.
+    study_name = "the-cxls-ml-hitfinder_momentum"  # Unique identifier of the study.
     storage_name = "sqlite:///{}.db".format(study_name)
     
     study = optuna.create_study(study_name=study_name, storage=storage_name, load_if_exists=True)
