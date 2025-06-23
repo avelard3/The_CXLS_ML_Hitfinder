@@ -55,6 +55,7 @@ class Data(Dataset):
                 
         # Check if a transform needs to be applied and apply it
         try:
+            self._file_index = self.file_list[idx]
             if self.use_transform:
                 print("You tried to use a transform when transforms don't work")
                 image = self.transforms(self.image_data[idx])
@@ -73,7 +74,7 @@ class Data(Dataset):
 
                 #*
         except Exception as e:
-            print(f"An unexpected error occurred while getting item at index {idx}: {e}")
+            print(f"An unexpected error occurred while getting item at index {idx}: {e} and this is with file {self._file_index}")
             
     def make_(self) -> None:
         """

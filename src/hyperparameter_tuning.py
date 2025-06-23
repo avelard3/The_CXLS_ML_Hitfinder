@@ -192,7 +192,7 @@ def objective(trial): #learning rate is a log=true!?
     print("Loading model state dictionary")
     tuning_manager.load_model_state_dict()
     print("Getting VDS")
-    vds_dataset = '/scratch/avelard3/vds_051925-20:53.h5'
+    vds_dataset = path_manager.get_vds()
     print("Get file names")
     h5_file_paths = path_manager.get_file_names()
     print("Creating Data object")
@@ -307,12 +307,12 @@ def create_timeline_plot(study, path:str=None) -> None:
 
 
 if __name__ == '__main__':
-    study_name = "the-cxls-ml-hitfinder"  # Unique identifier of the study.
+    study_name = "the-cxls-ml-hitfinder-trial1_june23"  # Unique identifier of the study.
     storage_name = "sqlite:///{}.db".format(study_name)
     
     study = optuna.create_study(study_name=study_name, storage=storage_name, load_if_exists=True)
 
-    study.optimize(objective, n_trials=2) 
+    study.optimize(objective, n_trials=15) #!
 
     
     image_path_save = '/scratch/avelard3/big_files/pics_from_optuna_5_9'

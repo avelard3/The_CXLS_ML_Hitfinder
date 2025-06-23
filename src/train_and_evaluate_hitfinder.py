@@ -37,6 +37,22 @@ def arguments(parser) -> argparse.ArgumentParser:
     parser.add_argument('-at', '--apply_transform', type=bool, default = False, help = 'Apply transform to images (true or false)')
     parser.add_argument('-mf', '--master_file', type=str, default=None, help='File path to the master file containing the .lst files.')
     
+    
+    parser.add_argument('-lrp', '--lr_param_patience', type=int, help='Patience for learning rate parameter input')
+    parser.add_argument('-lrt', '--lr_param_threshold', type=float, help='Threshold for learning rate parameter input')
+    
+    parser.add_argument('-ccs', '--conv_channel_size', type=int, help='Final size of first convolution') #model
+    parser.add_argument('-cks', '--conv_kernel_size', type=int, help='Convolution kernel size') #model
+    parser.add_argument('-ldl', '--num_linear_dropout_layers', type=int, help='Number of dropout layers and linear layers') #max=3 #model    
+    parser.add_argument('-lls', '--linear_layer_size', type=int, help='Size of input of last linear layer')
+    parser.add_argument('-dop', '--dropout_probability', type=float, help='Dropout probability') #model
+    parser.add_argument('-ab1', '--adam_param_beta1', type=float, help="Adam parameter for momentum")
+    parser.add_argument('-ab2', '--adam_param_beta2', type=float, help="Adam parameter for RMSprop")
+    parser.add_argument('-awd', '--adam_param_weight_decay', type=float, help="its in the name")
+    parser.add_argument('-bn2dm', '--batch_norm_2d_momentum', type=float, help="its in the name")
+    parser.add_argument('-bn1dm', '--batch_norm_1d_momentum', type=float, help="its in the name")
+  
+    
     try:
         args = parser.parse_args()
         print("Parsed arguments:")
@@ -90,6 +106,7 @@ def main() -> None:
     transfer_learning_state_dict = args.transfer_learn
     transform = args.apply_transform # Parameter for Data class
     
+    
     #temperary holding
     transform = False
     
@@ -101,6 +118,24 @@ def main() -> None:
     # Transfer learning (yes or no)
     if transfer_learning_state_dict == 'None' or transfer_learning_state_dict == 'none':
         transfer_learning_state_dict = None
+    
+    
+    lr_param_patience = args.lr_param_patience
+    lr_param_threshold = args.lr_param_threshold
+    
+    conv_channel_size = args.conv_channel_size
+    conv_kernel_size = args.conv_kernel_size
+    num_linear_dropout_layers = args.num_linear_dropout_layers
+    linear_layer_size = args.linear_layer_size
+    dropout_probability = args.dropout_probability
+    adam_param_beta1 = args.adam_param_beta1
+    adam_param_beta2 = args.adam_param_beta2
+    adam_param_weight_decay = args.adam_param_weight_decay
+    batch_norm_2d_momentum = args.batch_norm_2d_momentum
+    batch_norm_1d_momentum = args.batch_norm_1d_momentum
+    
+    
+    
     
         
     h5_locations = {
@@ -118,7 +153,22 @@ def main() -> None:
         'scheduler': scheduler,
         'criterion': criterion,
         'learning rate': learning_rate,
-        'model': model_arch
+        'model': model_arch,
+        "lr_param_patience" : lr_param_patience,
+        "lr_param_threshold" : lr_param_threshold,
+        "adam_param_beta1" : adam_param_beta1,
+        "adam_param_beta2" : adam_param_beta2,
+        "adam_param_weight_decay" : adam_param_weight_decay,
+    }
+    
+    model_inputs = {
+        "conv_channel_size" : conv_channel_size,  
+        "conv_kernel_size" : conv_kernel_size,
+        "num_linear_dropout_layers" : num_linear_dropout_layers,
+        "linear_layer_size" : linear_layer_size,
+        "dropout_probability" : dropout_probability,
+        "batch_norm_2d_momentum" : batch_norm_2d_momentum,
+        "batch_norm_1d_momentum" : batch_norm_1d_momentum
     }
 
     executing_mode = 'training'
@@ -126,7 +176,7 @@ def main() -> None:
     
     path_manager.run_paths()
     
-    training_manager = train_model.TrainModel(cfg, h5_locations, transfer_learning_state_dict)
+    training_manager = train_model.TrainModel(cfg, model_inputs, h5_locations, transfer_learning_state_dict)
     training_manager.make_training_instances()
     training_manager.load_model_state_dict()
     

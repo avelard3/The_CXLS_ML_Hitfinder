@@ -13,7 +13,7 @@ from . import conf
 
 class TrainModel:
     
-    def __init__(self, cfg: dict, attributes: dict, transfer_learning_state_dict: str) -> None:
+    def __init__(self, cfg: dict, model_inputs: dict, attributes: dict, transfer_learning_state_dict: str) -> None:
         """
         This constructor breaks up the training configuration infomation dictionary and h5 metadata key dictionary.
         In addition, a logging object is created and global list are created for storing infomation about the training loss and accuracy. 
@@ -35,12 +35,23 @@ class TrainModel:
         self.scheduler = cfg['scheduler']
         self.criterion = cfg['criterion']
         self.learning_rate = cfg['learning rate']
-        self.model = cfg['model']
+        self.model = cfg['model']        
+        
+        self.lr_param_patience = cfg["lr_param_patience"]
+        self.lr_param_threshold = cfg["lr_param_threshold"]
+        self.adam_param_beta1 = cfg["adam_param_beta1"]
+        self.adam_param_beta2 = cfg["adam_param_beta2"]
+        self.adam_param_weight_decay = cfg["adam_param_weight_decay"]
+        
+        self.model_in = model_inputs
+
         
         self.plot_train_accuracy = np.zeros(self.epochs)
         self.plot_train_loss = np.zeros(self.epochs)
         self.plot_test_accuracy = np.zeros(self.epochs)
         self.plot_test_loss = np.zeros(self.epochs)
+        
+        
         
     def assign_new_data(self, train: DataLoader, test: DataLoader) -> None:
         """
@@ -60,9 +71,9 @@ class TrainModel:
         - the loss criterion
         """
         try:
-            self.model = getattr(m, self.model)().to(self.device)
-            self.optimizer = getattr(optim, self.optimizer)(self.model.parameters(), lr=self.learning_rate) #arguments of adam (optim.adam(arguments,arguments))
-            self.scheduler = getattr(lrs, self.scheduler)(self.optimizer, mode='min', factor=0.1, patience=3, threshold=0.1) # learning rate scheduler #probably specific to optimizer
+            self.model = getattr(m, self.model)(model_inputs=self.model_in).to(self.device)
+            self.optimizer = getattr(optim, self.optimizer)(self.model.parameters(), lr=self.learning_rate, betas=[self.adam_param_beta1,self.adam_param_beta2], weight_decay=self.adam_param_weight_decay)            
+            self.scheduler = getattr(lrs, self.scheduler)(self.optimizer, mode='min', factor=0.1, patience=self.lr_param_patience, threshold=self.lr_param_threshold) # learning rate scheduler #probably specific to optimizer
             self.criterion = getattr(nn, self.criterion)() # loss function. should probably leave that alone for now
             
             print('All training objects have been created.')
@@ -228,10 +239,10 @@ class TrainModel:
         This function plots the loss and accuracy of the training and testing sets per epoch.
         """
         try:
-            plt.plot(range(self.epochs), self.plot_train_accuracy, marker='o', color='red')
-            plt.plot(range(self.epochs), self.plot_test_accuracy, marker='o', color='orange', linestyle='dashed')
-            plt.plot(range(self.epochs), self.plot_train_loss, marker='o', color='blue')
-            plt.plot(range(self.epochs), self.plot_test_loss, marker='o', color='teal', linestyle='dashed')
+            plt.plot(range(self.epochs), self.plot_train_accuracy, marker='.', color='red')
+            plt.plot(range(self.epochs), self.plot_test_accuracy, marker='.', color='orange', linestyle='dashed')
+            plt.plot(range(self.epochs), self.plot_train_loss, marker='.', color='blue')
+            plt.plot(range(self.epochs), self.plot_test_loss, marker='.', color='teal', linestyle='dashed')
             plt.grid()
             plt.xlabel('epoch')
             plt.ylabel('loss/accuracy')
