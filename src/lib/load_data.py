@@ -6,6 +6,9 @@ from . import conf
 import sys
 from typing import Optional
 import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.colors as colors
+
 
 
 class Data(Dataset):
@@ -34,8 +37,7 @@ class Data(Dataset):
             self.hit_parameter = self.file['vsource_hit_parameter']
         
         
-        self.use_transform = use_transform
-        self.transforms = None #initialize
+        self.use_transform = False
         self._master_file = master_file
         
         # If transforms will be used, then it creates the pytorch object that will be used to transform future data
@@ -52,14 +54,21 @@ class Data(Dataset):
         """
         Get a sample from the dataset (tuple of image data and metadata) at the given index.
         """
-                
+        x = 0        
         # Check if a transform needs to be applied and apply it
         try:
+            print("before anything")
             self._file_index = self.file_list[idx]
             if self.use_transform:
                 print("You tried to use a transform when transforms don't work")
-                image = self.transforms(self.image_data[idx])
-                return image, self.meta_data[idx], self.file_paths[idx]
+                imgg = self.transforms(self.images[idx])
+                print("after trying to transform")
+                if idx == 0 and x==0:
+                    print("Creating a plot of one of the images that is being used")
+                    self.graph_image(imgg)
+                    x+=1
+                return imgg, self.camera_length[idx], self.photon_energy[idx], self.hit_parameter[idx], self.file_list[idx] #change
+
             else:
 
                 #if statement with return only one thing in masterfile metadata #! 
@@ -70,20 +79,35 @@ class Data(Dataset):
                 if self._master_file != None:
                     return self.images[idx], self.camera_length[0], self.photon_energy[0], self.hit_parameter[0], self.file_list[idx]
                 else:
+                    imgg = self.images[idx]
+                    if idx == 0 and x==0:
+                        print("Creating a plot of one of the images that is being used")
+                        self.graph_image(imgg)
+                        x+=1
                     return self.images[idx], self.camera_length[idx], self.photon_energy[idx], self.hit_parameter[idx], self.file_list[idx] #change
 
                 #*
         except Exception as e:
             print(f"An unexpected error occurred while getting item at index {idx}: {e} and this is with file {self._file_index}")
             
-    def make_(self) -> None:
+    def make_transform(self) -> None:
         """
         If the transfom flag is true, this function creates the global variable for the transform for image data. 
         This part doesn't interact with the actual data; it just stores pytorch object data for a future transform.
         """
         self.transforms = transforms.Compose([
-            transforms.Resize(512) #Resize transform doesn't work for hitfinder, but transforms in general do work
+            transforms.Resize(200) #Resize transform doesn't work for hitfinder, but transforms in general do work
         ])
+        
+        
+    def graph_image(self,smaller_array):        
+        smaller_array = smaller_array[0,:,:]
+        fig, ax = plt.subplots()
+        heatmap = ax.imshow(smaller_array, norm=colors.SymLogNorm(linthresh=100, linscale=1, base=10), cmap='viridis', origin = 'lower')
+
+        cbar = plt.colorbar(heatmap, ax=ax)
+        plt.show()
+        plt.savefig("/scratch/avelard3/cxls_hitfinder_joblogs/zseedata_trial4.png")
 
         
 class CreateDataLoader():

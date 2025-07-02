@@ -1,7 +1,7 @@
 import torch
 import datetime
 import os 
-from . import models
+from . import models as m
 from . import utils as u
 from . import conf
 import inspect
@@ -10,7 +10,7 @@ import importlib
 
 class RunModel:
     
-    def __init__(self, cfg: dict, attributes: dict) -> None:
+    def __init__(self, cfg: dict, model_inputs: dict, attributes: dict) -> None:
         """
         Initialize the RunModel class with model architecture, model path, output list path, h5 file paths, and device.
 
@@ -23,7 +23,7 @@ class RunModel:
         self.model_path = cfg['model_path']
         self.save_output_list = cfg['save_output_list']
 
-        
+        self.model_in = model_inputs
         self.list_containing_peaks = []
         self.list_not_containing_peaks = []
         
@@ -34,11 +34,11 @@ class RunModel:
         Create an instance of the model class specified by the model architecture.
         """
         try:
-            self.model = getattr(models, self.model_arch)()
+            self.model = getattr(m, self.model_arch)(model_inputs=self.model_in)
             print(f'Model object has been created: {self.model.__class__.__name__}')
         except AttributeError:
             print(f"Error: Model '{self.model_arch}' not found in the module.")
-            print(f'Available models: {inspect.getmembers(models, inspect.isclass)}')
+            print(f'Available models: {inspect.getmembers(m, inspect.isclass)}')
         except TypeError:
             print(f"Error: '{self.model_arch}' found in module is not callable.")
         except Exception as e:

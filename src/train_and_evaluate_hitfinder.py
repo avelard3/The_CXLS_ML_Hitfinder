@@ -34,9 +34,8 @@ def arguments(parser) -> argparse.ArgumentParser:
     parser.add_argument('-pk', '--peaks', type=str, help='Attribute name for is there are peaks present.') #aka hit_parameter
     
     parser.add_argument('-tl', '--transfer_learn', type=str, default=None, help='File path to state dict file for transfer learning.' )
-    parser.add_argument('-at', '--apply_transform', type=bool, default = False, help = 'Apply transform to images (true or false)')
+    parser.add_argument('-at', '--apply_transform', type=str, default=False, help='Apply transform to images (true or false)')
     parser.add_argument('-mf', '--master_file', type=str, default=None, help='File path to the master file containing the .lst files.')
-    
     
     parser.add_argument('-lrp', '--lr_param_patience', type=int, help='Patience for learning rate parameter input')
     parser.add_argument('-lrt', '--lr_param_threshold', type=float, help='Threshold for learning rate parameter input')

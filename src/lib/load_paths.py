@@ -34,6 +34,7 @@ class Paths:
         self._camera_length_location = self._h5_location['camera length'] 
         self._photon_energy_location = self._h5_location['photon energy']
         self._hit_parameter_location = self._h5_location['peak']
+        self.crop_images = True
 
         
     def run_paths(self) -> None:
@@ -83,8 +84,6 @@ class Paths:
         self._image_shape = (self._total_num_images, 1, self._height, self._width) #!DEFINITELY needs to be this shape, but IDK WHY (num_images, 1, height, width)
         self._attr_shape = (self._total_num_images, 1) 
         
-        #! self.add_files_to_list(file_names_only, self._dim_and_shape_array)
-        #! need to deal with file list
 
         
     def map_dataset_to_vds(self) -> None:
@@ -143,6 +142,18 @@ class Paths:
                                 
                         elif self._dim_and_shape_array[i,1] == 3: # (need to have a metadata check eventually) and self._attr_shape[0] > 1: # if it's multievent with indiv metadata
 
+                            print("vsource_image.shape", vsource_image.shape)
+                            
+                            if self.crop_images:
+                                #TODO add an option of quadrants 1-4 so that beam stop is not in any pictures later
+                                print("Going to crop to 512x512 from current shape", vsource_image.shape)
+                                #starting point 
+                                shape_of_img = vsource_image.shape
+                                center_x = shape_of_img[1]//2
+                                center_y = shape_of_img[2]//2
+                                vsource_image = vsource_image[:, center_x: (center_x + 512), center_y: (center_y +512)] #IM TOTALLY GUESSING HERE
+                            
+                            print("vsource_image.shape", vsource_image.shape)
                             self._image_layout[k:(k+self._dim_and_shape_array[i,0]), 0, :, :] = vsource_image
                             for j in range(self._dim_and_shape_array[i,0]):
                                 self.add_file_to_list(self._source_file, j+1)
@@ -172,7 +183,7 @@ class Paths:
         """
         Adds h5 file name into list of images for use in output file later
         """
-        pic_num = i % self._number_of_events
+        pic_num = i
         numbered_file =f'{numbered_file}_{str(pic_num)}'
         self._h5_file_list.append(numbered_file)
             

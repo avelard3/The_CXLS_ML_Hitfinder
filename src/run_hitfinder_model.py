@@ -72,7 +72,7 @@ def main():
     batch_size = args.batch
     
     # Temperary hold
-    transform = False
+    transform = True
     
     master_file = args.master_file
     if master_file == 'None' or master_file == 'none':
@@ -91,13 +91,41 @@ def main():
         'save_output_list': save_output_list,
         'device': device,
     }
+    
+    #! DELETE ME LATER
+    conv_channel_size=7
+    conv_kernel_size=6
+    num_linear_dropout_layers=1
+    linear_layer_size=6
+    dropout_probability=0.38437557450917537
+    batch_norm_2d_momentum=0.17464996633777477
+    batch_norm_1d_momentum=0.7345315119311252
+
+
+
+
+    model_inputs = {
+        "conv_channel_size" : conv_channel_size,  
+        "conv_kernel_size" : conv_kernel_size,
+        "num_linear_dropout_layers" : num_linear_dropout_layers,
+        "linear_layer_size" : linear_layer_size,
+        "dropout_probability" : dropout_probability,
+        "batch_norm_2d_momentum" : batch_norm_2d_momentum,
+        "batch_norm_1d_momentum" : batch_norm_1d_momentum
+    }
+
+    #! DELETE ME LATER END except that i had to change things other places so i might just be stuck like this now
+    
+    
+    
+    
     executing_mode = 'running'
     path_manager = load_paths.Paths(h5_file_list, h5_locations, executing_mode, master_file)
 
     path_manager.run_paths()
     
     
-    process_data = run_model.RunModel(cfg, h5_locations)
+    process_data = run_model.RunModel(cfg, model_inputs, h5_locations)
     process_data.make_model_instance()
     process_data.load_model()
 
