@@ -36,7 +36,6 @@ class Data(Dataset):
         if self.executing_mode == "training":
             self.hit_parameter = self.file['vsource_hit_parameter']
         
-        
         self.use_transform = False
         self._master_file = master_file
         
@@ -57,12 +56,10 @@ class Data(Dataset):
         x = 0        
         # Check if a transform needs to be applied and apply it
         try:
-            print("before anything")
             self._file_index = self.file_list[idx]
             if self.use_transform:
                 print("You tried to use a transform when transforms don't work")
                 imgg = self.transforms(self.images[idx])
-                print("after trying to transform")
                 if idx == 0 and x==0:
                     print("Creating a plot of one of the images that is being used")
                     self.graph_image(imgg)
@@ -75,10 +72,10 @@ class Data(Dataset):
                 #*
                 if self.executing_mode == "running":
                     self.hit_parameter = np.empty(self.camera_length.shape)
-                    
+
                 if self._master_file != None:
                     return self.images[idx], self.camera_length[0], self.photon_energy[0], self.hit_parameter[0], self.file_list[idx]
-                else:
+                else:                    
                     imgg = self.images[idx]
                     if idx == 0 and x==0:
                         print("Creating a plot of one of the images that is being used")
