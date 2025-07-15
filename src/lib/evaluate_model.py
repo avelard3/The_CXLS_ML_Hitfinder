@@ -20,6 +20,7 @@ class ModelEvaluation:
             cfg (dict): Dictionary containing important information for training including 
             attributes (dict): Dictionary containing the names of the metadata contained in the h5 image files
             trained_model (nn.Module): Trained model taken from the training class. 
+            testing_data (DataLoader): Data that was set aside for testing/evaluating hitfinder
         """
         
         self.test_loader = testing_data
@@ -90,13 +91,18 @@ class ModelEvaluation:
         """ 
         Plots the confusion matrix of the testing set.
         The values in this matrix are done so that the rows total to 1. 
+        
+        Args:
+            path (str): Path to where confusion matrix should be saved
+             
         """
         
         try:
             print('Creating confusion matrix...')
             self.cm = confusion_matrix(self.all_labels, self.all_predictions, normalize='true')
         except Exception as e:
-            print(f"An error occurred while creating the confusion matrix: {e}")       
+            print(f"An error occurred while creating the confusion matrix: {e}")      
+             
         # Plotting the confusion matrix
         try:
             plt.matshow(self.cm, cmap="Blues")

@@ -13,12 +13,14 @@ import matplotlib.colors as colors
 
 class Data(Dataset):
     
-    def __init__(self, vds_path: str, file_list: list, executing_mode: str, use_transform: bool, master_file: Optional[str] = None,) -> None:
+    def __init__(self, vds_path: str, file_list: list, executing_mode: str, use_transform: bool, master_file: Optional[str] = None) -> None:
         """
         Initialize the Data object with classification and attribute data.
 
         Args:
-            vds_path (str)
+            vds_path (str): 
+            file_list (list):
+            executing mode (str): Indicates whether hitfinder is in training or running mode
             use_transform (bool): Whether you want the transforms to be applied to the images to create more data or not
         """
         self.train_loader = None

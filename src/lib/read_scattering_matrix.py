@@ -32,40 +32,44 @@ class ScatteringMatrix():
         """
         Read geometry file information
         """
-        with open(self._current_geom_file_path + self._current_geom_file, 'r') as file:
-            data = json.load(file)
-
-        # Vectors from geom file
-
-        self._fs_vec = [entry['fs_vec'] for entry in data] # fast scan vector
-        self._ss_vec = [entry['ss_vec'] for entry in data] # slow scan vector
-        self._t_vec = [entry['t_vec'] for entry in data] # center of first pixel vector
-
-
-        # Size of detector panel from geom file
-
-        n_fs_list = [entry['n_fs'] for entry in data] # should all be equivalent #FIXME add breakpoint if not equivalent
-        self._n_fs_int = n_fs_list[0]  # number of pixels in fast-scan direction
         
-        n_ss_list = [entry['n_ss'] for entry in data] # should all be equivalent
-        self._n_ss_int = n_ss_list[0] # number of pixels in slow-scan direction
+        try:
+            with open(self._current_geom_file_path + self._current_geom_file, 'r') as file:
+                data = json.load(file)
 
-        file.close()
-        
-        # Vector definitions all based on reborn documentation for detectors
+            # Vectors from geom file
 
-        # reborn finds photon wavelength  by dividing hc / photon_energy, where hc is the constant h * constant c from scipy constants
-        # default photon_energy = 1.602e-15 according to reborn, but in example reborn used wavelength = 1.5e-10 #FIXME
-        # Likely unimportant because qvec isn't used in anything currently
-        self._b_vec = np.array([0.0, 0.0, 1.0]) # Default that reborn uses
-        self._wavelength = 1.5e-10 
-        self._t_vec_arr = np.array(self._t_vec)
-        self._ss_vec_arr = (np.array(self._ss_vec))
-        self._fs_vec_arr = (np.array(self._fs_vec))
+            self._fs_vec = [entry['fs_vec'] for entry in data] # fast scan vector
+            self._ss_vec = [entry['ss_vec'] for entry in data] # slow scan vector
+            self._t_vec = [entry['t_vec'] for entry in data] # center of first pixel vector
 
-        orig_array_shape = self._fs_vec_arr.shape # FIXME: add a break point if t,fs,ss are different sizes
-        self._num_panels = orig_array_shape[0]
-        self._vector_length = orig_array_shape[1]
+
+            # Size of detector panel from geom file
+
+            n_fs_list = [entry['n_fs'] for entry in data] # should all be equivalent #FIXME add breakpoint if not equivalent
+            self._n_fs_int = n_fs_list[0]  # number of pixels in fast-scan direction
+            
+            n_ss_list = [entry['n_ss'] for entry in data] # should all be equivalent
+            self._n_ss_int = n_ss_list[0] # number of pixels in slow-scan direction
+
+            file.close()
+            
+            # Vector definitions all based on reborn documentation for detectors
+
+            # reborn finds photon wavelength  by dividing hc / photon_energy, where hc is the constant h * constant c from scipy constants
+            # default photon_energy = 1.602e-15 according to reborn, but in example reborn used wavelength = 1.5e-10 #FIXME
+            # Likely unimportant because qvec isn't used in anything currently
+            self._b_vec = np.array([0.0, 0.0, 1.0]) # Default that reborn uses
+            self._wavelength = 1.5e-10 
+            self._t_vec_arr = np.array(self._t_vec)
+            self._ss_vec_arr = (np.array(self._ss_vec))
+            self._fs_vec_arr = (np.array(self._fs_vec))
+
+            orig_array_shape = self._fs_vec_arr.shape # FIXME: add a break point if t,fs,ss are different sizes
+            self._num_panels = orig_array_shape[0]
+            self._vector_length = orig_array_shape[1]
+        except Exception as e:
+            print(f"An unexpected error occurred while reading the geometry file: {e}")
         
         
 
@@ -73,44 +77,45 @@ class ScatteringMatrix():
         """
         Calculate q_vector based on file geometry
         """
-        
-        # The following is made more complicated due to the fact that we're not using for loops
-        
+                
         # Everything that it multiplied should have the shape (num_panels, vector_length, n_fs_int, n_ss_int)
         
         # Creating a correctly sized array of n_fs and n_ss where the index is equal to the value stored at that index
         # (so you can iterate through all the positions in a n_fs by n_ss panel)
-        
-        n_fs_indices = np.arange(self._n_fs_int).reshape(1,1,-1,1) # Shape (1, 1, n_fs, 1)
-        n_ss_indices = np.arange(self._n_ss_int).reshape(1,1,1,-1) # Shape(1, 1, 1, n_ss)
-        n_fs_indices_expanded = np.tile(n_fs_indices, (self._num_panels, self._vector_length, 1, self._n_ss_int)) # Shape (num_panels, vector_length, n_fs, n_ss)
-        n_ss_indices_expanded = np.tile(n_ss_indices, (self._num_panels, self._vector_length, self._n_fs_int, 1)) # Shape (num_panels, vector_length, n_fs, n_ss)
+        try: 
+            n_fs_indices = np.arange(self._n_fs_int).reshape(1,1,-1,1) # Shape (1, 1, n_fs, 1)
+            n_ss_indices = np.arange(self._n_ss_int).reshape(1,1,1,-1) # Shape(1, 1, 1, n_ss)
+            n_fs_indices_expanded = np.tile(n_fs_indices, (self._num_panels, self._vector_length, 1, self._n_ss_int)) # Shape (num_panels, vector_length, n_fs, n_ss)
+            n_ss_indices_expanded = np.tile(n_ss_indices, (self._num_panels, self._vector_length, self._n_fs_int, 1)) # Shape (num_panels, vector_length, n_fs, n_ss)
 
 
-        # Expand dimensions of fs, ss, and t to align with n_fs_indices and n_ss_indices
-        # The arrays need to be expanded to find the vector in each panel, and each pixel of that panel, with 3 values defining the vector
-        fs_expanded = self._fs_vec_arr[:, :, np.newaxis, np.newaxis]
-        fs_expanded = np.tile(fs_expanded, (1, 1, self._n_fs_int, self._n_ss_int))  # Shape (num_panels, vector_length, n_fs, n_ss)
+            # Expand dimensions of fs, ss, and t to align with n_fs_indices and n_ss_indices
+            # The arrays need to be expanded to find the vector in each panel, and each pixel of that panel, with 3 values defining the vector
+            fs_expanded = self._fs_vec_arr[:, :, np.newaxis, np.newaxis]
+            fs_expanded = np.tile(fs_expanded, (1, 1, self._n_fs_int, self._n_ss_int))  # Shape (num_panels, vector_length, n_fs, n_ss)
 
-        ss_expanded = self._ss_vec_arr[:, :, np.newaxis, np.newaxis]  
-        ss_expanded = np.tile(ss_expanded, (1, 1, self._n_fs_int, self._n_ss_int))  # Shape (num_panels, vector_length, n_fs, n_ss)
+            ss_expanded = self._ss_vec_arr[:, :, np.newaxis, np.newaxis]  
+            ss_expanded = np.tile(ss_expanded, (1, 1, self._n_fs_int, self._n_ss_int))  # Shape (num_panels, vector_length, n_fs, n_ss)
 
-        t_expanded = self._t_vec_arr[:, :, np.newaxis, np.newaxis]  
-        t_expanded = np.tile(t_expanded, (1, 1, self._n_fs_int, self._n_ss_int)) # Shape (num_panels, vector_length, n_fs, n_ss)
-        
-        # The b vector also needs to be the correct size for multiplication:
-        b_vec_expanded = self._b_vec.reshape(1,-1,1,1)
-        b_vec_expanded = np.tile(b_vec_expanded, (self._num_panels, 1, self._n_fs_int, self._n_ss_int)) # Shape (num_panels, vector_length, n_fs, n_ss)
+            t_expanded = self._t_vec_arr[:, :, np.newaxis, np.newaxis]  
+            t_expanded = np.tile(t_expanded, (1, 1, self._n_fs_int, self._n_ss_int)) # Shape (num_panels, vector_length, n_fs, n_ss)
+            
+            # The b vector also needs to be the correct size for multiplication:
+            b_vec_expanded = self._b_vec.reshape(1,-1,1,1)
+            b_vec_expanded = np.tile(b_vec_expanded, (self._num_panels, 1, self._n_fs_int, self._n_ss_int)) # Shape (num_panels, vector_length, n_fs, n_ss)
 
-        # Perform the calculation for each set of vectors to find the v vector point to each individual pixel on each individual panel
+            # Perform the calculation for each set of vectors to find the v vector point to each individual pixel on each individual panel
 
-        self._v_vec = fs_expanded * n_fs_indices_expanded + ss_expanded * n_ss_indices_expanded + t_expanded  # Shape (num_panels, size_of_vector = 3, n_fs, n_ss)
-        self._v_vec = (np.array(self._v_vec))
-        
-        # q vector is graphing it in real space like the reborn documentation shows, but I don't think qvec is important
-        self._q_vec = ((2*np.pi)/self._wavelength) * ((self._v_vec/npla.norm(self._v_vec)) - b_vec_expanded) 
+            self._v_vec = fs_expanded * n_fs_indices_expanded + ss_expanded * n_ss_indices_expanded + t_expanded  # Shape (num_panels, size_of_vector = 3, n_fs, n_ss)
+            self._v_vec = (np.array(self._v_vec))
+            
+            # q vector is graphing it in real space like the reborn documentation shows, but I don't think qvec is important
+            self._q_vec = ((2*np.pi)/self._wavelength) * ((self._v_vec/npla.norm(self._v_vec)) - b_vec_expanded) 
 
-        print("shape of qvec", self._q_vec.shape)
+            print("shape of qvec", self._q_vec.shape)
+            
+        except Exception as e:
+            print(f"An unexpected error occurred while calculating the q-vector: {e}")
 
 
     def create_new_array(self):
@@ -118,23 +123,24 @@ class ScatteringMatrix():
         Create new array that's the correct size for the new image
         """
         # Calculate the dimensions in real space and pixel space to determine the necessary size array to hold all the panels from the detector
+        try:
+            # Find the average length of a pixel in real space "units"
+            ss_ecul_norm = npla.norm(self._ss_vec, axis=1)
+            fs_eucl_norm = npla.norm(self._fs_vec, axis=1)
+            self._pixel_length_x = np.mean(ss_ecul_norm)
+            self._pixel_length_y = np.mean(fs_eucl_norm)
 
-        # Find the average length of a pixel in real space "units"
-        ss_ecul_norm = npla.norm(self._ss_vec, axis=1)
-        fs_eucl_norm = npla.norm(self._fs_vec, axis=1)
-        self._pixel_length_x = np.mean(ss_ecul_norm)
-        self._pixel_length_y = np.mean(fs_eucl_norm)
+            # Find the max and min of x and y values of the v vectors in real space to find the range of real space that all the panels take up
+            self._max_x = np.max(self._v_vec[:,0,:,:]) 
+            self._max_y = np.max(self._v_vec[:,1,:,:])
+            self._min_x = np.min(self._v_vec[:,0,:,:]) 
+            self._min_y = np.min(self._v_vec[:,1,:,:]) 
 
-        # Find the max and min of x and y values of the v vectors in real space to find the range of real space that all the panels take up
-        self._max_x = np.max(self._v_vec[:,0,:,:]) 
-        self._max_y = np.max(self._v_vec[:,1,:,:])
-        self._min_x = np.min(self._v_vec[:,0,:,:]) 
-        self._min_y = np.min(self._v_vec[:,1,:,:]) 
-
-        # Find the range in the x and y direction of the panels and convert it into pixels 
-        self._final_array_x_len = int(np.ceil((self._max_x - self._min_x)/self._pixel_length_x)) +2
-        self._final_array_y_len = int(np.ceil((self._max_y - self._min_y)/self._pixel_length_y)) +2 
-
+            # Find the range in the x and y direction of the panels and convert it into pixels 
+            self._final_array_x_len = int(np.ceil((self._max_x - self._min_x)/self._pixel_length_x)) +2
+            self._final_array_y_len = int(np.ceil((self._max_y - self._min_y)/self._pixel_length_y)) +2 
+        except Exception as e:
+            print(f"An unexpected error occurred while creating a new array for the scattering matrix: {e}")
 
 
     def insert_data_into_new_matrix(self, all_data_array: np.array):
@@ -144,64 +150,70 @@ class ScatteringMatrix():
         Args:
             all_data_array (np.array): all images in an array
         """
-        self._all_data_array = all_data_array
-        self._num_trials_in_data = self._all_data_array.shape[0]
         
-        # Create the final array for the pixel data using the dimensions from create_new_array
-        self._final_array = np.zeros((self._num_trials_in_data ,self._final_array_y_len, self._final_array_x_len)) # shape (num_trials_in_data (ex 82), fs * num_panels, x or ss)
-        
-        # FIXME add an if statement to correlate which dimension or axis goes with fs or ss
-        #This is conditional on size and shape of data file
-        
-        # Splitting array in fs and then ss
-        self._all_data_array_split_fs = np.array(np.array_split(self._all_data_array, self._all_data_array.shape[2]/self._n_fs_int, axis = 2)) # shape (self._all_data_array.shape[2]/self._n_fs_int , num_trials_in_data (ex 82) , self._all_data_array[1] , self._n_fs_int)
-        self._all_data_array_split_ss = np.array(np.array_split(self._all_data_array_split_fs, self._all_data_array.shape[1]/self._n_ss_int, axis = 2)) # shape (self._all_data_array.shape[1]/self._n_ss_int , self._all_data_array.shape[2]/self._n_fs_int , num_trials_in_data (ex 82), self._n_ss_int, self._n_fs_int)
+        try:
+            self._all_data_array = all_data_array
+            self._num_trials_in_data = self._all_data_array.shape[0]
+            
+            # Create the final array for the pixel data using the dimensions from create_new_array
+            self._final_array = np.zeros((self._num_trials_in_data ,self._final_array_y_len, self._final_array_x_len)) # shape (num_trials_in_data (ex 82), fs * num_panels, x or ss)
+            
+            # FIXME add an if statement to correlate which dimension or axis goes with fs or ss
+            #This is conditional on size and shape of data file
+            
+            # Splitting array in fs and then ss
+            self._all_data_array_split_fs = np.array(np.array_split(self._all_data_array, self._all_data_array.shape[2]/self._n_fs_int, axis = 2)) # shape (self._all_data_array.shape[2]/self._n_fs_int , num_trials_in_data (ex 82) , self._all_data_array[1] , self._n_fs_int)
+            self._all_data_array_split_ss = np.array(np.array_split(self._all_data_array_split_fs, self._all_data_array.shape[1]/self._n_ss_int, axis = 2)) # shape (self._all_data_array.shape[1]/self._n_ss_int , self._all_data_array.shape[2]/self._n_fs_int , num_trials_in_data (ex 82), self._n_ss_int, self._n_fs_int)
 
-        # Reorganiznig array to be (num_trials_in_data, n_ss, n_fs, result of division ss, result of division fs)
-        self._all_data_array_split = np.transpose(self._all_data_array_split_ss, (2,3,4,0,1))
+            # Reorganiznig array to be (num_trials_in_data, n_ss, n_fs, result of division ss, result of division fs)
+            self._all_data_array_split = np.transpose(self._all_data_array_split_ss, (2,3,4,0,1))
 
-        # Reshape data to be (num_trials, fs, ss, num_panels) again
-        # The final result is each panel has it's own index with the corresponding data for the pixel and trial number
-        self._all_data_array_reshape = np.reshape(self._all_data_array_split, (self._num_trials_in_data, self._n_fs_int, self._n_ss_int, self._all_data_array_split.shape[3] * self._all_data_array_split.shape[4])) # shape (num_trials_in_data (ex 82), y or fs per panel, x or ss per panel, num_panels but calc diff way for check)
+            # Reshape data to be (num_trials, fs, ss, num_panels) again
+            # The final result is each panel has it's own index with the corresponding data for the pixel and trial number
+            self._all_data_array_reshape = np.reshape(self._all_data_array_split, (self._num_trials_in_data, self._n_fs_int, self._n_ss_int, self._all_data_array_split.shape[3] * self._all_data_array_split.shape[4])) # shape (num_trials_in_data (ex 82), y or fs per panel, x or ss per panel, num_panels but calc diff way for check)
 
-        # Find the tv_vec for each panel; tv vec is the lowest, leftmost v_vector (and what we previously were assuming the t-vec was)
-        # Need to change the fs and ss vectors into pixels so it can be rearranged. 
+            # Find the tv_vec for each panel; tv vec is the lowest, leftmost v_vector (and what we previously were assuming the t-vec was)
+            # Need to change the fs and ss vectors into pixels so it can be rearranged. 
 
-        
-        self._i_ns = (self._t_vec_arr[:,0] + ((self._max_x - self._min_x)/2))/self._pixel_length_x 
-        self._j_ns = (self._t_vec_arr[:,1] + ((self._max_y - self._min_y)/2))/self._pixel_length_y
+            
+            self._i_ns = (self._t_vec_arr[:,0] + ((self._max_x - self._min_x)/2))/self._pixel_length_x 
+            self._j_ns = (self._t_vec_arr[:,1] + ((self._max_y - self._min_y)/2))/self._pixel_length_y
 
-        # for each panel, for y to y+fs and x to x+ss of the final pixel data array, add all the data from the particular panel 
-        #order of if statements corresponds to the order in which the quadrants of the detector are put together
-        #numpy.rot90 default is counterclockwise
-        
-        for num in range(self._num_panels):
-            if self._fs_vec_arr[num,0] < 0 and self._ss_vec_arr[num,0] > 0: #fs neg and ss is pos
-                #90 deg turn counterclockwise??
-                #top right
-                rot_all_data_array = np.flip(self._all_data_array_reshape[:, :, :, num], axis = 2)
-                # self._final_array[:, int(np.ceil(self._j_ns[num] - self._n_fs_int)) : int(np.ceil(self._j_ns[num])), int(np.ceil(self._i_ns[num])) : int(np.ceil(self._i_ns[num] + self._n_ss_int))] = rot_all_data_array
-                self._final_array[:, int(np.ceil(self._j_ns[num] - self._n_fs_int)) : int(np.ceil(self._j_ns[num])), int(np.ceil(self._i_ns[num])) : int(np.ceil(self._i_ns[num] + self._n_ss_int))] = rot_all_data_array
+            # for each panel, for y to y+fs and x to x+ss of the final pixel data array, add all the data from the particular panel 
+            #order of if statements corresponds to the order in which the quadrants of the detector are put together
+            #numpy.rot90 default is counterclockwise
+            
+            for num in range(self._num_panels):
+                if self._fs_vec_arr[num,0] < 0 and self._ss_vec_arr[num,0] > 0: #fs neg and ss is pos
+                    #90 deg turn counterclockwise??
+                    #top right
+                    rot_all_data_array = np.flip(self._all_data_array_reshape[:, :, :, num], axis = 2)
+                    # self._final_array[:, int(np.ceil(self._j_ns[num] - self._n_fs_int)) : int(np.ceil(self._j_ns[num])), int(np.ceil(self._i_ns[num])) : int(np.ceil(self._i_ns[num] + self._n_ss_int))] = rot_all_data_array
+                    self._final_array[:, int(np.ceil(self._j_ns[num] - self._n_fs_int)) : int(np.ceil(self._j_ns[num])), int(np.ceil(self._i_ns[num])) : int(np.ceil(self._i_ns[num] + self._n_ss_int))] = rot_all_data_array
+                    
+                if self._fs_vec_arr[num,0] > 0 and self._ss_vec_arr[num,0] > 0: #if theyre both positive
+                    #no rotation
+                    #top left
+                    self._final_array[:, int(np.ceil(self._j_ns[num])) : int(np.ceil(self._j_ns[num] + self._n_fs_int)), int(np.ceil(self._i_ns[num])) : int(np.ceil(self._i_ns[num] + self._n_ss_int))] = self._all_data_array_reshape[:, :, :, num]
                 
-            if self._fs_vec_arr[num,0] > 0 and self._ss_vec_arr[num,0] > 0: #if theyre both positive
-                #no rotation
-                #top left
-                self._final_array[:, int(np.ceil(self._j_ns[num])) : int(np.ceil(self._j_ns[num] + self._n_fs_int)), int(np.ceil(self._i_ns[num])) : int(np.ceil(self._i_ns[num] + self._n_ss_int))] = self._all_data_array_reshape[:, :, :, num]
-             
-            if self._fs_vec_arr[num,0] > 0 and self._ss_vec_arr[num,0] < 0: #fs pos and ss neg
-                #90 deg turn clockwise
-                #bottom left
-                rot_all_data_array = np.flip(self._all_data_array_reshape[:, :, :, num], axis = 1)
-                self._final_array[:, int(np.ceil(self._j_ns[num])) : int(np.ceil(self._j_ns[num] + self._n_fs_int)), int(np.ceil(self._i_ns[num] - self._n_ss_int)) : int(np.ceil(self._i_ns[num]))] = rot_all_data_array
-            
-            if self._fs_vec_arr[num,0] < 0 and self._ss_vec_arr[num,0] < 0: #fs pos and ss neg
-                #180 rotation
-                #bottom right
-                rot_all_data_array = np.flip(self._all_data_array_reshape[:, :, :, num], axis = (1,2))
-                self._final_array[:, int(np.ceil(self._j_ns[num] - self._n_fs_int)) : int(np.ceil(self._j_ns[num])), int(np.ceil(self._i_ns[num] - self._n_ss_int)) : int(np.ceil(self._i_ns[num]))] = rot_all_data_array
-              
-            
-            # self._final_array[:, int(np.ceil(self._j_ns[num])) : int(np.ceil(self._j_ns[num] + self._n_fs_int)), int(np.ceil(self._i_ns[num])) : int(np.ceil(self._i_ns[num] + self._n_ss_int))] = self._all_data_array_reshape[:, :, :, num]
+                if self._fs_vec_arr[num,0] > 0 and self._ss_vec_arr[num,0] < 0: #fs pos and ss neg
+                    #90 deg turn clockwise
+                    #bottom left
+                    rot_all_data_array = np.flip(self._all_data_array_reshape[:, :, :, num], axis = 1)
+                    self._final_array[:, int(np.ceil(self._j_ns[num])) : int(np.ceil(self._j_ns[num] + self._n_fs_int)), int(np.ceil(self._i_ns[num] - self._n_ss_int)) : int(np.ceil(self._i_ns[num]))] = rot_all_data_array
+                
+                if self._fs_vec_arr[num,0] < 0 and self._ss_vec_arr[num,0] < 0: #if theyre both negative
+                    #180 rotation
+                    #bottom right
+                    rot_all_data_array = np.flip(self._all_data_array_reshape[:, :, :, num], axis = (1,2))
+                    self._final_array[:, int(np.ceil(self._j_ns[num] - self._n_fs_int)) : int(np.ceil(self._j_ns[num])), int(np.ceil(self._i_ns[num] - self._n_ss_int)) : int(np.ceil(self._i_ns[num]))] = rot_all_data_array
+                
+                
+                # self._final_array[:, int(np.ceil(self._j_ns[num])) : int(np.ceil(self._j_ns[num] + self._n_fs_int)), int(np.ceil(self._i_ns[num])) : int(np.ceil(self._i_ns[num] + self._n_ss_int))] = self._all_data_array_reshape[:, :, :, num]
+        except Exception as e:
+            print(f"An unexpected error occurred while inserting data into new matrix: {e}")
+
+       
             
     # Checking and graphing outputs
     def graph_padded_data(self):
@@ -307,6 +319,7 @@ class ScatteringMatrix():
    
 # Methods for padding annd cropping data (the class is defined below but its called in ScatteringMatrix graph_padded_data())     
 #FIXME: I think I need to change this so that it stretches the image rather than adds space between
+#* I think this is all depreciated
 class ReshapeData():
     def __init__(self,data_array: np.ndarray):
         """
@@ -317,21 +330,17 @@ class ReshapeData():
 
         """
         required_image_size = (512, 512) #FIXME
-        self._crop_height, self._crop_width = required_image_size
-        
-        self._batch_size, self._height, self._width  = data_array.shape
-        
+        self._crop_height, self._crop_width = required_image_size        
+        self._batch_size, self._height, self._width  = data_array.shape        
         self.data_array = data_array
-        
-        new_data_array = data_array
+
         if self._crop_height < self._height or self._crop_width < self._width:
             self.result_array = self.crop_input_data(self.data_array)
         elif self._crop_height > self._height or self._crop_width > self._width:
             self.result_array = self.pad_input_data(self.data_array)
         else:
             self.result_array = self.data_array
-
-           
+         
     
     def crop_input_data(self, data_array: np.ndarray) -> np.ndarray:
 
