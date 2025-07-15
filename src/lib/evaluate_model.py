@@ -114,7 +114,7 @@ class ModelEvaluation:
                 print(f'Confustion matrix saved to: {path}')
         except Exception as e:
             print(f"An error occurred while plotting confusion matrix: {e}")
-###############################################
+
     def plot_roc_curve(self, path:str=None) -> None:
         """
         Plots the ROC (Reciever Operating Characteristic) Curve of the testing set.

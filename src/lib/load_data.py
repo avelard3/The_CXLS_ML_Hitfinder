@@ -78,7 +78,6 @@ class Data(Dataset):
                 else:                    
                     imgg = self.images[idx]
                     if idx == 0 and x==0:
-                        print("Creating a plot of one of the images that is being used")
                         self.graph_image(imgg)
                         x+=1
                     return self.images[idx], self.camera_length[idx], self.photon_energy[idx], self.hit_parameter[idx], self.file_list[idx] #change
@@ -104,7 +103,7 @@ class Data(Dataset):
 
         cbar = plt.colorbar(heatmap, ax=ax)
         plt.show()
-        plt.savefig("/scratch/avelard3/cxls_hitfinder_joblogs/zseedata_trial4.png")
+        plt.savefig("/scratch/avelard3/cxls_hitfinder_joblogs/zseedata_trial5.png")
 
         
 class CreateDataLoader():
