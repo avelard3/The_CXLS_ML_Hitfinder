@@ -8,20 +8,17 @@ import datetime
 from . import conf
 # from .The_CXLS_ML_Hitfinder.src.lib import read_scattering_matrix
 class Paths:
-    def __init__(self, list_path: list, h5_location: dict, executing_mode: str, master_file: Optional[str] = None, is_multi_event: bool = False) -> None:
+    def __init__(self, list_path: list, h5_location: dict, executing_mode: str, is_multi_event: bool = False) -> None:
         """
         Constructor for Paths class that handles both single and multi-event files.
         Args:
             list_path (list): Path to an lst file with h5 file paths.
             h5_location (dict): The image or hyperparameter path name in the h5 file
             executing_mode (str): if it's running or training mode
-            master_file (Optional[str], optional): Path to master file for metadata. Defaults to None.
             is_multi_event (bool, optional): Flag to distinguish between single and multi-event processing. Defaults to False.
         """
         self._list_path = list_path
         self._h5_location = h5_location
-        self._master_file = master_file
-        self._master_dict = {}
         self._h5_tensor_list, self._h5_attr_list, self._h5_file_list = [], [], []
         self._loaded_h5_tensor = None
         self._h5_file_path = None
@@ -166,12 +163,12 @@ class Paths:
                             else:
                                 vsource_camera_length = h5.VirtualSource(f[self._camera_length_location]) 
                                 if "wavelength" in self._photon_energy_location.lower():
-                                    scaled_value = 12398.41984 / mrm[self._photon_energy_location][()]
+                                    scaled_value = 12398.41984 / f[self._photon_energy_location][()]
                                     with h5.File("scaled_photon_energy.h5", "w") as f:
                                         f.create_dataset('/photon_energy_eV', data=scaled_value)
                                     vsource_photon_energy = h5.VirtualSource("scaled_photon_energy.h5", '/photon_energy_eV', shape=(1,))
                                 else:
-                                    vsource_photon_energy = h5.VirtualSource(mrm[self._photon_energy_location])
+                                    vsource_photon_energy = h5.VirtualSource(f[self._photon_energy_location])
 
                             
                             if self._dim_and_shape_array[i,1] == 2: #if it's single event #change to Ks!!!!!!!!!!!!!!!!!!!!!#!
@@ -259,7 +256,3 @@ class Paths:
         Returns list of file names put into h5 file
         """ 
         return self._h5_file_list
-    
-    
-    def read_master_file(self):
-        self.true_master_file = True

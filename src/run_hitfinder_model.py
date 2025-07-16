@@ -25,7 +25,6 @@ def arguments(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
     parser.add_argument('-cl', '--camera_length', type=str, help='Attribute name for the camera length parameter.')
     parser.add_argument('-pe', '--photon_energy', type=str, help='Attribute name for the photon energy parameter.')
     parser.add_argument('-b', '--batch', type=int, help='Batch size for data running through the model.')
-    parser.add_argument('-mf', '--master_file', type=str, default=None, help='File path to the master file containing the .lst files.')
     
     try:
         args = parser.parse_args()
@@ -74,10 +73,6 @@ def main():
     # Temperary hold
     transform = True
     
-    master_file = args.master_file
-    if master_file == 'None' or master_file == 'none':
-        master_file = None
-    
     h5_locations = {
         'image': image_location,
         'camera length': camera_length_location,
@@ -120,7 +115,7 @@ def main():
     
     
     executing_mode = 'running'
-    path_manager = load_paths.Paths(h5_file_list, h5_locations, executing_mode, master_file)
+    path_manager = load_paths.Paths(h5_file_list, h5_locations, executing_mode)
 
     path_manager.run_paths()
     
@@ -132,7 +127,7 @@ def main():
     vds_dataset = path_manager.get_vds()    
     h5_file_paths = path_manager.get_file_names()
 
-    data_manager = load_data.Data(vds_dataset, h5_file_paths, executing_mode, transform, master_file)
+    data_manager = load_data.Data(vds_dataset, h5_file_paths, executing_mode, transform)
 
     create_data_loader = load_data.CreateDataLoader(data_manager, batch_size)
     create_data_loader.inference_data_loader()

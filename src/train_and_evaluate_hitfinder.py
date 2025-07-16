@@ -35,7 +35,6 @@ def arguments(parser) -> argparse.ArgumentParser:
     
     parser.add_argument('-tl', '--transfer_learn', type=str, default=None, help='File path to state dict file for transfer learning.' )
     parser.add_argument('-at', '--apply_transform', type=str, default=False, help='Apply transform to images (true or false)')
-    parser.add_argument('-mf', '--master_file', type=str, default=None, help='File path to the master file containing the .lst files.')
     
     parser.add_argument('-lrp', '--lr_param_patience', type=int, help='Patience for learning rate parameter input')
     parser.add_argument('-lrt', '--lr_param_threshold', type=float, help='Threshold for learning rate parameter input')
@@ -109,11 +108,7 @@ def main() -> None:
     #temperary holding
     transform = False
     
-    master_file = args.master_file
-    if master_file == 'None' or master_file == 'none':
-        master_file = None
-        
-        
+
     # Transfer learning (yes or no)
     if transfer_learning_state_dict == 'None' or transfer_learning_state_dict == 'none':
         transfer_learning_state_dict = None
@@ -171,7 +166,7 @@ def main() -> None:
     }
 
     executing_mode = 'training'
-    path_manager = load_paths.Paths(h5_file_list, h5_locations, executing_mode, master_file)
+    path_manager = load_paths.Paths(h5_file_list, h5_locations, executing_mode)
     
     path_manager.run_paths()
     
@@ -182,7 +177,7 @@ def main() -> None:
     vds_dataset = path_manager.get_vds()
     h5_file_paths = path_manager.get_file_names()
     
-    data_manager = load_data.Data(vds_dataset, h5_file_paths, executing_mode, transform, master_file)
+    data_manager = load_data.Data(vds_dataset, h5_file_paths, executing_mode, transform)
     
     create_data_loader = load_data.CreateDataLoader(data_manager, batch_size)
     

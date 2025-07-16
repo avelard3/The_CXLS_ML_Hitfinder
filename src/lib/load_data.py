@@ -13,7 +13,7 @@ import matplotlib.colors as colors
 
 class Data(Dataset):
     
-    def __init__(self, vds_path: str, file_list: list, executing_mode: str, use_transform: bool, master_file: Optional[str] = None) -> None:
+    def __init__(self, vds_path: str, file_list: list, executing_mode: str, use_transform: bool) -> None:
         """
         Initialize the Data object with classification and attribute data.
 
@@ -39,7 +39,6 @@ class Data(Dataset):
             self.hit_parameter = self.file['vsource_hit_parameter']
         
         self.use_transform = False
-        self._master_file = master_file
         
         # If transforms will be used, then it creates the pytorch object that will be used to transform future data
         if self.use_transform:
@@ -74,15 +73,13 @@ class Data(Dataset):
                 #*
                 if self.executing_mode == "running":
                     self.hit_parameter = np.empty(self.camera_length.shape)
-
-                if self._master_file != None:
-                    return self.images[idx], self.camera_length[0], self.photon_energy[0], self.hit_parameter[0], self.file_list[idx]
-                else:                    
-                    imgg = self.images[idx]
-                    if idx == 0 and x==0:
-                        self.graph_image(imgg)
-                        x+=1
-                    return self.images[idx], self.camera_length[idx], self.photon_energy[idx], self.hit_parameter[idx], self.file_list[idx] #change
+                if self.use_transform:
+                    print("lol why is transform true this was supossed to be false") #FIXME
+                imgg = self.images[idx]
+                if idx == 0 and x==0:
+                    self.graph_image(imgg)
+                    x+=1
+                return self.images[idx], self.camera_length[idx], self.photon_energy[idx], self.hit_parameter[idx], self.file_list[idx] #change
 
                 #*
         except Exception as e:
