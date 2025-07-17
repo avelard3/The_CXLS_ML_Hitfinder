@@ -63,34 +63,50 @@ class Paths:
             #Check dimensions and shape of each h5 file & store in np.array
             with open(self._list_path, 'r') as lst_file: # open lst file
                 self._dim_and_shape_list = [] #and use list_name.append([img_shape which has num of img in h5, img_dim]) to add more data
+                num_bad_files = 0
+                num_complete_files = 0
+                num_total_files = 0
                 
                 for source_file in lst_file: # open one of h5 files in lst file
                     source_file = source_file.strip()
-                    
+                    num_total_files += 1    
                     if "master" in source_file.lower():
+                        num_total_files -=1
                         if self._executing_mode == 'training':
                             raise NotImplementedError("Cannot train with master file")
                         continue
-                    
-                    file_names_only.append(source_file)
-                    with h5.File(source_file, 'r') as f: # use h5.File to read the h5 file that you just opened
                         
-                        for path in self.possible_image_paths:
-                            if path in f:
-                                self._image_location = path
-                        
-                        dataset_shape = f[self._image_location].shape
-                        image_file_dim = len(dataset_shape)
-
-                        if image_file_dim == 2:
-                            self._dim_and_shape_list.append([1, image_file_dim])
-                        elif image_file_dim == 3:
-                            self._dim_and_shape_list.append([dataset_shape[0], image_file_dim])
-                        else:
-                            raise IndexError(f"ERROR: Unexpected image file dimensions, expected shape of 2 or 3, but instead found {image_file_dim}")
+                    try:    
+                        with h5.File(source_file, 'r') as f: # use h5.File to read the h5 file that you just opened
                             
-                    f.close()
+                            for path in self.possible_image_paths:
+                                if path in f:
+                                    self._image_location = path
+                            
+                            dataset_shape = f[self._image_location].shape
+                            image_file_dim = len(dataset_shape)
+                            print("image_file_dim", dataset_shape[0])
+
+                            if image_file_dim == 2:
+                                self._dim_and_shape_list.append([1, image_file_dim])
+                            elif image_file_dim == 3:
+                                self._dim_and_shape_list.append([dataset_shape[0], image_file_dim])
+                            else:
+                                raise IndexError(f"ERROR: Unexpected image file dimensions, expected shape of 2 or 3, but instead found {image_file_dim}")
+                                
+                        f.close()
+                        file_names_only.append(source_file)
+                        num_complete_files +=1
+                        
+                        
+                    except (OSError, FileNotFoundError) as e:
+                        num_bad_files += 1
+                        self._dim_and_shape_list.append([0, 0])
+                        print(f"Skipping {source_file} due to an error: {e}")
+                        print(f"{num_bad_files} files have been skipped out of the {num_complete_files + num_bad_files} processed so far.")
+                    
             lst_file.close()
+            print(f"Successfully prepared {num_complete_files} out of the {num_total_files}")
             self._dim_and_shape_array = np.array(self._dim_and_shape_list) #shape is [num_images_in_file, 2 or 3 for multievent]
             self._total_num_images = np.sum(self._dim_and_shape_array[:,0])
             print("The total number of images that will be processed is", self._total_num_images)
@@ -116,15 +132,27 @@ class Paths:
                 
                 # Loop through each source file and map it to the virtual dataset
                 k=0
-                master_files_encountered = 0            
+                master_files_encountered = 0      
+                num_bad_files = 0
+                num_complete_files = 0
+                num_total_files = 0      
                 
                 with open(self._list_path, 'r') as lst_file: # open list file
                     most_recent_master = None
+
                     for i, source_file in enumerate(lst_file): # for each file numbered up to i in the list file (aka: for i in range(len(lst_file)): source_file = lst_file[i])
+                        print("THE NUMBER I AT THE BEGINNING", i)
+                        print("source_file", source_file)
+                        print("source_file.strip()", source_file.strip())
                         self._source_file = source_file.strip() 
-                        self.add_file_to_list(self._source_file, i) # add the current file name & number to a list to keep track of images
+                        print("a")
+                        num_total_files += 1
+                        print("b")
+                         # add the current file name & number to a list to keep track of images
                         if "master" in self._source_file.lower():
+                            print("NO1")
                             most_recent_master = self._source_file
+                            num_total_files -=1
                             master_files_encountered += 1
                             with h5.File(self._source_file, 'r') as f:        
                                 for path in self.possible_camera_length_paths:
@@ -133,97 +161,125 @@ class Paths:
                                 for path in self.possible_photon_energy_paths:
                                     if path in f:
                                         self._photon_energy_location = path 
-                            continue                    
-                        
-                        with h5.File(self._source_file, 'r') as f: # using h5.File to read the current h5 file in the list                         
-                            # Clarify image location
-                            for path in self.possible_image_paths:
-                                if path in f:
-                                    self._image_location = path                                
-                            for path in self.possible_camera_length_paths:
-                                if path in f:
-                                    self._camera_length_location = path
-                            for path in self.possible_photon_energy_paths:
-                                if path in f:
-                                    self._photon_energy_location = path
-                            
-                            # Image data source
-                            vsource_image = h5.VirtualSource(f[self._image_location])
-                            i = i - master_files_encountered
-                            if most_recent_master != None:
-                                with h5.File(most_recent_master, 'r') as mrm:
-                                    vsource_camera_length = h5.VirtualSource(mrm[self._camera_length_location]) 
+                            continue         
+                        print("c")           
+                        try:
+                            print("d")
+                            with h5.File(self._source_file, 'r') as f: # using h5.File to read the current h5 file in the list                         
+                                # Clarify image location
+                                print("e")
+                                for path in self.possible_image_paths:
+                                    print("f")
+                                    if path in f:
+                                        print("g")
+                                        self._image_location = path        
+                                        print("h")                        
+                                for path in self.possible_camera_length_paths:
+                                    if path in f:
+                                        self._camera_length_location = path
+                                for path in self.possible_photon_energy_paths:
+                                    if path in f:
+                                        self._photon_energy_location = path
+                                print("i")
+                                # Image data source
+                                vsource_image = h5.VirtualSource(f[self._image_location])
+                                print("j")
+                                i = i - master_files_encountered
+                                
+                                if most_recent_master != None:
+                                    print("NO2")
+                                    with h5.File(most_recent_master, 'r') as mrm:
+                                        vsource_camera_length = h5.VirtualSource(mrm[self._camera_length_location]) 
+                                        if "wavelength" in self._photon_energy_location.lower():
+                                            scaled_value = 12398.41984 / mrm[self._photon_energy_location][()]
+                                            with h5.File("scaled_photon_energy.h5", "w") as f:
+                                                f.create_dataset('/photon_energy_eV', data=scaled_value)
+                                            vsource_photon_energy = h5.VirtualSource("scaled_photon_energy.h5", '/photon_energy_eV', shape=(1,))
+                                        else:
+                                            vsource_photon_energy = h5.VirtualSource(mrm[self._photon_energy_location])
+                                else:
+                                    print("k")
+                                    vsource_camera_length = h5.VirtualSource(f[self._camera_length_location]) 
+                                    print("L")
                                     if "wavelength" in self._photon_energy_location.lower():
-                                        scaled_value = 12398.41984 / mrm[self._photon_energy_location][()]
+                                        print("NO3")
+                                        scaled_value = 12398.41984 / f[self._photon_energy_location][()]
                                         with h5.File("scaled_photon_energy.h5", "w") as f:
                                             f.create_dataset('/photon_energy_eV', data=scaled_value)
                                         vsource_photon_energy = h5.VirtualSource("scaled_photon_energy.h5", '/photon_energy_eV', shape=(1,))
                                     else:
-                                        vsource_photon_energy = h5.VirtualSource(mrm[self._photon_energy_location])
-                            else:
-                                vsource_camera_length = h5.VirtualSource(f[self._camera_length_location]) 
-                                if "wavelength" in self._photon_energy_location.lower():
-                                    scaled_value = 12398.41984 / f[self._photon_energy_location][()]
-                                    with h5.File("scaled_photon_energy.h5", "w") as f:
-                                        f.create_dataset('/photon_energy_eV', data=scaled_value)
-                                    vsource_photon_energy = h5.VirtualSource("scaled_photon_energy.h5", '/photon_energy_eV', shape=(1,))
-                                else:
-                                    vsource_photon_energy = h5.VirtualSource(f[self._photon_energy_location])
+                                        print("m")
+                                        vsource_photon_energy = h5.VirtualSource(f[self._photon_energy_location])
+                                        print("n")
 
-                            
-                            if self._dim_and_shape_array[i,1] == 2: #if it's single event #change to Ks!!!!!!!!!!!!!!!!!!!!!#!
-                                print("Single event has not been tested recently")
-                                self.add_file_to_list(self._source_file, 1)
-                                self._image_layout[i, 0, :, :] = vsource_image
-                                self._camera_length_layout[i] = vsource_camera_length
-                                
-                                self._photon_energy_layout[i] = vsource_photon_energy
-                                if self._executing_mode == 'training':
-                                    for path in self.possible_hit_parameter_paths:
-                                        if path in f:
-                                            self._hit_parameter_location = path
-                                    
-                                    vsource_hit_parameter = h5.VirtualSource(f[self._hit_parameter_location])
-                                    self._hit_parameter_layout[i] = vsource_hit_parameter
-                                    
-                            elif self._dim_and_shape_array[i,1] == 3: # (need to have a metadata check eventually) and self._attr_shape[0] > 1: # if it's multievent with indiv metadata
-                                
-                                if vsource_image.shape[1] != 512:
-                                    #TODO add an option of quadrants 1-4 so that beam stop is not in any pictures later
-                                    print("Going to crop to 512x512 from current shape", vsource_image.shape)
-                                    #starting point 
-                                    shape_of_img = vsource_image.shape
-                                    center_x = shape_of_img[1]//2
-                                    center_y = shape_of_img[2]//2
-                                    vsource_image = vsource_image[:, center_x: (center_x + 512), center_y: (center_y +512)]
-
-                                self._image_layout[k:(k+self._dim_and_shape_array[i,0]), 0, :, :] = vsource_image
-                                
-                                for j in range(self._dim_and_shape_array[i,0]):
-                                    self.add_file_to_list(self._source_file, j+1)
-                                if most_recent_master != None:
+                                print("o")
+                                print("self._dim_and_shape_array", self._dim_and_shape_array)
+                                print(" self._dim_and_shape_array[i,1]",  self._dim_and_shape_array[i,1])
+                                if self._dim_and_shape_array[i,1] == 2: #if it's single event #change to Ks!!!!!!!!!!!!!!!!!!!!!#!
+                                    print("NO4")
+                                    print("Single event has not been tested recently")
+                                    self.add_file_to_list(self._source_file, 1)
+                                    self._image_layout[i, 0, :, :] = vsource_image
                                     self._camera_length_layout[i] = vsource_camera_length
-                                    self._photon_energy_layout[i] = vsource_photon_energy 
+                                    
+                                    self._photon_energy_layout[i] = vsource_photon_energy
+                                    if self._executing_mode == 'training':
+                                        for path in self.possible_hit_parameter_paths:
+                                            if path in f:
+                                                self._hit_parameter_location = path
+                                        
+                                        vsource_hit_parameter = h5.VirtualSource(f[self._hit_parameter_location])
+                                        self._hit_parameter_layout[i] = vsource_hit_parameter
+                                        
+                                elif self._dim_and_shape_array[i,1] == 3: # (need to have a metadata check eventually) and self._attr_shape[0] > 1: # if it's multievent with indiv metadata
+                                    print("running with3")
+                                    if vsource_image.shape[1] != 512:
+                                        #TODO add an option of quadrants 1-4 so that beam stop is not in any pictures later
+                                        print(f"Going to crop to 512x512 from current shape {vsource_image.shape} on file {self._source_file}")
+                                        #starting point 
+                                        shape_of_img = vsource_image.shape
+                                        center_x = shape_of_img[1]//2
+                                        center_y = shape_of_img[2]//2
+                                        print("calculating size but nothing else", k)
+                                        vsource_image = vsource_image[:, center_x: (center_x + 512), center_y: (center_y + 512)]
+                                    print("THE K", k)
+                                    self._image_layout[k:(k+self._dim_and_shape_array[i,0]), 0, :, :] = vsource_image
+                                    for j in range(self._dim_and_shape_array[i,0]):
+                                        self.add_file_to_list(self._source_file, j+1)
+                                    if most_recent_master != None:
+                                        print("in recent master", k)
+                                        self._camera_length_layout[i] = vsource_camera_length
+                                        self._photon_energy_layout[i] = vsource_photon_energy 
+                                    else:
+                                        self._camera_length_layout[k:(k+self._dim_and_shape_array[i,0]),0] = vsource_camera_length
+                                        self._photon_energy_layout[k:(k+self._dim_and_shape_array[i,0]),0] = vsource_photon_energy
+                                        
+                                    if self._executing_mode == 'training':
+                                        for path in self.possible_hit_parameter_paths:
+                                            if path in f:
+                                                self._hit_parameter_location = path
+                                                
+                                        vsource_hit_parameter = h5.VirtualSource(f[self._hit_parameter_location])
+                                        self._hit_parameter_layout[k:(k+self._dim_and_shape_array[i,0]),0] = vsource_hit_parameter                                    
                                 else:
-                                    self._camera_length_layout[k:(k+self._dim_and_shape_array[i,0]),0] = vsource_camera_length
-                                    self._photon_energy_layout[k:(k+self._dim_and_shape_array[i,0]),0] = vsource_photon_energy
-                                    
-                                if self._executing_mode == 'training':
-                                    
-                                    for path in self.possible_hit_parameter_paths:
-                                        if path in f:
-                                            self._hit_parameter_location = path
-                                            
-                                    vsource_hit_parameter = h5.VirtualSource(f[self._hit_parameter_location])
-                                    self._hit_parameter_layout[k:(k+self._dim_and_shape_array[i,0]),0] = vsource_hit_parameter
+                                    print("ERROR: Mapping data to VDS. Likely an issue with metadata")
 
-                                
-                            else:
-                                print("ERROR: Mapping data to VDS. Likely an issue with metadata")
-
-                            f.close()
-                        k += self._dim_and_shape_array[i,0]   #keep track of number of images for mix of single/multievent
+                                self.add_file_to_list(self._source_file, i)
+                                f.close()
+                                num_complete_files +=1
+                                print("the current number of complete files", num_complete_files)
+                            k += self._dim_and_shape_array[i,0]   #keep track of number of images for mix of single/multievent
+                            print("k at the end", {k})
+                            print("the number i at the end", i)
+                        except (OSError, FileNotFoundError) as e:
+                            num_bad_files += 1
+                            i-=1
+                            print("I changed during error exception", i)
+                            print(f"Skipping {source_file} due to an error: {e}")
+                            print(f"{num_bad_files} files have been skipped out of the {num_complete_files + num_bad_files} processed so far.")
+                    
                     lst_file.close()
+                    print(f"Successfully read {num_complete_files} out of the {num_total_files}")
                     
                 # Create the VDS for images and metadata in the virtual HDF5 file
                 vds_file.create_virtual_dataset('vsource_image', self._image_layout)

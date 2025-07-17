@@ -38,7 +38,7 @@ class Data(Dataset):
         if self.executing_mode == "training":
             self.hit_parameter = self.file['vsource_hit_parameter']
         
-        self.use_transform = False
+        self.use_transform = use_transform
         
         # If transforms will be used, then it creates the pytorch object that will be used to transform future data
         if self.use_transform:

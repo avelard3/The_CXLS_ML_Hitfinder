@@ -104,14 +104,16 @@ def main() -> None:
     transfer_learning_state_dict = args.transfer_learn
     transform = args.apply_transform # Parameter for Data class
     
-    
-    #temperary holding
-    transform = False
-    
+    if transform.lower() == "false":
+        transform = False  
+    else:
+        transform = True
+
 
     # Transfer learning (yes or no)
-    if transfer_learning_state_dict == 'None' or transfer_learning_state_dict == 'none':
+    if transfer_learning_state_dict.lower() == 'none':
         transfer_learning_state_dict = None
+        
     
     
     lr_param_patience = args.lr_param_patience

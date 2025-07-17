@@ -125,6 +125,8 @@ class ModelEvaluation:
         """
         Plots the ROC (Reciever Operating Characteristic) Curve of the testing set.
         The x-axis is the false positive rate and the y-axis is the true positive rate
+        Args:
+            paht (str): Path to where ROC curve should be saved
         """
         try:
             print('Creating ROC curve...')

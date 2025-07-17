@@ -95,11 +95,14 @@ def objective(trial): #learning rate is a log=true!?
     
     transfer_learning_state_dict = args.transfer_learn
     # FIXME: There should be a way to get bool to work for this?
-    if transfer_learning_state_dict == 'None' or transfer_learning_state_dict == 'none':
+    if transfer_learning_state_dict.lower() == 'none':
         transfer_learning_state_dict = None
         
     transform = args.apply_transform # Parameter for Data class
-    transform = False  #temperary holding
+    if transform.lower() == "false":
+        transform = False  
+    else:
+        transform = True
         
     # hyperparameter tuning #? maybe add them all to a dictionary here
     epoch_range = tuple(args.epoch_range)

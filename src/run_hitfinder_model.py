@@ -71,7 +71,7 @@ def main():
     batch_size = args.batch
     
     # Temperary hold
-    transform = True
+    transform = False # there's no reason for transform to be true for running; the only thing that might be done is 
     
     h5_locations = {
         'image': image_location,
