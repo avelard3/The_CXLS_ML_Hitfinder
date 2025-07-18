@@ -12,7 +12,7 @@ from . import conf
 
 class ModelEvaluation:
     
-    def __init__(self, cfg: dict, attributes: dict, trained_model: nn.Module, testing_data: DataLoader) -> None:
+    def __init__(self, cfg: dict, trained_model: nn.Module, testing_data: DataLoader) -> None:
         """
         Breaks out important dictonaries, takes in the trained model, creates a logger object, and creates parameters to store evaluation metrics. 
 
@@ -126,7 +126,7 @@ class ModelEvaluation:
         Plots the ROC (Reciever Operating Characteristic) Curve of the testing set.
         The x-axis is the false positive rate and the y-axis is the true positive rate
         Args:
-            paht (str): Path to where ROC curve should be saved
+            path (str): Path to where ROC curve should be saved
         """
         try:
             print('Creating ROC curve...')

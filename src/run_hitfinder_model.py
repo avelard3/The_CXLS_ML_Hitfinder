@@ -3,6 +3,7 @@ from lib import *
 import torch
 import datetime
 from queue import Queue
+import os
 
 
 def arguments(parser: argparse.ArgumentParser) -> argparse.ArgumentParser: 
@@ -63,22 +64,12 @@ def main():
     model_arch = args.model
     model_path = args.dict
     save_output_list = args.output 
-    
-    image_location = args.image_location
-    camera_length_location = args.camera_length
-    photon_energy_location = args.photon_energy
+
     peaks_location = None
     batch_size = args.batch
     
     # Temperary hold
     transform = False # there's no reason for transform to be true for running; the only thing that might be done is 
-    
-    h5_locations = {
-        'image': image_location,
-        'camera length': camera_length_location,
-        'photon energy': photon_energy_location,
-        'peak': peaks_location
-    }
     
     cfg = {
         'model': model_arch,
@@ -115,12 +106,12 @@ def main():
     
     
     executing_mode = 'running'
-    path_manager = load_paths.Paths(h5_file_list, h5_locations, executing_mode)
+    path_manager = load_paths.Paths(h5_file_list, executing_mode)
 
     path_manager.run_paths()
     
     
-    process_data = run_model.RunModel(cfg, model_inputs, h5_locations)
+    process_data = run_model.RunModel(cfg, model_inputs)
     process_data.make_model_instance()
     process_data.load_model()
 
@@ -137,6 +128,8 @@ def main():
     process_data.classify_data(data_loader) 
    
     process_data.create_model_output_lst_files()
+    
+    os.remove("running_vds_delete_me.h5")
 
 if __name__ == '__main__':
     main()

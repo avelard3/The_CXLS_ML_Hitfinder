@@ -8,7 +8,7 @@ import datetime
 from . import conf
 # from .The_CXLS_ML_Hitfinder.src.lib import read_scattering_matrix
 class Paths:
-    def __init__(self, list_path: list, h5_location: dict, executing_mode: str, is_multi_event: bool = False) -> None:
+    def __init__(self, list_path: list, executing_mode: str, is_multi_event: bool = False) -> None:
         """
         Constructor for Paths class that handles both single and multi-event files.
         Args:
@@ -18,7 +18,6 @@ class Paths:
             is_multi_event (bool, optional): Flag to distinguish between single and multi-event processing. Defaults to False.
         """
         self._list_path = list_path
-        self._h5_location = h5_location
         self._h5_tensor_list, self._h5_attr_list, self._h5_file_list = [], [], []
         self._loaded_h5_tensor = None
         self._h5_file_path = None
@@ -27,11 +26,10 @@ class Paths:
         self._number_of_events = 1
         self._executing_mode = executing_mode
         
-        self._image_location = self._h5_location['image']
-        self._camera_length_location = self._h5_location['camera length'] 
-        self._photon_energy_location = self._h5_location['photon energy']
-        self._hit_parameter_location = self._h5_location['peak']
-        self.crop_images = False #FIXME
+        self._image_location = 'none'
+        self._camera_length_location = 'none'
+        self._photon_energy_location = 'none'
+        self._hit_parameter_location = 'none'
         
         self.possible_image_paths = ['/images/', '/entry/data/data']
         self.possible_camera_length_paths = ['/detector_distance', '/entry/instrument/detector/detector_distance']
@@ -55,7 +53,7 @@ class Paths:
         try:
             now = datetime.datetime.now()
             formatted_date_time = now.strftime('%m%d%y-%H:%M')
-            self.vds_name = f'/scratch/avelard3/all_vds/vds_{formatted_date_time}.h5'
+            self.vds_name = f'{self._executing_mode}_vds_delete_me.h5'
             print(f'Creating vds with name: {self.vds_name}')
                     
             # Dynamically determine the number of images
@@ -141,16 +139,10 @@ class Paths:
                     most_recent_master = None
 
                     for i, source_file in enumerate(lst_file): # for each file numbered up to i in the list file (aka: for i in range(len(lst_file)): source_file = lst_file[i])
-                        print("THE NUMBER I AT THE BEGINNING", i)
-                        print("source_file", source_file)
-                        print("source_file.strip()", source_file.strip())
                         self._source_file = source_file.strip() 
-                        print("a")
                         num_total_files += 1
-                        print("b")
                          # add the current file name & number to a list to keep track of images
                         if "master" in self._source_file.lower():
-                            print("NO1")
                             most_recent_master = self._source_file
                             num_total_files -=1
                             master_files_encountered += 1
@@ -162,32 +154,23 @@ class Paths:
                                     if path in f:
                                         self._photon_energy_location = path 
                             continue         
-                        print("c")           
                         try:
-                            print("d")
                             with h5.File(self._source_file, 'r') as f: # using h5.File to read the current h5 file in the list                         
                                 # Clarify image location
-                                print("e")
                                 for path in self.possible_image_paths:
-                                    print("f")
                                     if path in f:
-                                        print("g")
                                         self._image_location = path        
-                                        print("h")                        
                                 for path in self.possible_camera_length_paths:
                                     if path in f:
                                         self._camera_length_location = path
                                 for path in self.possible_photon_energy_paths:
                                     if path in f:
                                         self._photon_energy_location = path
-                                print("i")
                                 # Image data source
                                 vsource_image = h5.VirtualSource(f[self._image_location])
-                                print("j")
                                 i = i - master_files_encountered
                                 
                                 if most_recent_master != None:
-                                    print("NO2")
                                     with h5.File(most_recent_master, 'r') as mrm:
                                         vsource_camera_length = h5.VirtualSource(mrm[self._camera_length_location]) 
                                         if "wavelength" in self._photon_energy_location.lower():
@@ -198,25 +181,16 @@ class Paths:
                                         else:
                                             vsource_photon_energy = h5.VirtualSource(mrm[self._photon_energy_location])
                                 else:
-                                    print("k")
                                     vsource_camera_length = h5.VirtualSource(f[self._camera_length_location]) 
-                                    print("L")
                                     if "wavelength" in self._photon_energy_location.lower():
-                                        print("NO3")
                                         scaled_value = 12398.41984 / f[self._photon_energy_location][()]
                                         with h5.File("scaled_photon_energy.h5", "w") as f:
                                             f.create_dataset('/photon_energy_eV', data=scaled_value)
                                         vsource_photon_energy = h5.VirtualSource("scaled_photon_energy.h5", '/photon_energy_eV', shape=(1,))
                                     else:
-                                        print("m")
                                         vsource_photon_energy = h5.VirtualSource(f[self._photon_energy_location])
-                                        print("n")
 
-                                print("o")
-                                print("self._dim_and_shape_array", self._dim_and_shape_array)
-                                print(" self._dim_and_shape_array[i,1]",  self._dim_and_shape_array[i,1])
                                 if self._dim_and_shape_array[i,1] == 2: #if it's single event #change to Ks!!!!!!!!!!!!!!!!!!!!!#!
-                                    print("NO4")
                                     print("Single event has not been tested recently")
                                     self.add_file_to_list(self._source_file, 1)
                                     self._image_layout[i, 0, :, :] = vsource_image
@@ -232,7 +206,6 @@ class Paths:
                                         self._hit_parameter_layout[i] = vsource_hit_parameter
                                         
                                 elif self._dim_and_shape_array[i,1] == 3: # (need to have a metadata check eventually) and self._attr_shape[0] > 1: # if it's multievent with indiv metadata
-                                    print("running with3")
                                     if vsource_image.shape[1] != 512:
                                         #TODO add an option of quadrants 1-4 so that beam stop is not in any pictures later
                                         print(f"Going to crop to 512x512 from current shape {vsource_image.shape} on file {self._source_file}")
@@ -240,14 +213,11 @@ class Paths:
                                         shape_of_img = vsource_image.shape
                                         center_x = shape_of_img[1]//2
                                         center_y = shape_of_img[2]//2
-                                        print("calculating size but nothing else", k)
                                         vsource_image = vsource_image[:, center_x: (center_x + 512), center_y: (center_y + 512)]
-                                    print("THE K", k)
                                     self._image_layout[k:(k+self._dim_and_shape_array[i,0]), 0, :, :] = vsource_image
                                     for j in range(self._dim_and_shape_array[i,0]):
                                         self.add_file_to_list(self._source_file, j+1)
                                     if most_recent_master != None:
-                                        print("in recent master", k)
                                         self._camera_length_layout[i] = vsource_camera_length
                                         self._photon_energy_layout[i] = vsource_photon_energy 
                                     else:
@@ -267,14 +237,9 @@ class Paths:
                                 self.add_file_to_list(self._source_file, i)
                                 f.close()
                                 num_complete_files +=1
-                                print("the current number of complete files", num_complete_files)
                             k += self._dim_and_shape_array[i,0]   #keep track of number of images for mix of single/multievent
-                            print("k at the end", {k})
-                            print("the number i at the end", i)
                         except (OSError, FileNotFoundError) as e:
                             num_bad_files += 1
-                            i-=1
-                            print("I changed during error exception", i)
                             print(f"Skipping {source_file} due to an error: {e}")
                             print(f"{num_bad_files} files have been skipped out of the {num_complete_files + num_bad_files} processed so far.")
                     

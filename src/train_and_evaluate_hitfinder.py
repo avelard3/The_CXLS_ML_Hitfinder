@@ -4,6 +4,7 @@ import torch
 import datetime
 from queue import Queue
 import numpy as np
+import os
 
 def arguments(parser) -> argparse.ArgumentParser:
     """
@@ -96,11 +97,6 @@ def main() -> None:
     criterion = args.criterion
     learning_rate = args.learning_rate
     
-    image_location = args.image_location
-    camera_length_location = args.camera_length
-    photon_energy_location = args.photon_energy
-    peaks_location = args.peaks
-    
     transfer_learning_state_dict = args.transfer_learn
     transform = args.apply_transform # Parameter for Data class
     
@@ -131,15 +127,7 @@ def main() -> None:
     batch_norm_1d_momentum = args.batch_norm_1d_momentum
     
     
-    
-    
-        
-    h5_locations = {
-        'image': image_location,
-        'camera length': camera_length_location,
-        'photon energy': photon_energy_location,
-        'peak': peaks_location
-    }
+
     
     cfg = {
         'batch size': batch_size,
@@ -168,11 +156,11 @@ def main() -> None:
     }
 
     executing_mode = 'training'
-    path_manager = load_paths.Paths(h5_file_list, h5_locations, executing_mode)
+    path_manager = load_paths.Paths(h5_file_list, executing_mode)
     
     path_manager.run_paths()
     
-    training_manager = train_model.TrainModel(cfg, model_inputs, h5_locations, transfer_learning_state_dict)
+    training_manager = train_model.TrainModel(cfg, model_inputs, transfer_learning_state_dict)
     training_manager.make_training_instances()
     training_manager.load_model_state_dict()
     
@@ -196,11 +184,14 @@ def main() -> None:
     trained_model = training_manager.get_model()
     
     # Checking and reporting accuracy of model
-    evaluation_manager = evaluate_model.ModelEvaluation(cfg, h5_locations, trained_model, test_loader) 
+    evaluation_manager = evaluate_model.ModelEvaluation(cfg, trained_model, test_loader) 
     evaluation_manager.run_testing_set()
     evaluation_manager.make_classification_report()
     evaluation_manager.plot_confusion_matrix(training_results)
     evaluation_manager.plot_roc_curve(training_results)
+    
+    os.remove("training_vds_delete_me.h5")
+    
     
 
 if __name__ == '__main__':

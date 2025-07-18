@@ -13,7 +13,7 @@ from . import conf
 
 class TrainModel:
     
-    def __init__(self, cfg: dict, model_inputs: dict, attributes: dict, transfer_learning_state_dict: str) -> None:
+    def __init__(self, cfg: dict, model_inputs: dict, transfer_learning_state_dict: str) -> None:
         """
         This constructor breaks up the training configuration infomation dictionary and h5 metadata key dictionary.
         In addition, a logging object is created and global list are created for storing infomation about the training loss and accuracy. 

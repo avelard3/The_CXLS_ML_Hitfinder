@@ -10,7 +10,7 @@ import importlib
 
 class RunModel:
     
-    def __init__(self, cfg: dict, model_inputs: dict, attributes: dict) -> None:
+    def __init__(self, cfg: dict, model_inputs: dict) -> None:
         """
         Initialize the RunModel class with model architecture, model path, output list path, h5 file paths, and device.
 
