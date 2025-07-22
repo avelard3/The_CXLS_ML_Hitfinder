@@ -26,60 +26,60 @@ class Data(Dataset):
         self.train_loader = None
         self.test_loader = None
         self.inference_loader = None
-        self.vds_path = vds_path
-        self.file_list = file_list
-        self.executing_mode = executing_mode
+        self._vds_path = vds_path
+        self._file_list = file_list
+        self._executing_mode = executing_mode
+        
         # add function that does this, make NONE in init
-        self.file = h5.File(self.vds_path, 'r')
-        self.images = self.file['vsource_image']
+        self.file = h5.File(self._vds_path, 'r')
+        self._images = self.file['vsource_image']
+        self._camera_length = self.file['vsource_camera_length']
+        self._photon_energy = self.file['vsource_photon_energy']
+        if self._executing_mode == "training":
+            self._hit_parameter = self.file['vsource_hit_parameter']
         
-        self.camera_length = self.file['vsource_camera_length']
-        self.photon_energy = self.file['vsource_photon_energy']
-        if self.executing_mode == "training":
-            self.hit_parameter = self.file['vsource_hit_parameter']
-        
-        self.use_transform = use_transform
+        self._use_transform = use_transform
         
         # If transforms will be used, then it creates the pytorch object that will be used to transform future data
-        if self.use_transform:
+        if self._use_transform:
             self.make_transform()
 
     def __len__(self) -> int:
         """
         Return the number of samples in the dataset.
         """
-        return self.images.shape[0]
+        return self._images.shape[0]
     
     def __getitem__(self, idx: int) -> tuple:
         """
         Get a sample from the dataset (tuple of image data and metadata) at the given index.
         """
-        x = 0        
+        x = 0 
         # Check if a transform needs to be applied and apply it
         try:
-            self._file_index = self.file_list[idx]
-            if self.use_transform:
+            self._file_index = self._file_list[idx]
+            if self._use_transform:
                 print("You tried to use a transform when transforms don't work")
-                imgg = self.transforms(self.images[idx])
+                imgg = self.transforms(self._images[idx])
                 if idx == 0 and x==0:
                     print("Creating a plot of one of the images that is being used")
                     self.graph_image(imgg)
                     x+=1
-                return imgg, self.camera_length[idx], self.photon_energy[idx], self.hit_parameter[idx], self.file_list[idx] #change
+                return imgg, self._camera_length[idx], self._photon_energy[idx], self._hit_parameter[idx], self._file_list[idx] #change
 
             else:
 
                 #if statement with return only one thing in masterfile metadata #! 
                 #*
-                if self.executing_mode == "running":
-                    self.hit_parameter = np.empty(self.camera_length.shape)
-                if self.use_transform:
+                if self._executing_mode == "running":
+                    self._hit_parameter = np.empty(self._camera_length.shape)
+                if self._use_transform:
                     print("lol why is transform true this was supossed to be false") #FIXME
-                imgg = self.images[idx]
+                imgg = self._images[idx]
                 if idx == 0 and x==0:
                     self.graph_image(imgg)
                     x+=1
-                return self.images[idx], self.camera_length[idx], self.photon_energy[idx], self.hit_parameter[idx], self.file_list[idx] #change
+                return self._images[idx], self._camera_length[idx], self._photon_energy[idx], self._hit_parameter[idx], self._file_list[idx] #change
 
                 #*
         except Exception as e:
@@ -95,7 +95,7 @@ class Data(Dataset):
         ])
         
         
-    def graph_image(self,smaller_array):        
+    def graph_image(self, smaller_array):        
         smaller_array = smaller_array[0,:,:]
         fig, ax = plt.subplots()
         heatmap = ax.imshow(smaller_array, norm=colors.SymLogNorm(linthresh=100, linscale=1, base=10), cmap='viridis', origin = 'lower')
@@ -126,8 +126,7 @@ class CreateDataLoader():
             
             num_train = int(0.8 * num_items)
             num_test = num_items - num_train
-            
-            
+
             try:
                 train_dataset, test_dataset = torch.utils.data.random_split(self._hitfinder_dataset, [num_train, num_test])
             except Exception as e:

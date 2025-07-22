@@ -4,7 +4,7 @@ import torch
 from typing import Optional
 from torch.utils.data import Dataset
 import datetime
-# from .The_CXLS_ML_Hitfinder.src.lib.utils import SpecialCaseFunctions
+from lib.utils import SpecialCaseFunctions
 from . import conf
 # from .The_CXLS_ML_Hitfinder.src.lib import read_scattering_matrix
 class Paths:
@@ -31,10 +31,10 @@ class Paths:
         self._photon_energy_location = 'none'
         self._hit_parameter_location = 'none'
         
-        self.possible_image_paths = ['/images/', '/entry/data/data']
-        self.possible_camera_length_paths = ['/detector_distance', '/entry/instrument/detector/detector_distance']
-        self.possible_photon_energy_paths = ['/photon_energy_eV', '/entry/instrument/beam/incident_wavelength']
-        self.possible_hit_parameter_paths = ['/hit/']
+        self._possible_image_paths = ['/images/', '/entry/data/data']
+        self._possible_camera_length_paths = ['/detector_distance', '/entry/instrument/detector/detector_distance']
+        self._possible_photon_energy_paths = ['/photon_energy_eV', '/entry/instrument/beam/incident_wavelength']
+        self._possible_hit_parameter_paths = ['/hit/']
 
         
     def run_paths(self) -> None:
@@ -77,7 +77,7 @@ class Paths:
                     try:    
                         with h5.File(source_file, 'r') as f: # use h5.File to read the h5 file that you just opened
                             
-                            for path in self.possible_image_paths:
+                            for path in self._possible_image_paths:
                                 if path in f:
                                     self._image_location = path
                             
@@ -146,24 +146,24 @@ class Paths:
                             most_recent_master = self._source_file
                             num_total_files -=1
                             master_files_encountered += 1
-                            with h5.File(self._source_file, 'r') as f:        
-                                for path in self.possible_camera_length_paths:
+                            with h5.File(self._source_file, 'r') as f: #for master file, figure out where images are stored   
+                                for path in self._possible_camera_length_paths:
                                     if path in f:
                                         self._camera_length_location = path                                    
-                                for path in self.possible_photon_energy_paths:
+                                for path in self._possible_photon_energy_paths:
                                     if path in f:
                                         self._photon_energy_location = path 
                             continue         
                         try:
                             with h5.File(self._source_file, 'r') as f: # using h5.File to read the current h5 file in the list                         
-                                # Clarify image location
-                                for path in self.possible_image_paths:
+                                # Figure out where images are stored
+                                for path in self._possible_image_paths:
                                     if path in f:
                                         self._image_location = path        
-                                for path in self.possible_camera_length_paths:
+                                for path in self._possible_camera_length_paths:
                                     if path in f:
                                         self._camera_length_location = path
-                                for path in self.possible_photon_energy_paths:
+                                for path in self._possible_photon_energy_paths:
                                     if path in f:
                                         self._photon_energy_location = path
                                 # Image data source
@@ -171,25 +171,28 @@ class Paths:
                                 i = i - master_files_encountered
                                 
                                 if most_recent_master != None:
-                                    with h5.File(most_recent_master, 'r') as mrm:
+                                    with h5.File(most_recent_master, 'r') as mrm: #find the metadata info in master file
                                         vsource_camera_length = h5.VirtualSource(mrm[self._camera_length_location]) 
+                                        # if the photon_energy is given as wavelength, then convert and create a VDS off of that
                                         if "wavelength" in self._photon_energy_location.lower():
-                                            scaled_value = 12398.41984 / mrm[self._photon_energy_location][()]
+                                            scaled_value = SpecialCaseFunctions.incident_photon_wavelength_to_energy(mrm[self._photon_energy_location][()])
                                             with h5.File("scaled_photon_energy.h5", "w") as f:
                                                 f.create_dataset('/photon_energy_eV', data=scaled_value)
                                             vsource_photon_energy = h5.VirtualSource("scaled_photon_energy.h5", '/photon_energy_eV', shape=(1,))
                                         else:
                                             vsource_photon_energy = h5.VirtualSource(mrm[self._photon_energy_location])
-                                else:
+                                else: #find the metadata in each image data
                                     vsource_camera_length = h5.VirtualSource(f[self._camera_length_location]) 
+                                    # if the photon_energy is given as wavelength, then convert and create a VDS off of that
                                     if "wavelength" in self._photon_energy_location.lower():
-                                        scaled_value = 12398.41984 / f[self._photon_energy_location][()]
+                                        scaled_value = SpecialCaseFunctions.incident_photon_wavelength_to_energy(f[self._photon_energy_location][()])
                                         with h5.File("scaled_photon_energy.h5", "w") as f:
                                             f.create_dataset('/photon_energy_eV', data=scaled_value)
                                         vsource_photon_energy = h5.VirtualSource("scaled_photon_energy.h5", '/photon_energy_eV', shape=(1,))
                                     else:
                                         vsource_photon_energy = h5.VirtualSource(f[self._photon_energy_location])
 
+                                # Single Event!!!
                                 if self._dim_and_shape_array[i,1] == 2: #if it's single event #change to Ks!!!!!!!!!!!!!!!!!!!!!#!
                                     print("Single event has not been tested recently")
                                     self.add_file_to_list(self._source_file, 1)
@@ -198,34 +201,40 @@ class Paths:
                                     
                                     self._photon_energy_layout[i] = vsource_photon_energy
                                     if self._executing_mode == 'training':
-                                        for path in self.possible_hit_parameter_paths:
+                                        for path in self._possible_hit_parameter_paths:
                                             if path in f:
                                                 self._hit_parameter_location = path
                                         
                                         vsource_hit_parameter = h5.VirtualSource(f[self._hit_parameter_location])
                                         self._hit_parameter_layout[i] = vsource_hit_parameter
-                                        
+                                
+                                # Multi Event 
                                 elif self._dim_and_shape_array[i,1] == 3: # (need to have a metadata check eventually) and self._attr_shape[0] > 1: # if it's multievent with indiv metadata
+                                    # Crop the image to the correct size
                                     if vsource_image.shape[1] != 512:
                                         #TODO add an option of quadrants 1-4 so that beam stop is not in any pictures later
                                         print(f"Going to crop to 512x512 from current shape {vsource_image.shape} on file {self._source_file}")
-                                        #starting point 
                                         shape_of_img = vsource_image.shape
                                         center_x = shape_of_img[1]//2
                                         center_y = shape_of_img[2]//2
                                         vsource_image = vsource_image[:, center_x: (center_x + 512), center_y: (center_y + 512)]
                                     self._image_layout[k:(k+self._dim_and_shape_array[i,0]), 0, :, :] = vsource_image
+                                    
+                                    # Add files to list
                                     for j in range(self._dim_and_shape_array[i,0]):
                                         self.add_file_to_list(self._source_file, j+1)
+                                        
+                                    # Add metadata to VDS (different with and without master file)
                                     if most_recent_master != None:
                                         self._camera_length_layout[i] = vsource_camera_length
                                         self._photon_energy_layout[i] = vsource_photon_energy 
                                     else:
                                         self._camera_length_layout[k:(k+self._dim_and_shape_array[i,0]),0] = vsource_camera_length
                                         self._photon_energy_layout[k:(k+self._dim_and_shape_array[i,0]),0] = vsource_photon_energy
-                                        
+                                    
+                                    # Find the path where hit is stored and add to VDS    
                                     if self._executing_mode == 'training':
-                                        for path in self.possible_hit_parameter_paths:
+                                        for path in self._possible_hit_parameter_paths:
                                             if path in f:
                                                 self._hit_parameter_location = path
                                                 
@@ -238,6 +247,7 @@ class Paths:
                                 f.close()
                                 num_complete_files +=1
                             k += self._dim_and_shape_array[i,0]   #keep track of number of images for mix of single/multievent
+                        
                         except (OSError, FileNotFoundError) as e:
                             num_bad_files += 1
                             print(f"Skipping {source_file} due to an error: {e}")

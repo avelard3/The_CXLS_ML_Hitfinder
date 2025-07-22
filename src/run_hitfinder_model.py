@@ -103,8 +103,6 @@ def main():
     #! DELETE ME LATER END except that i had to change things other places so i might just be stuck like this now
     
     
-    
-    
     executing_mode = 'running'
     path_manager = load_paths.Paths(h5_file_list, executing_mode)
 

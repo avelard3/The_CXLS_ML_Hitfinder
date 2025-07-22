@@ -2,126 +2,126 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torchvision.models
-
+from . import conf
 
 class Simple_3_Layer_CNN(nn.Module):
-    def __init__(self, input_channels=1, output_channels=1, input_size=(512, 512)):
+    def __init__(self, input_channels=1, output_channels=1, input_size=conf.required_image_size):
         super(Simple_3_Layer_CNN, self).__init__()
-        self.kernel_size1 = 3
-        self.stride1 = 1
-        self.padding1 = 1
-        self.kernel_size2 = 3
-        self.stride2 = 1
-        self.padding2 = 1
+        self._kernel_size1 = 3
+        self._stride1 = 1
+        self._padding1 = 1
+        self._kernel_size2 = 3
+        self._stride2 = 1
+        self._padding2 = 1
 
-        self.conv1 = nn.Conv2d(input_channels, 4, kernel_size=self.kernel_size1, stride=self.stride1, padding=self.padding1)
-        self.pool1 = nn.MaxPool2d(2, 2)
-        self.conv2 = nn.Conv2d(4, 8, kernel_size=self.kernel_size2, stride=self.stride2, padding=self.padding2)
-        self.pool2 = nn.MaxPool2d(2,2)
-        self.conv3 = nn.Conv2d(8, 16, kernel_size=self.kernel_size2, stride=self.stride2, padding=self.padding2)
-        self.pool3 = nn.MaxPool2d(2,2)
+        self._conv1 = nn.Conv2d(input_channels, 4, kernel_size=self._kernel_size1, stride=self._stride1, padding=self._padding1)
+        self._pool1 = nn.MaxPool2d(2, 2)
+        self._conv2 = nn.Conv2d(4, 8, kernel_size=self._kernel_size2, stride=self._stride2, padding=self._padding2)
+        self._pool2 = nn.MaxPool2d(2,2)
+        self._conv3 = nn.Conv2d(8, 16, kernel_size=self._kernel_size2, stride=self._stride2, padding=self._padding2)
+        self._pool3 = nn.MaxPool2d(2,2)
         
-        out_height1 = self.calculate_output_dimension(input_size[0], self.kernel_size1, self.stride1, self.padding1)
-        out_width1 = self.calculate_output_dimension(input_size[1], self.kernel_size1, self.stride1, self.padding1)
-        out_height2 = self.calculate_output_dimension(out_height1 // 2, self.kernel_size2, self.stride2, self.padding2)
-        out_width2 = self.calculate_output_dimension(out_width1 // 2, self.kernel_size2, self.stride2, self.padding2)
-        self.fc_size_1 = out_height2 * out_width2 #fully connected layer
-        self.fc1 = nn.Linear(self.fc_size_1, output_channels)
+        out_height1 = self.calculate_output_dimension(input_size[0], self._kernel_size1, self._stride1, self._padding1)
+        out_width1 = self.calculate_output_dimension(input_size[1], self._kernel_size1, self._stride1, self._padding1)
+        out_height2 = self.calculate_output_dimension(out_height1 // 2, self._kernel_size2, self._stride2, self._padding2)
+        out_width2 = self.calculate_output_dimension(out_width1 // 2, self._kernel_size2, self._stride2, self._padding2)
+        self._fc_size_1 = out_height2 * out_width2 #fully connected layer
+        self._fc1 = nn.Linear(self._fc_size_1, output_channels)
         
     def calculate_output_dimension(self, input_dim, kernel_size, stride, padding):
         return ((input_dim + 2 * padding - kernel_size) // stride) + 1
     
     def forward(self, x, camera_length, photon_energy):
-        x = self.conv1(x)
+        x = self._conv1(x)
         x = F.relu(x)
-        x = self.pool1(x)
+        x = self._pool1(x)
         
-        x = self.conv2(x)
+        x = self._conv2(x)
         x = F.relu(x)
-        x = self.pool2(x)
+        x = self._pool2(x)
         
-        x = self.conv3(x)
+        x = self._conv3(x)
         x = F.relu(x)
-        x = self.pool3(x)
+        x = self._pool3(x)
         
         x = x.view(x.size(0), -1)
-        x = self.fc1(x)
+        x = self._fc1(x)
         x = F.relu(x)
         return x
     
 #*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#
 class CNN_with_Optunas_Best(nn.Module): #
-    def __init__(self, input_channels=1, output_channels=1, input_size=(512, 512), model_inputs=None):
+    def __init__(self, input_channels=1, output_channels=1, input_size=conf.required_image_size, model_inputs=None):
         super(CNN_with_Optunas_Best, self).__init__()
-        self.output_channels = output_channels
-        self.model_inputs = model_inputs
+        self._output_channels = output_channels
+        self._model_inputs = model_inputs
         if model_inputs is None:
             raise ValueError("Model inupts dictionary cannot be None -av")        
         # needed in models.py
-        self.conv_channel_size = self.model_inputs['conv_channel_size'] 
-        self.conv_kernel_size = self.model_inputs['conv_kernel_size']
-        self.num_linear_dropout_layers = self.model_inputs['num_linear_dropout_layers']
-        self.linear_layer_size = self.model_inputs['linear_layer_size']
-        self.dropout_probability = self.model_inputs['dropout_probability'] 
-        self.momentum_2d = self.model_inputs['batch_norm_2d_momentum']
-        self.momentum_1d = self.model_inputs['batch_norm_1d_momentum']
+        self._conv_channel_size = self._model_inputs['conv_channel_size'] 
+        self._conv_kernel_size = self._model_inputs['conv_kernel_size']
+        self._num_linear_dropout_layers = self._model_inputs['num_linear_dropout_layers']
+        self._linear_layer_size = self._model_inputs['linear_layer_size']
+        self._dropout_probability = self._model_inputs['dropout_probability'] 
+        self._momentum_2d = self._model_inputs['batch_norm_2d_momentum']
+        self._momentum_1d = self._model_inputs['batch_norm_1d_momentum']
         
-        self.stride = 1
-        self.padding = 1
-        self.pool_kernel_size = 2
+        self._stride = 1
+        self._padding = 1
+        self._pool_kernel_size = 2
 
-        self.conv1 = nn.Conv2d(input_channels, self.conv_channel_size, kernel_size=self.conv_kernel_size, stride=self.stride, padding=self.padding)
-        self.bn2d_1 = nn.BatchNorm2d(self.conv_channel_size, momentum = self.momentum_2d)
-        self.conv2 = nn.Conv2d(self.conv_channel_size, 2*(self.conv_channel_size), kernel_size=self.conv_kernel_size, stride=self.stride, padding=self.padding)
-        self.bn2d_2 = nn.BatchNorm2d((2*self.conv_channel_size), momentum = self.momentum_2d)
-        self.conv3 = nn.Conv2d(2*(self.conv_channel_size), 4*(self.conv_channel_size), kernel_size=self.conv_kernel_size, stride=self.stride, padding=self.padding)        
-        self.bn2d_3 = nn.BatchNorm2d((4*self.conv_channel_size), momentum = self.momentum_2d)
+        self._conv1 = nn.Conv2d(input_channels, self._conv_channel_size, kernel_size=self._conv_kernel_size, stride=self._stride, padding=self._padding)
+        self._bn2d_1 = nn.BatchNorm2d(self._conv_channel_size, momentum = self._momentum_2d)
+        self._conv2 = nn.Conv2d(self._conv_channel_size, 2*(self._conv_channel_size), kernel_size=self._conv_kernel_size, stride=self._stride, padding=self._padding)
+        self._bn2d_2 = nn.BatchNorm2d((2*self._conv_channel_size), momentum = self._momentum_2d)
+        self._conv3 = nn.Conv2d(2*(self._conv_channel_size), 4*(self._conv_channel_size), kernel_size=self._conv_kernel_size, stride=self._stride, padding=self._padding)        
+        self._bn2d_3 = nn.BatchNorm2d((4*self._conv_channel_size), momentum = self._momentum_2d)
         
-        self.pool = nn.MaxPool2d(self.pool_kernel_size, self.pool_kernel_size)
+        self._pool = nn.MaxPool2d(self._pool_kernel_size, self._pool_kernel_size)
          
         #after first conv and pool        
-        out_height_conv1 = self.calculate_output_dimension_after_conv(input_size[0], self.conv_kernel_size, self.stride, self.padding)
-        out_width_conv1 = self.calculate_output_dimension_after_conv(input_size[1], self.conv_kernel_size, self.stride, self.padding)
+        out_height_conv1 = self.calculate_output_dimension_after_conv(input_size[0], self._conv_kernel_size, self._stride, self._padding)
+        out_width_conv1 = self.calculate_output_dimension_after_conv(input_size[1], self._conv_kernel_size, self._stride, self._padding)
         
-        out_height_pool1 = self.calculate_output_dimension_after_pool(out_height_conv1, self.pool_kernel_size, self.stride*2)
-        out_width_pool1 = self.calculate_output_dimension_after_pool(out_width_conv1, self.pool_kernel_size, self.stride*2)
+        out_height_pool1 = self.calculate_output_dimension_after_pool(out_height_conv1, self._pool_kernel_size, self._stride*2)
+        out_width_pool1 = self.calculate_output_dimension_after_pool(out_width_conv1, self._pool_kernel_size, self._stride*2)
 
         #after second conv and pool
-        out_height_conv2 = self.calculate_output_dimension_after_conv(out_height_pool1, self.conv_kernel_size, self.stride, self.padding)
-        out_width_conv2 = self.calculate_output_dimension_after_conv(out_width_pool1, self.conv_kernel_size, self.stride, self.padding)
-        out_height_pool2 = self.calculate_output_dimension_after_pool(out_height_conv2, self.pool_kernel_size, self.stride*2)
-        out_width_pool2 = self.calculate_output_dimension_after_pool(out_width_conv2, self.pool_kernel_size, self.stride*2)
+        out_height_conv2 = self.calculate_output_dimension_after_conv(out_height_pool1, self._conv_kernel_size, self._stride, self._padding)
+        out_width_conv2 = self.calculate_output_dimension_after_conv(out_width_pool1, self._conv_kernel_size, self._stride, self._padding)
+        out_height_pool2 = self.calculate_output_dimension_after_pool(out_height_conv2, self._pool_kernel_size, self._stride*2)
+        out_width_pool2 = self.calculate_output_dimension_after_pool(out_width_conv2, self._pool_kernel_size, self._stride*2)
         
         #after thrid conv and pool
-        out_height_conv3 = self.calculate_output_dimension_after_conv(out_height_pool2, self.conv_kernel_size, self.stride, self.padding)
-        out_width_conv3 = self.calculate_output_dimension_after_conv(out_width_pool2, self.conv_kernel_size, self.stride, self.padding)
-        out_height_pool3 = self.calculate_output_dimension_after_pool(out_height_conv3, self.pool_kernel_size, self.stride*2)
-        out_width_pool3 = self.calculate_output_dimension_after_pool(out_width_conv3, self.pool_kernel_size, self.stride*2)
+        out_height_conv3 = self.calculate_output_dimension_after_conv(out_height_pool2, self._conv_kernel_size, self._stride, self._padding)
+        out_width_conv3 = self.calculate_output_dimension_after_conv(out_width_pool2, self._conv_kernel_size, self._stride, self._padding)
+        out_height_pool3 = self.calculate_output_dimension_after_pool(out_height_conv3, self._pool_kernel_size, self._stride*2)
+        out_width_pool3 = self.calculate_output_dimension_after_pool(out_width_conv3, self._pool_kernel_size, self._stride*2)
         
-        self.first_fc_size_input = out_height_pool3 * out_width_pool3 * self.conv_channel_size *4 #fully connected layer # times 4 because of the output of self.conv3
-        self.last_fc_size_input = self.linear_layer_size
-        self.mid_fc_size_input = 4 * self.linear_layer_size
+        self._first_fc_size_input = out_height_pool3 * out_width_pool3 * self._conv_channel_size *4 #fully connected layer # times 4 because of the output of self.conv3
+        self._last_fc_size_input = self._linear_layer_size
+        self._mid_fc_size_input = 4 * self._linear_layer_size
         
-        self.dropout = nn.Dropout(self.dropout_probability)
+        self._dropout = nn.Dropout(self._dropout_probability)
         
         
-        if self.num_linear_dropout_layers == 1:
+        if self._num_linear_dropout_layers == 1:
             print("Setting variables with 1 linear & dropout layer")
-            self.fc1 = nn.Linear(self.first_fc_size_input, self.output_channels) 
+            self._fc1 = nn.Linear(self._first_fc_size_input, self._output_channels) 
             
-        if self.num_linear_dropout_layers == 2:
+        if self._num_linear_dropout_layers == 2:
             print("Setting variables with 2 linear & dropout layer")
-            self.fc1 = nn.Linear(self.first_fc_size_input, self.last_fc_size_input) 
-            self.bn1d_1 = nn.BatchNorm1d(self.last_fc_size_input, momentum = self.momentum_1d)
-            self.fc2 = nn.Linear(self.last_fc_size_input, self.output_channels)
+            self._fc1 = nn.Linear(self._first_fc_size_input, self._last_fc_size_input) 
+            self._bn1d_1 = nn.BatchNorm1d(self._last_fc_size_input, momentum = self._momentum_1d)
+            self._fc2 = nn.Linear(self._last_fc_size_input, self._output_channels)
             
-        if self.num_linear_dropout_layers == 3:
+        if self._num_linear_dropout_layers == 3:
             print("Setting variables with 3 linear & dropout layer")
-            self.fc1 = nn.Linear(self.first_fc_size_input, self.mid_fc_size_input) 
-            self.bn1d_1 = nn.BatchNorm1d(self.mid_fc_size_input, momentum = self.momentum_1d)
-            self.fc2 = nn.Linear(self.mid_fc_size_input, self.last_fc_size_input)
-            self.bn1d_2 = nn.BatchNorm1d(self.last_fc_size_input, momentum = self.momentum_1d)
-            self.fc3 = nn.Linear(self.last_fc_size_input, self.output_channels)
+            self._fc1 = nn.Linear(self._first_fc_size_input, self._mid_fc_size_input) 
+            self._bn1d_1 = nn.BatchNorm1d(self._mid_fc_size_input, momentum = self._momentum_1d)
+            self._fc2 = nn.Linear(self._mid_fc_size_input, self._last_fc_size_input)
+            self._bn1d_2 = nn.BatchNorm1d(self._last_fc_size_input, momentum = self._momentum_1d)
+            self._fc3 = nn.Linear(self._last_fc_size_input, self._output_channels)
             
 
     def calculate_output_dimension_after_conv(self, input_dim, kernel_size, stride, padding):
@@ -131,40 +131,40 @@ class CNN_with_Optunas_Best(nn.Module): #
         return ((input_dim - kernel_size) // stride) + 1
 
     def forward(self, x, camera_length, photon_energy):
-        x = self.conv1(x)
+        x = self._conv1(x)
         x = F.relu(x)
-        x = self.bn2d_1(x)
-        x = self.pool(x)
+        x = self._bn2d_1(x)
+        x = self._pool(x)
         
-        x = self.conv2(x)
+        x = self._conv2(x)
         x = F.relu(x)
-        x = self.bn2d_2(x)
-        x = self.pool(x)
+        x = self._bn2d_2(x)
+        x = self._pool(x)
         
-        x = self.conv3(x)
+        x = self._conv3(x)
         x = F.relu(x)
-        x = self.bn2d_3(x)
-        x = self.pool(x)
+        x = self._bn2d_3(x)
+        x = self._pool(x)
         
         x = x.view(x.size(0), -1) #reshaping it to a vector
         
         
         #always at least one fc
-        x = self.fc1(x) 
+        x = self._fc1(x) 
         x = F.relu(x)
-        x = self.dropout(x)
+        x = self._dropout(x)
 
-        if (self.num_linear_dropout_layers - 1) != 0: # if the number of layers is 2 or 3, it will not be zero
-            x = self.bn1d_1(x)
-            x = self.fc2(x) 
+        if (self._num_linear_dropout_layers - 1) != 0: # if the number of layers is 2 or 3, it will not be zero
+            x = self._bn1d_1(x)
+            x = self._fc2(x) 
             x = F.relu(x)
-            x = self.dropout(x)
+            x = self._dropout(x)
             
-        if self.num_linear_dropout_layers == 3: # if the number of layers is 3, it will not be zero
-            x = self.bn1d_2(x)
-            x = self.fc3(x)
+        if self._num_linear_dropout_layers == 3: # if the number of layers is 3, it will not be zero
+            x = self._bn1d_2(x)
+            x = self._fc3(x)
             x = F.relu(x)
-            x = self.dropout(x)
+            x = self._dropout(x)
         
         x = F.relu(x) # tbh i dont think this is necessary but im not sure and i feel like it should be so here we are    
         return x
@@ -174,77 +174,77 @@ class CNN_with_Optunas_Best(nn.Module): #
 
 #?#?#?#?#?#?#?#?#?#?#?#?#?#?#?#?#?#?#?#?#?#?#?#?#
 class Optuna_Simple_CNN(nn.Module): #
-    def __init__(self, input_channels=1, output_channels=1, input_size=(512, 512), hpd=None):
+    def __init__(self, input_channels=1, output_channels=1, input_size=conf.required_image_size, hpd=None):
         super(Optuna_Simple_CNN, self).__init__()
-        self.output_channels = output_channels
-        self.hpd = hpd
+        self._output_channels = output_channels
+        self._hpd = hpd
         if hpd is None:
             raise ValueError("Hyperparameter dictionary (hpd) cannot be None -av")        
         # needed in models.py
-        self.conv_channel_size = self.hpd['conv_channel_size'] 
-        self.conv_kernel_size = self.hpd['conv_kernel_size']
-        self.num_linear_dropout_layers = self.hpd['num_linear_dropout_layers']
-        self.linear_layer_size = self.hpd['linear_layer_size']
-        self.dropout_probability = self.hpd['dropout_probability'] 
-        self.momentum_2d = self.hpd['momentum_2d']
-        self.momentum_1d = self.hpd['momentum_1d']
+        self._conv_channel_size = self._hpd['conv_channel_size'] 
+        self._conv_kernel_size = self._hpd['conv_kernel_size']
+        self._num_linear_dropout_layers = self._hpd['num_linear_dropout_layers']
+        self._linear_layer_size = self._hpd['linear_layer_size']
+        self._dropout_probability = self._hpd['dropout_probability'] 
+        self._momentum_2d = self._hpd['momentum_2d']
+        self._momentum_1d = self._hpd['momentum_1d']
         
-        self.stride = 1
-        self.padding = 1
-        self.pool_kernel_size = 2
+        self._stride = 1
+        self._padding = 1
+        self._pool_kernel_size = 2
 
-        self.conv1 = nn.Conv2d(input_channels, self.conv_channel_size, kernel_size=self.conv_kernel_size, stride=self.stride, padding=self.padding)
-        self.bn2d_1 = nn.BatchNorm2d(self.conv_channel_size, momentum = self.momentum_2d)
-        self.conv2 = nn.Conv2d(self.conv_channel_size, 2*(self.conv_channel_size), kernel_size=self.conv_kernel_size, stride=self.stride, padding=self.padding)
-        self.bn2d_2 = nn.BatchNorm2d((2*self.conv_channel_size), momentum = self.momentum_2d)
-        self.conv3 = nn.Conv2d(2*(self.conv_channel_size), 4*(self.conv_channel_size), kernel_size=self.conv_kernel_size, stride=self.stride, padding=self.padding)        
-        self.bn2d_3 = nn.BatchNorm2d((4*self.conv_channel_size), momentum = self.momentum_2d)
+        self._conv1 = nn.Conv2d(input_channels, self._conv_channel_size, kernel_size=self._conv_kernel_size, stride=self._stride, padding=self._padding)
+        self._bn2d_1 = nn.BatchNorm2d(self._conv_channel_size, momentum = self._momentum_2d)
+        self._conv2 = nn.Conv2d(self._conv_channel_size, 2*(self._conv_channel_size), kernel_size=self._conv_kernel_size, stride=self._stride, padding=self._padding)
+        self._bn2d_2 = nn.BatchNorm2d((2*self._conv_channel_size), momentum = self._momentum_2d)
+        self._conv3 = nn.Conv2d(2*(self._conv_channel_size), 4*(self._conv_channel_size), kernel_size=self._conv_kernel_size, stride=self._stride, padding=self._padding)        
+        self._bn2d_3 = nn.BatchNorm2d((4*self._conv_channel_size), momentum = self._momentum_2d)
         
-        self.pool = nn.MaxPool2d(self.pool_kernel_size, self.pool_kernel_size)
+        self._pool = nn.MaxPool2d(self._pool_kernel_size, self._pool_kernel_size)
          
         #after first conv and pool        
-        out_height_conv1 = self.calculate_output_dimension_after_conv(input_size[0], self.conv_kernel_size, self.stride, self.padding)
-        out_width_conv1 = self.calculate_output_dimension_after_conv(input_size[1], self.conv_kernel_size, self.stride, self.padding)
+        out_height_conv1 = self.calculate_output_dimension_after_conv(input_size[0], self._conv_kernel_size, self._stride, self._padding)
+        out_width_conv1 = self.calculate_output_dimension_after_conv(input_size[1], self._conv_kernel_size, self._stride, self._padding)
         
-        out_height_pool1 = self.calculate_output_dimension_after_pool(out_height_conv1, self.pool_kernel_size, self.stride*2)
-        out_width_pool1 = self.calculate_output_dimension_after_pool(out_width_conv1, self.pool_kernel_size, self.stride*2)
+        out_height_pool1 = self.calculate_output_dimension_after_pool(out_height_conv1, self._pool_kernel_size, self._stride*2)
+        out_width_pool1 = self.calculate_output_dimension_after_pool(out_width_conv1, self._pool_kernel_size, self._stride*2)
 
         #after second conv and pool
-        out_height_conv2 = self.calculate_output_dimension_after_conv(out_height_pool1, self.conv_kernel_size, self.stride, self.padding)
-        out_width_conv2 = self.calculate_output_dimension_after_conv(out_width_pool1, self.conv_kernel_size, self.stride, self.padding)
-        out_height_pool2 = self.calculate_output_dimension_after_pool(out_height_conv2, self.pool_kernel_size, self.stride*2)
-        out_width_pool2 = self.calculate_output_dimension_after_pool(out_width_conv2, self.pool_kernel_size, self.stride*2)
+        out_height_conv2 = self.calculate_output_dimension_after_conv(out_height_pool1, self._conv_kernel_size, self._stride, self._padding)
+        out_width_conv2 = self.calculate_output_dimension_after_conv(out_width_pool1, self._conv_kernel_size, self._stride, self._padding)
+        out_height_pool2 = self.calculate_output_dimension_after_pool(out_height_conv2, self._pool_kernel_size, self._stride*2)
+        out_width_pool2 = self.calculate_output_dimension_after_pool(out_width_conv2, self._pool_kernel_size, self._stride*2)
         
         #after thrid conv and pool
-        out_height_conv3 = self.calculate_output_dimension_after_conv(out_height_pool2, self.conv_kernel_size, self.stride, self.padding)
-        out_width_conv3 = self.calculate_output_dimension_after_conv(out_width_pool2, self.conv_kernel_size, self.stride, self.padding)
-        out_height_pool3 = self.calculate_output_dimension_after_pool(out_height_conv3, self.pool_kernel_size, self.stride*2)
-        out_width_pool3 = self.calculate_output_dimension_after_pool(out_width_conv3, self.pool_kernel_size, self.stride*2)
+        out_height_conv3 = self.calculate_output_dimension_after_conv(out_height_pool2, self._conv_kernel_size, self._stride, self._padding)
+        out_width_conv3 = self.calculate_output_dimension_after_conv(out_width_pool2, self._conv_kernel_size, self._stride, self._padding)
+        out_height_pool3 = self.calculate_output_dimension_after_pool(out_height_conv3, self._pool_kernel_size, self._stride*2)
+        out_width_pool3 = self.calculate_output_dimension_after_pool(out_width_conv3, self._pool_kernel_size, self._stride*2)
         
-        self.first_fc_size_input = out_height_pool3 * out_width_pool3 * self.conv_channel_size *4 #fully connected layer # times 4 because of the output of self.conv3
-        self.last_fc_size_input = self.linear_layer_size
-        self.mid_fc_size_input = 4 * self.linear_layer_size
+        self._first_fc_size_input = out_height_pool3 * out_width_pool3 * self._conv_channel_size *4 #fully connected layer # times 4 because of the output of self.conv3
+        self._last_fc_size_input = self._linear_layer_size
+        self._mid_fc_size_input = 4 * self._linear_layer_size
         
-        self.dropout = nn.Dropout(self.dropout_probability)
+        self._dropout = nn.Dropout(self._dropout_probability)
         
         
-        if self.num_linear_dropout_layers == 1:
+        if self._num_linear_dropout_layers == 1:
             print("Setting variables with 1 linear & dropout layer")
-            self.fc1 = nn.Linear(self.first_fc_size_input, self.output_channels) 
+            self._fc1 = nn.Linear(self._first_fc_size_input, self._output_channels) 
             
-        if self.num_linear_dropout_layers == 2:
+        if self._num_linear_dropout_layers == 2:
             print("Setting variables with 2 linear & dropout layer")
-            self.fc1 = nn.Linear(self.first_fc_size_input, self.last_fc_size_input) 
-            self.bn1d_1 = nn.BatchNorm1d(self.last_fc_size_input, momentum = self.momentum_1d)
-            self.fc2 = nn.Linear(self.last_fc_size_input, self.output_channels)
+            self._fc1 = nn.Linear(self._first_fc_size_input, self._last_fc_size_input) 
+            self._bn1d_1 = nn.BatchNorm1d(self._last_fc_size_input, momentum = self._momentum_1d)
+            self._fc2 = nn.Linear(self._last_fc_size_input, self._output_channels)
             
-        if self.num_linear_dropout_layers == 3:
+        if self._num_linear_dropout_layers == 3:
             print("Setting variables with 3 linear & dropout layer")
-            self.fc1 = nn.Linear(self.first_fc_size_input, self.mid_fc_size_input) 
-            self.bn1d_1 = nn.BatchNorm1d(self.mid_fc_size_input, momentum = self.momentum_1d)
-            self.fc2 = nn.Linear(self.mid_fc_size_input, self.last_fc_size_input)
-            self.bn1d_2 = nn.BatchNorm1d(self.last_fc_size_input, momentum = self.momentum_1d)
-            self.fc3 = nn.Linear(self.last_fc_size_input, self.output_channels)
+            self._fc1 = nn.Linear(self._first_fc_size_input, self._mid_fc_size_input) 
+            self._bn1d_1 = nn.BatchNorm1d(self._mid_fc_size_input, momentum = self._momentum_1d)
+            self._fc2 = nn.Linear(self._mid_fc_size_input, self._last_fc_size_input)
+            self._bn1d_2 = nn.BatchNorm1d(self._last_fc_size_input, momentum = self._momentum_1d)
+            self._fc3 = nn.Linear(self._last_fc_size_input, self._output_channels)
             
 
     def calculate_output_dimension_after_conv(self, input_dim, kernel_size, stride, padding):
@@ -254,44 +254,40 @@ class Optuna_Simple_CNN(nn.Module): #
         return ((input_dim - kernel_size) // stride) + 1
 
     def forward(self, x, camera_length, photon_energy):
-        x = self.conv1(x)
+        x = self._conv1(x)
         x = F.relu(x)
-        x = self.bn2d_1(x)
-        x = self.pool(x)
+        x = self._bn2d_1(x)
+        x = self._pool(x)
         
-        x = self.conv2(x)
+        x = self._conv2(x)
         x = F.relu(x)
-        x = self.bn2d_2(x)
-        x = self.pool(x)
+        x = self._bn2d_2(x)
+        x = self._pool(x)
         
-        x = self.conv3(x)
+        x = self._conv3(x)
         x = F.relu(x)
-        x = self.bn2d_3(x)
-        x = self.pool(x)
+        x = self._bn2d_3(x)
+        x = self._pool(x)
         
         x = x.view(x.size(0), -1) #reshaping it to a vector
         
         
         #always at least one fc
-        x = self.fc1(x) 
+        x = self._fc1(x) 
         x = F.relu(x)
-        x = self.dropout(x)
+        x = self._dropout(x)
 
-        if (self.num_linear_dropout_layers - 1) != 0: # if the number of layers is 2 or 3, it will not be zero
-            x = self.bn1d_1(x)
-            x = self.fc2(x) 
+        if (self._num_linear_dropout_layers - 1) != 0: # if the number of layers is 2 or 3, it will not be zero
+            x = self._bn1d_1(x)
+            x = self._fc2(x) 
             x = F.relu(x)
-            x = self.dropout(x)
+            x = self._dropout(x)
             
-        if self.num_linear_dropout_layers == 3: # if the number of layers is 3, it will not be zero
-            x = self.bn1d_2(x)
-            x = self.fc3(x)
+        if self._num_linear_dropout_layers == 3: # if the number of layers is 3, it will not be zero
+            x = self._bn1d_2(x)
+            x = self._fc3(x)
             x = F.relu(x)
-            x = self.dropout(x)
+            x = self._dropout(x)
         
         x = F.relu(x) # tbh i dont think this is necessary but im not sure and i feel like it should be so here we are    
         return x
-
-
-#?#?#?#?#?#?#?#?#?#?#?#?#?#?#?#?#?#?#?#?#?#?#?#?#
-

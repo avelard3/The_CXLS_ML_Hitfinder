@@ -24,7 +24,7 @@ class TrainModel:
         """
 
         
-        self.model_path = transfer_learning_state_dict
+        self.transfer_learning_path = transfer_learning_state_dict
 
         self.train_loader = None
         self.test_loader = None
@@ -37,11 +37,11 @@ class TrainModel:
         self.learning_rate = cfg['learning rate']
         self.model = cfg['model']        
         
-        self.lr_param_patience = cfg["lr_param_patience"]
-        self.lr_param_threshold = cfg["lr_param_threshold"]
-        self.adam_param_beta1 = cfg["adam_param_beta1"]
-        self.adam_param_beta2 = cfg["adam_param_beta2"]
-        self.adam_param_weight_decay = cfg["adam_param_weight_decay"]
+        self._lr_param_patience = cfg["lr_param_patience"]
+        self._lr_param_threshold = cfg["lr_param_threshold"]
+        self._adam_param_beta1 = cfg["adam_param_beta1"]
+        self._adam_param_beta2 = cfg["adam_param_beta2"]
+        self._adam_param_weight_decay = cfg["adam_param_weight_decay"]
         
         self.model_in = model_inputs
 
@@ -72,8 +72,8 @@ class TrainModel:
         """
         try:
             self.model = getattr(m, self.model)(model_inputs=self.model_in).to(self.device)
-            self.optimizer = getattr(optim, self.optimizer)(self.model.parameters(), lr=self.learning_rate, betas=[self.adam_param_beta1,self.adam_param_beta2], weight_decay=self.adam_param_weight_decay)            
-            self.scheduler = getattr(lrs, self.scheduler)(self.optimizer, mode='min', factor=0.1, patience=self.lr_param_patience, threshold=self.lr_param_threshold) # learning rate scheduler #probably specific to optimizer
+            self.optimizer = getattr(optim, self.optimizer)(self.model.parameters(), lr=self.learning_rate, betas=[self._adam_param_beta1, self._adam_param_beta2], weight_decay=self._adam_param_weight_decay)            
+            self.scheduler = getattr(lrs, self.scheduler)(self.optimizer, mode='min', factor=0.1, patience=self._lr_param_patience, threshold=self._lr_param_threshold) # learning rate scheduler #probably specific to optimizer
             self.criterion = getattr(nn, self.criterion)() # loss function. should probably leave that alone for now
             
             print('All training objects have been created.')
@@ -101,7 +101,7 @@ class TrainModel:
         """
         This function loads in the state dict of a model if provided.
         """
-        if self.model_path != None:
+        if self.transfer_learning_path != None:
             try:
                 state_dict = torch.load(self.transfer_learning_path)
                 self.model.load_state_dict(state_dict)
