@@ -7,6 +7,8 @@ import datetime
 from lib.utils import SpecialCaseFunctions
 from . import conf
 # from .The_CXLS_ML_Hitfinder.src.lib import read_scattering_matrix
+
+
 class Paths:
     def __init__(self, list_path: list, executing_mode: str, is_multi_event: bool = False) -> None:
         """
@@ -30,11 +32,6 @@ class Paths:
         self._camera_length_location = 'none'
         self._photon_energy_location = 'none'
         self._hit_parameter_location = 'none'
-        
-        self._possible_image_paths = ['/images/', '/entry/data/data']
-        self._possible_camera_length_paths = ['/detector_distance', '/entry/instrument/detector/detector_distance']
-        self._possible_photon_energy_paths = ['/photon_energy_eV', '/entry/instrument/beam/incident_wavelength']
-        self._possible_hit_parameter_paths = ['/hit/']
 
         
     def run_paths(self) -> None:
@@ -77,9 +74,7 @@ class Paths:
                     try:    
                         with h5.File(source_file, 'r') as f: # use h5.File to read the h5 file that you just opened
                             
-                            for path in self._possible_image_paths:
-                                if path in f:
-                                    self._image_location = path
+                            self._image_location = self._find_path_in_h5(conf.possible_image_paths, f)
                             
                             dataset_shape = f[self._image_location].shape
                             image_file_dim = len(dataset_shape)
@@ -147,25 +142,16 @@ class Paths:
                             num_total_files -=1
                             master_files_encountered += 1
                             with h5.File(self._source_file, 'r') as f: #for master file, figure out where images are stored   
-                                for path in self._possible_camera_length_paths:
-                                    if path in f:
-                                        self._camera_length_location = path                                    
-                                for path in self._possible_photon_energy_paths:
-                                    if path in f:
-                                        self._photon_energy_location = path 
+                                self._camera_length_location = self._find_path_in_h5(conf.possible_camera_length_paths, f) 
+                                self._photon_energy_location = self._find_path_in_h5(conf.possible_photon_energy_paths, f)                                 
                             continue         
                         try:
                             with h5.File(self._source_file, 'r') as f: # using h5.File to read the current h5 file in the list                         
                                 # Figure out where images are stored
-                                for path in self._possible_image_paths:
-                                    if path in f:
-                                        self._image_location = path        
-                                for path in self._possible_camera_length_paths:
-                                    if path in f:
-                                        self._camera_length_location = path
-                                for path in self._possible_photon_energy_paths:
-                                    if path in f:
-                                        self._photon_energy_location = path
+                                self._image_location = self._find_path_in_h5(conf.possible_image_paths, f) 
+                                self._camera_length_location = self._find_path_in_h5(conf.possible_camera_length_paths, f) 
+                                self._photon_energy_location = self._find_path_in_h5(conf.possible_photon_energy_paths, f)
+                                
                                 # Image data source
                                 vsource_image = h5.VirtualSource(f[self._image_location])
                                 i = i - master_files_encountered
@@ -201,10 +187,7 @@ class Paths:
                                     
                                     self._photon_energy_layout[i] = vsource_photon_energy
                                     if self._executing_mode == 'training':
-                                        for path in self._possible_hit_parameter_paths:
-                                            if path in f:
-                                                self._hit_parameter_location = path
-                                        
+                                        self._hit_parameter_location = self._find_path_in_h5(conf.possible_hit_parameter_paths, f)                                        
                                         vsource_hit_parameter = h5.VirtualSource(f[self._hit_parameter_location])
                                         self._hit_parameter_layout[i] = vsource_hit_parameter
                                 
@@ -218,11 +201,13 @@ class Paths:
                                         center_x = shape_of_img[1]//2
                                         center_y = shape_of_img[2]//2
                                         vsource_image = vsource_image[:, center_x: (center_x + 512), center_y: (center_y + 512)]
-                                    self._image_layout[k:(k+self._dim_and_shape_array[i,0]), 0, :, :] = vsource_image
                                     
                                     # Add files to list
                                     for j in range(self._dim_and_shape_array[i,0]):
                                         self.add_file_to_list(self._source_file, j+1)
+                                    
+                                    self._image_layout[k:(k+self._dim_and_shape_array[i,0]), 0, :, :] = vsource_image
+
                                         
                                     # Add metadata to VDS (different with and without master file)
                                     if most_recent_master != None:
@@ -234,7 +219,7 @@ class Paths:
                                     
                                     # Find the path where hit is stored and add to VDS    
                                     if self._executing_mode == 'training':
-                                        for path in self._possible_hit_parameter_paths:
+                                        for path in conf.possible_hit_parameter_paths:
                                             if path in f:
                                                 self._hit_parameter_location = path
                                                 
@@ -243,7 +228,7 @@ class Paths:
                                 else:
                                     print("ERROR: Mapping data to VDS. Likely an issue with metadata")
 
-                                self.add_file_to_list(self._source_file, i)
+                                # self.add_file_to_list(self._source_file, i) #STOPPED CHECKING HERE #!@@@!!!!!!!!!!!!!!!!!!!!!!!!!!!! #FIXME I THINK THIS CAN BE DELETED BUT IDK WHY ITS HERE
                                 f.close()
                                 num_complete_files +=1
                             k += self._dim_and_shape_array[i,0]   #keep track of number of images for mix of single/multievent
@@ -287,3 +272,8 @@ class Paths:
         Returns list of file names put into h5 file
         """ 
         return self._h5_file_list
+
+    def _find_path_in_h5(self, possible_path: list, h5_file):
+        for path in possible_path:
+            if path in h5_file:
+                return path
