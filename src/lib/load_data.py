@@ -9,7 +9,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.colors as colors
 
-
+# data_manager = load_data.Data(vds_dataset, h5_file_paths, executing_mode, transform)
+# create_data_loader = load_data.CreateDataLoader(data_manager, batch_size)
 
 class Data(Dataset):
     
@@ -23,9 +24,7 @@ class Data(Dataset):
             executing mode (str): Indicates whether hitfinder is in training or running mode
             use_transform (bool): Whether you want the transforms to be applied to the images to create more data or not
         """
-        self.train_loader = None
-        self.test_loader = None
-        self.inference_loader = None
+        self._run_loader = None
         self._vds_path = vds_path
         self._file_list = file_list
         self._executing_mode = executing_mode
@@ -154,9 +153,9 @@ class CreateDataLoader():
         """
         return self._train_loader, self._test_loader
     
-    def inference_data_loader(self) -> None: 
+    def run_data_loader(self) -> None: 
         """
-        Puts the inference data into a dataloader for batch processing.
+        Puts the run data into a dataloader for batch processing.
         """
         print('Making data loader...')
         try:
@@ -165,7 +164,7 @@ class CreateDataLoader():
                 raise ValueError("The dataset is empty.")
             
             try:
-                self.inference_loader = DataLoader(self._hitfinder_dataset, batch_size=self._batch_size, shuffle=False, pin_memory=True)
+                self._run_loader = DataLoader(self._hitfinder_dataset, batch_size=self._batch_size, shuffle=False, pin_memory=True)
                 print('Data loader created.')
             except Exception as e:
                 print(f"An error occurred while creating data loaders: {e}")
@@ -176,8 +175,8 @@ class CreateDataLoader():
         except Exception as e:
             print(f"An unexpected error occurred: {e}")
             
-    def get_inference_data_loader(self) -> DataLoader:
+    def get_run_data_loader(self) -> DataLoader:
         """
-        Returns the inference data loader for putting through the trained model. 
+        Returns the run data loader for putting through the trained model. 
         """
-        return self.inference_loader
+        return self._run_loader

@@ -41,10 +41,10 @@ class Paths:
         """
         Calls the function that sets up the files to b read and then maps the dataset to a virtual dataset (VDS)
         """
-        self.prepare_file_info()
-        self.map_dataset_to_vds()
+        self._prepare_file_info()
+        self._map_dataset_to_vds()
             
-    def prepare_file_info(self) -> None:
+    def _prepare_file_info(self) -> None:
         """
         Prepares files to be entered into VDS by checking dimensions/shape and storing this information in a vds file
         """
@@ -114,7 +114,7 @@ class Paths:
         except Exception as e:
             print(f"An unexpected error occurred while preparing file info for loading paths: {e}")
 
-    def map_dataset_to_vds(self) -> None:
+    def _map_dataset_to_vds(self) -> None:
         """
         Maps the images and metadata into a virtual dataset (with different methods depending on training/running and data format)
         """

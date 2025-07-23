@@ -5,6 +5,7 @@ import datetime
 from queue import Queue
 import numpy as np
 import os
+from lib import conf
 
 def arguments(parser) -> argparse.ArgumentParser:
     """
@@ -29,27 +30,8 @@ def arguments(parser) -> argparse.ArgumentParser:
     parser.add_argument('-c', '--criterion', type=str, help='Training loss function.')
     parser.add_argument('-lr', '--learning_rate', type=float, help='Training inital learning rate.')
     
-    parser.add_argument('-im', '--image_location', type=str, help='Attribute name for the image')
-    parser.add_argument('-cl', '--camera_length', type=str, help='Attribute name for the camera length parameter.')
-    parser.add_argument('-pe', '--photon_energy', type=str, help='Attribute name for the photon energy parameter.')
-    parser.add_argument('-pk', '--peaks', type=str, help='Attribute name for is there are peaks present.') #aka hit_parameter
-    
     parser.add_argument('-tl', '--transfer_learn', type=str, default=None, help='File path to state dict file for transfer learning.' )
     parser.add_argument('-at', '--apply_transform', type=str, default=False, help='Apply transform to images (true or false)')
-    
-    parser.add_argument('-lrp', '--lr_param_patience', type=int, help='Patience for learning rate parameter input')
-    parser.add_argument('-lrt', '--lr_param_threshold', type=float, help='Threshold for learning rate parameter input')
-    
-    parser.add_argument('-ccs', '--conv_channel_size', type=int, help='Final size of first convolution') #model
-    parser.add_argument('-cks', '--conv_kernel_size', type=int, help='Convolution kernel size') #model
-    parser.add_argument('-ldl', '--num_linear_dropout_layers', type=int, help='Number of dropout layers and linear layers') #max=3 #model    
-    parser.add_argument('-lls', '--linear_layer_size', type=int, help='Size of input of last linear layer')
-    parser.add_argument('-dop', '--dropout_probability', type=float, help='Dropout probability') #model
-    parser.add_argument('-ab1', '--adam_param_beta1', type=float, help="Adam parameter for momentum")
-    parser.add_argument('-ab2', '--adam_param_beta2', type=float, help="Adam parameter for RMSprop")
-    parser.add_argument('-awd', '--adam_param_weight_decay', type=float, help="its in the name")
-    parser.add_argument('-bn2dm', '--batch_norm_2d_momentum', type=float, help="its in the name")
-    parser.add_argument('-bn1dm', '--batch_norm_1d_momentum', type=float, help="its in the name")
   
     
     try:
@@ -112,19 +94,19 @@ def main() -> None:
         
     
     
-    lr_param_patience = args.lr_param_patience
-    lr_param_threshold = args.lr_param_threshold
+    lr_param_patience = conf.lr_param_patience
+    lr_param_threshold = conf.lr_param_threshold
     
-    conv_channel_size = args.conv_channel_size
-    conv_kernel_size = args.conv_kernel_size
-    num_linear_dropout_layers = args.num_linear_dropout_layers
-    linear_layer_size = args.linear_layer_size
-    dropout_probability = args.dropout_probability
-    adam_param_beta1 = args.adam_param_beta1
-    adam_param_beta2 = args.adam_param_beta2
-    adam_param_weight_decay = args.adam_param_weight_decay
-    batch_norm_2d_momentum = args.batch_norm_2d_momentum
-    batch_norm_1d_momentum = args.batch_norm_1d_momentum
+    conv_channel_size = conf.conv_channel_size
+    conv_kernel_size = conf.conv_kernel_size
+    num_linear_dropout_layers = conf.num_linear_dropout_layers
+    linear_layer_size = conf.linear_layer_size
+    dropout_probability = conf.dropout_probability
+    adam_param_beta1 = conf.adam_param_beta1
+    adam_param_beta2 = conf.adam_param_beta2
+    adam_param_weight_decay = conf.adam_param_weight_decay
+    batch_norm_2d_momentum = conf.batch_norm_2d_momentum
+    batch_norm_1d_momentum = conf.batch_norm_1d_momentum
     
     
 
@@ -156,43 +138,42 @@ def main() -> None:
     }
 
     executing_mode = 'training'
-    path_manager = load_paths.Paths(h5_file_list, executing_mode)
+    path_manager = load_paths.Paths(h5_file_list, executing_mode) #init Paths object
     
-    path_manager.run_paths()
+    path_manager.run_paths() 
     
-    training_manager = train_model.TrainModel(cfg, model_inputs, transfer_learning_state_dict)
-    training_manager.make_training_instances()
-    training_manager.load_model_state_dict()
+    training_manager = train_model.TrainModel(cfg, model_inputs, transfer_learning_state_dict) #init TrainModel object
+    training_manager.make_training_instances() 
+    training_manager.load_model_state_dict() 
     
-    vds_dataset = path_manager.get_vds()
-    h5_file_paths = path_manager.get_file_names()
+    vds_dataset = path_manager.get_vds() 
+    h5_file_paths = path_manager.get_file_names() 
     
-    data_manager = load_data.Data(vds_dataset, h5_file_paths, executing_mode, transform)
+    data_manager = load_data.Data(vds_dataset, h5_file_paths, executing_mode, transform) #init Data object
     
-    create_data_loader = load_data.CreateDataLoader(data_manager, batch_size)
+    create_data_loader = load_data.CreateDataLoader(data_manager, batch_size) #init CreateDataLoader object that create DataLoader object
     
-    create_data_loader.split_training_data() 
+    create_data_loader.split_training_data()   
     train_loader, test_loader = create_data_loader.get_training_data_loaders() 
     
-    training_manager.assign_new_data(train_loader, test_loader)
+    training_manager.assign_new_data(train_loader, test_loader) 
     
     training_manager.epoch_loop() 
-    training_manager.plot_loss_accuracy(training_results)
+    training_manager.plot_loss_accuracy(training_results) 
         
     # Saving model
-    training_manager.save_model(model_dict_save_path)
+    training_manager.save_model(model_dict_save_path) 
     trained_model = training_manager.get_model()
     
     # Checking and reporting accuracy of model
-    evaluation_manager = evaluate_model.ModelEvaluation(cfg, trained_model, test_loader) 
-    evaluation_manager.run_testing_set()
-    evaluation_manager.make_classification_report()
-    evaluation_manager.plot_confusion_matrix(training_results)
-    evaluation_manager.plot_roc_curve(training_results)
+    evaluation_manager = evaluate_model.ModelEvaluation(cfg, trained_model, test_loader) #init ModelEvaluation object
+    evaluation_manager.run_testing_set() 
+    evaluation_manager.make_classification_report()  
+    evaluation_manager.plot_confusion_matrix(training_results) 
+    evaluation_manager.plot_roc_curve(training_results) 
     
     os.remove("training_vds_delete_me.h5")
-    
-    
+
 
 if __name__ == '__main__':
     main()

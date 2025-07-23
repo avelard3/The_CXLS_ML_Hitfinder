@@ -4,6 +4,7 @@ import torch
 import datetime
 from queue import Queue
 import os
+from lib import conf
 
 
 def arguments(parser: argparse.ArgumentParser) -> argparse.ArgumentParser: 
@@ -65,7 +66,6 @@ def main():
     model_path = args.dict
     save_output_list = args.output 
 
-    peaks_location = None
     batch_size = args.batch
     
     # Temperary hold
@@ -79,53 +79,44 @@ def main():
     }
     
     #! DELETE ME LATER
-    conv_channel_size=7
-    conv_kernel_size=6
-    num_linear_dropout_layers=1
-    linear_layer_size=6
-    dropout_probability=0.38437557450917537
-    batch_norm_2d_momentum=0.17464996633777477
-    batch_norm_1d_momentum=0.7345315119311252
-
-
 
 
     model_inputs = {
-        "conv_channel_size" : conv_channel_size,  
-        "conv_kernel_size" : conv_kernel_size,
-        "num_linear_dropout_layers" : num_linear_dropout_layers,
-        "linear_layer_size" : linear_layer_size,
-        "dropout_probability" : dropout_probability,
-        "batch_norm_2d_momentum" : batch_norm_2d_momentum,
-        "batch_norm_1d_momentum" : batch_norm_1d_momentum
+        "conv_channel_size" : conf.conv_channel_size,  
+        "conv_kernel_size" : conf.conv_kernel_size,
+        "num_linear_dropout_layers" : conf.num_linear_dropout_layers,
+        "linear_layer_size" : conf.linear_layer_size,
+        "dropout_probability" : conf.dropout_probability,
+        "batch_norm_2d_momentum" : conf.batch_norm_2d_momentum,
+        "batch_norm_1d_momentum" : conf.batch_norm_1d_momentum
     }
 
     #! DELETE ME LATER END except that i had to change things other places so i might just be stuck like this now
     
     
     executing_mode = 'running'
-    path_manager = load_paths.Paths(h5_file_list, executing_mode)
+    path_manager = load_paths.Paths(h5_file_list, executing_mode) # init Paths object
 
-    path_manager.run_paths()
+    path_manager.run_paths() 
     
     
-    process_data = run_model.RunModel(cfg, model_inputs)
-    process_data.make_model_instance()
-    process_data.load_model()
+    process_data = run_model.RunModel(cfg, model_inputs) # init RunModel Object
+    process_data.make_model_instance() 
+    process_data.load_model() 
 
-    vds_dataset = path_manager.get_vds()    
-    h5_file_paths = path_manager.get_file_names()
+    vds_dataset = path_manager.get_vds() 
+    h5_file_paths = path_manager.get_file_names() 
 
-    data_manager = load_data.Data(vds_dataset, h5_file_paths, executing_mode, transform)
+    data_manager = load_data.Data(vds_dataset, h5_file_paths, executing_mode, transform) #init Data object
 
-    create_data_loader = load_data.CreateDataLoader(data_manager, batch_size)
-    create_data_loader.inference_data_loader()
+    create_data_loader = load_data.CreateDataLoader(data_manager, batch_size) #init CreateDataLoader object that creates DataLoader object
+    create_data_loader.run_data_loader() #rename the loader, but single
 
-    data_loader = create_data_loader.get_inference_data_loader()
+    data_loader = create_data_loader.get_run_data_loader() 
 
     process_data.classify_data(data_loader) 
-   
-    process_data.create_model_output_lst_files()
+    
+    process_data.create_model_output_lst_files() 
     
     os.remove("running_vds_delete_me.h5")
 

@@ -24,18 +24,17 @@ class TrainModel:
         """
 
         
-        self.transfer_learning_path = transfer_learning_state_dict
+        self._transfer_learning_path = transfer_learning_state_dict
 
-        self.train_loader = None
-        self.test_loader = None
-        self.batch_size = cfg['batch size']
-        self.device = cfg['device']
-        self.epochs = cfg['epochs']
-        self.optimizer = cfg['optimizer']
-        self.scheduler = cfg['scheduler']
-        self.criterion = cfg['criterion']
-        self.learning_rate = cfg['learning rate']
-        self.model = cfg['model']        
+        self._train_loader = None
+        self._test_loader = None
+        self._device = cfg['device']
+        self._epochs = cfg['epochs']
+        self._optimizer = cfg['optimizer']
+        self._scheduler = cfg['scheduler']
+        self._criterion = cfg['criterion']
+        self._learning_rate = cfg['learning rate']
+        self._model = cfg['model']        
         
         self._lr_param_patience = cfg["lr_param_patience"]
         self._lr_param_threshold = cfg["lr_param_threshold"]
@@ -43,13 +42,13 @@ class TrainModel:
         self._adam_param_beta2 = cfg["adam_param_beta2"]
         self._adam_param_weight_decay = cfg["adam_param_weight_decay"]
         
-        self.model_in = model_inputs
+        self._model_in = model_inputs
 
         
-        self.plot_train_accuracy = np.zeros(self.epochs)
-        self.plot_train_loss = np.zeros(self.epochs)
-        self.plot_test_accuracy = np.zeros(self.epochs)
-        self.plot_test_loss = np.zeros(self.epochs)
+        self._plot_train_accuracy = np.zeros(self._epochs)
+        self._plot_train_loss = np.zeros(self._epochs)
+        self._plot_test_accuracy = np.zeros(self._epochs)
+        self._plot_test_loss = np.zeros(self._epochs)
         
         
         
@@ -57,8 +56,8 @@ class TrainModel:
         """
         Assigns new data loaders. (Train is training data loader and test is testing data loader.)
         """
-        self.train_loader = train
-        self.test_loader = test
+        self._train_loader = train
+        self._test_loader = test
 
         
     def make_training_instances(self) -> None:
@@ -71,29 +70,29 @@ class TrainModel:
         - the loss criterion
         """
         try:
-            self.model = getattr(m, self.model)(model_inputs=self.model_in).to(self.device)
-            self.optimizer = getattr(optim, self.optimizer)(self.model.parameters(), lr=self.learning_rate, betas=[self._adam_param_beta1, self._adam_param_beta2], weight_decay=self._adam_param_weight_decay)            
-            self.scheduler = getattr(lrs, self.scheduler)(self.optimizer, mode='min', factor=0.1, patience=self._lr_param_patience, threshold=self._lr_param_threshold) # learning rate scheduler #probably specific to optimizer
-            self.criterion = getattr(nn, self.criterion)() # loss function. should probably leave that alone for now
+            self._model = getattr(m, self._model)(model_inputs=self._model_in).to(self._device)
+            self._optimizer = getattr(optim, self._optimizer)(self._model.parameters(), lr=self._learning_rate, betas=[self._adam_param_beta1, self._adam_param_beta2], weight_decay=self._adam_param_weight_decay)            
+            self._scheduler = getattr(lrs, self._scheduler)(self._optimizer, mode='min', factor=0.1, patience=self._lr_param_patience, threshold=self._lr_param_threshold) # learning rate scheduler #probably specific to optimizer
+            self._criterion = getattr(nn, self._criterion)() # loss function. should probably leave that alone for now
             
             print('All training objects have been created.')
             
         except AttributeError as e:
             print(f"AttributeError: {e}")
             if 'nn' in str(e):
-                print(f"Error: '{self.model_name}', '{self.criterion_name}' not found in torch.nn")
+                print(f"Error: '{self._model_name}', '{self._criterion_name}' not found in torch.nn")
             elif 'optim' in str(e):
-                print(f"Error: '{self.optimizer_name}' not found in torch.optim")
+                print(f"Error: '{self._optimizer_name}' not found in torch.optim")
             elif 'lr_scheduler' in str(e):
-                print(f"Error: '{self.scheduler_name}' not found in torch.optim.lr_scheduler")
+                print(f"Error: '{self._scheduler_name}' not found in torch.optim.lr_scheduler")
         except TypeError as e:
             print(f"TypeError: {e}")
             if 'nn' in str(e):
-                print(f"Error: '{self.model_name}' or '{self.criterion_name}' is not callable")
+                print(f"Error: '{self._model_name}' or '{self._criterion_name}' is not callable")
             elif 'optim' in str(e):
-                print(f"Error: '{self.optimizer_name}' is not callable")
+                print(f"Error: '{self._optimizer_name}' is not callable")
             elif 'lr_scheduler' in str(e):
-                print(f"Error: '{self.scheduler_name}' is not callable")
+                print(f"Error: '{self._scheduler_name}' is not callable")
         except Exception as e:
             print(f"An unexpected error occurred: {e}")
 
@@ -101,25 +100,25 @@ class TrainModel:
         """
         This function loads in the state dict of a model if provided.
         """
-        if self.transfer_learning_path != None:
+        if self._transfer_learning_path != None:
             try:
-                state_dict = torch.load(self.transfer_learning_path)
-                self.model.load_state_dict(state_dict)
-                self.model = self.model.eval() 
-                self.model.to(self.device)
+                state_dict = torch.load(self._transfer_learning_path)
+                self._model.load_state_dict(state_dict)
+                self._model = self._model.eval() 
+                self._model.to(self._device)
                 
-                print(f'The model state dict has been loaded into: {self.model.__class__.__name__}')
+                print(f'The model state dict has been loaded into: {self._model.__class__.__name__}')
                 
             except FileNotFoundError:
-                print(f"Error: The file '{self.transfer_learning_path}' was not found.")
+                print(f"Error: The file '{self._transfer_learning_path}' was not found.")
             except torch.serialization.pickle.UnpicklingError:
-                print(f"Error: The file '{self.transfer_learning_path}' is not a valid PyTorch model file.")
+                print(f"Error: The file '{self._transfer_learning_path}' is not a valid PyTorch model file.")
             except RuntimeError as e:
                 print(f"Error: There was an issue loading the state dictionary into the model: {e}")
             except Exception as e:
                 print(f"An unexpected error occurred: {e}")
         else:
-            print(f'There is no model state dict to load into: {self.model.__class__.__name__}')
+            print(f'There is no model state dict to load into: {self._model.__class__.__name__}')
     
     def epoch_loop(self) -> None: 
         """
@@ -127,19 +126,19 @@ class TrainModel:
         The train and test function are used back to back per epoch to optimize then perfom a second evalution on the perfomance of the model. 
         """
          
-        print(f'Model testing and validation: {self.model.__class__.__name__}')       
+        print(f'Model testing and validation: {self._model.__class__.__name__}')       
             
-        for epoch in range(self.epochs):
+        for epoch in range(self._epochs):
             print('-- epoch '+str(epoch)) 
             print('Training ...')
-            self.train(epoch)
+            self._train(epoch)
             print('Evaluating ...')
-            self.test(epoch)
+            self._test(epoch)
             
-            # print(f"-- learning rate : {self.scheduler.get_last_lr()}")
+            # print(f"-- learning rate : {self._scheduler.get_last_lr()}")
 
             
-    def train(self, epoch:int) -> None:
+    def _train(self, epoch:int) -> None:
         
         """
         This function trains the model and prints the loss and accuracy of the training sets per epoch.
@@ -147,21 +146,21 @@ class TrainModel:
         
         running_loss_train, accuracy_train, predictions, total_predictions = 0.0, 0.0, 0.0, 0.0
 
-        self.model.train()
+        self._model.train()
         
         try:
             print("Train in train_model")
-            for images, camera_length, photon_energy, hit_parameter, _ in self.train_loader: 
-                inputs = torch.Tensor(images).to(self.device, dtype=torch.float32)
-                cam_len = torch.Tensor(camera_length).to(self.device, dtype=torch.float32).squeeze(1)                    
-                phot_en = torch.Tensor(photon_energy).to(self.device, dtype=torch.float32).squeeze(1)                    
-                self.optimizer.zero_grad()
-                score = self.model(inputs, cam_len, phot_en) 
-                truth = hit_parameter.reshape(-1, 1).float().to(self.device)
+            for images, camera_length, photon_energy, hit_parameter, _ in self._train_loader: 
+                inputs = torch.Tensor(images).to(self._device, dtype=torch.float32)
+                cam_len = torch.Tensor(camera_length).to(self._device, dtype=torch.float32).squeeze(1)                    
+                phot_en = torch.Tensor(photon_energy).to(self._device, dtype=torch.float32).squeeze(1)                    
+                self._optimizer.zero_grad()
+                score = self._model(inputs, cam_len, phot_en) 
+                truth = hit_parameter.reshape(-1, 1).float().to(self._device)
                 
-                loss = self.criterion(score, truth)
+                loss = self._criterion(score, truth)
                 loss.backward()
-                self.optimizer.step()
+                self._optimizer.step()
 
                 running_loss_train += loss.item()
                 
@@ -169,11 +168,11 @@ class TrainModel:
                 accuracy_train += (predictions == truth).float().sum()
                 total_predictions += torch.numel(truth)
 
-            loss_train = running_loss_train / len(self.train_loader)  
-            self.plot_train_loss[epoch] = loss_train
+            loss_train = running_loss_train / len(self._train_loader)  
+            self._plot_train_loss[epoch] = loss_train
             print(f'Train loss: {loss_train}')
             accuracy_train /= total_predictions
-            self.plot_train_accuracy[epoch] = accuracy_train
+            self._plot_train_accuracy[epoch] = accuracy_train
             print(f'Train accuracy: {accuracy_train}')
 
         except RuntimeError as e:
@@ -185,7 +184,7 @@ class TrainModel:
         except Exception as e:
             print(f"An unexpected error occurred during training: {e}")
         
-    def test(self, epoch:int) -> None:
+    def _test(self, epoch:int) -> None:
         
         """ 
         This function test the model in evaluation mode and prints the loss and accuracy of the testing sets per epoch.
@@ -193,34 +192,34 @@ class TrainModel:
         
         running_loss_test, accuracy_test, predictions, total = 0.0, 0.0, 0.0, 0.0
  
-        self.model.eval()
+        self._model.eval()
 
         try:
             print("Test in train_model")
             with torch.no_grad():
                 
-                for images, camera_length, photon_energy, hit_parameter, _ in self.test_loader:
+                for images, camera_length, photon_energy, hit_parameter, _ in self._test_loader:
 
-                    # inputs = inputs.unsqueeze(1).to(self.device, dtype=torch.float32)
-                    inputs = torch.Tensor(images).to(self.device, dtype=torch.float32)
-                    cam_len = torch.Tensor(camera_length).to(self.device, dtype=torch.float32).squeeze(1)                    
-                    phot_en = torch.Tensor(photon_energy).to(self.device, dtype=torch.float32).squeeze(1)      
+                    # inputs = inputs.unsqueeze(1).to(self._device, dtype=torch.float32)
+                    inputs = torch.Tensor(images).to(self._device, dtype=torch.float32)
+                    cam_len = torch.Tensor(camera_length).to(self._device, dtype=torch.float32).squeeze(1)                    
+                    phot_en = torch.Tensor(photon_energy).to(self._device, dtype=torch.float32).squeeze(1)      
 
-                    score = self.model(inputs, cam_len, phot_en)
-                    truth = hit_parameter.reshape(-1, 1).float().to(self.device)
+                    score = self._model(inputs, cam_len, phot_en)
+                    truth = hit_parameter.reshape(-1, 1).float().to(self._device)
 
-                    loss = self.criterion(score, truth)
+                    loss = self._criterion(score, truth)
                     running_loss_test += loss.item()
 
                     predictions = (torch.sigmoid(score) > 0.5).long()
                     accuracy_test += (predictions == truth).float().sum()
                     total += torch.numel(truth)
 
-            loss_test = running_loss_test / len(self.test_loader)
-            self.scheduler.step(loss_test)
-            self.plot_test_loss[epoch] = loss_test
+            loss_test = running_loss_test / len(self._test_loader)
+            self._scheduler.step(loss_test)
+            self._plot_test_loss[epoch] = loss_test
             accuracy_test /= total
-            self.plot_test_accuracy[epoch] = accuracy_test
+            self._plot_test_accuracy[epoch] = accuracy_test
 
             print(f'Test loss: {loss_test}')
             print(f'Test accuracy: {accuracy_test}')
@@ -239,14 +238,14 @@ class TrainModel:
         This function plots the loss and accuracy of the training and testing sets per epoch.
         """
         try:
-            plt.plot(range(self.epochs), self.plot_train_accuracy, marker='.', color='red')
-            plt.plot(range(self.epochs), self.plot_test_accuracy, marker='.', color='orange', linestyle='dashed')
-            plt.plot(range(self.epochs), self.plot_train_loss, marker='.', color='blue')
-            plt.plot(range(self.epochs), self.plot_test_loss, marker='.', color='teal', linestyle='dashed')
+            plt.plot(range(self._epochs), self._plot_train_accuracy, marker='.', color='red')
+            plt.plot(range(self._epochs), self._plot_test_accuracy, marker='.', color='orange', linestyle='dashed')
+            plt.plot(range(self._epochs), self._plot_train_loss, marker='.', color='blue')
+            plt.plot(range(self._epochs), self._plot_test_loss, marker='.', color='teal', linestyle='dashed')
             plt.grid()
             plt.xlabel('epoch')
             plt.ylabel('loss/accuracy')
-            plt.title(f'Loss and Accuracy for {self.model.__class__.__name__}')
+            plt.title(f'Loss and Accuracy for {self._model.__class__.__name__}')
             plt.legend(['accuracy train', 'accuracy test', 'loss train', 'loss test'])
 
             if path is not None:
@@ -270,7 +269,7 @@ class TrainModel:
         """
 
         try:
-            torch.save(self.model.state_dict(), path)
+            torch.save(self._model.state_dict(), path)
             print(f"Model saved to: {path}")
 
         except Exception as e:
@@ -283,4 +282,4 @@ class TrainModel:
         Returns:
             nn.Module: The trained model object. 
         """
-        return self.model
+        return self._model

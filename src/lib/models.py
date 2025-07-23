@@ -21,10 +21,10 @@ class Simple_3_Layer_CNN(nn.Module):
         self._conv3 = nn.Conv2d(8, 16, kernel_size=self._kernel_size2, stride=self._stride2, padding=self._padding2)
         self._pool3 = nn.MaxPool2d(2,2)
         
-        out_height1 = self.calculate_output_dimension(input_size[0], self._kernel_size1, self._stride1, self._padding1)
-        out_width1 = self.calculate_output_dimension(input_size[1], self._kernel_size1, self._stride1, self._padding1)
-        out_height2 = self.calculate_output_dimension(out_height1 // 2, self._kernel_size2, self._stride2, self._padding2)
-        out_width2 = self.calculate_output_dimension(out_width1 // 2, self._kernel_size2, self._stride2, self._padding2)
+        out_height1 = self._calculate_output_dimension(input_size[0], self._kernel_size1, self._stride1, self._padding1)
+        out_width1 = self._calculate_output_dimension(input_size[1], self._kernel_size1, self._stride1, self._padding1)
+        out_height2 = self._calculate_output_dimension(out_height1 // 2, self._kernel_size2, self._stride2, self._padding2)
+        out_width2 = self._calculate_output_dimension(out_width1 // 2, self._kernel_size2, self._stride2, self._padding2)
         self._fc_size_1 = out_height2 * out_width2 #fully connected layer
         self._fc1 = nn.Linear(self._fc_size_1, output_channels)
         
@@ -80,25 +80,25 @@ class CNN_with_Optunas_Best(nn.Module): #
         self._pool = nn.MaxPool2d(self._pool_kernel_size, self._pool_kernel_size)
          
         #after first conv and pool        
-        out_height_conv1 = self.calculate_output_dimension_after_conv(input_size[0], self._conv_kernel_size, self._stride, self._padding)
-        out_width_conv1 = self.calculate_output_dimension_after_conv(input_size[1], self._conv_kernel_size, self._stride, self._padding)
+        out_height_conv1 = self._calculate_output_dimension_after_conv(input_size[0], self._conv_kernel_size, self._stride, self._padding)
+        out_width_conv1 = self._calculate_output_dimension_after_conv(input_size[1], self._conv_kernel_size, self._stride, self._padding)
         
-        out_height_pool1 = self.calculate_output_dimension_after_pool(out_height_conv1, self._pool_kernel_size, self._stride*2)
-        out_width_pool1 = self.calculate_output_dimension_after_pool(out_width_conv1, self._pool_kernel_size, self._stride*2)
+        out_height_pool1 = self._calculate_output_dimension_after_pool(out_height_conv1, self._pool_kernel_size, self._stride*2)
+        out_width_pool1 = self._calculate_output_dimension_after_pool(out_width_conv1, self._pool_kernel_size, self._stride*2)
 
         #after second conv and pool
-        out_height_conv2 = self.calculate_output_dimension_after_conv(out_height_pool1, self._conv_kernel_size, self._stride, self._padding)
-        out_width_conv2 = self.calculate_output_dimension_after_conv(out_width_pool1, self._conv_kernel_size, self._stride, self._padding)
-        out_height_pool2 = self.calculate_output_dimension_after_pool(out_height_conv2, self._pool_kernel_size, self._stride*2)
-        out_width_pool2 = self.calculate_output_dimension_after_pool(out_width_conv2, self._pool_kernel_size, self._stride*2)
+        out_height_conv2 = self._calculate_output_dimension_after_conv(out_height_pool1, self._conv_kernel_size, self._stride, self._padding)
+        out_width_conv2 = self._calculate_output_dimension_after_conv(out_width_pool1, self._conv_kernel_size, self._stride, self._padding)
+        out_height_pool2 = self._calculate_output_dimension_after_pool(out_height_conv2, self._pool_kernel_size, self._stride*2)
+        out_width_pool2 = self._calculate_output_dimension_after_pool(out_width_conv2, self._pool_kernel_size, self._stride*2)
         
         #after thrid conv and pool
-        out_height_conv3 = self.calculate_output_dimension_after_conv(out_height_pool2, self._conv_kernel_size, self._stride, self._padding)
-        out_width_conv3 = self.calculate_output_dimension_after_conv(out_width_pool2, self._conv_kernel_size, self._stride, self._padding)
-        out_height_pool3 = self.calculate_output_dimension_after_pool(out_height_conv3, self._pool_kernel_size, self._stride*2)
-        out_width_pool3 = self.calculate_output_dimension_after_pool(out_width_conv3, self._pool_kernel_size, self._stride*2)
+        out_height_conv3 = self._calculate_output_dimension_after_conv(out_height_pool2, self._conv_kernel_size, self._stride, self._padding)
+        out_width_conv3 = self._calculate_output_dimension_after_conv(out_width_pool2, self._conv_kernel_size, self._stride, self._padding)
+        out_height_pool3 = self._calculate_output_dimension_after_pool(out_height_conv3, self._pool_kernel_size, self._stride*2)
+        out_width_pool3 = self._calculate_output_dimension_after_pool(out_width_conv3, self._pool_kernel_size, self._stride*2)
         
-        self._first_fc_size_input = out_height_pool3 * out_width_pool3 * self._conv_channel_size *4 #fully connected layer # times 4 because of the output of self.conv3
+        self._first_fc_size_input = out_height_pool3 * out_width_pool3 * self._conv_channel_size *4 #fully connected layer # times 4 because of the output of self._conv3
         self._last_fc_size_input = self._linear_layer_size
         self._mid_fc_size_input = 4 * self._linear_layer_size
         
@@ -124,10 +124,10 @@ class CNN_with_Optunas_Best(nn.Module): #
             self._fc3 = nn.Linear(self._last_fc_size_input, self._output_channels)
             
 
-    def calculate_output_dimension_after_conv(self, input_dim, kernel_size, stride, padding):
+    def _calculate_output_dimension_after_conv(self, input_dim, kernel_size, stride, padding):
         return ((input_dim - kernel_size + padding*2) // stride) + 1 
 
-    def calculate_output_dimension_after_pool(self, input_dim, kernel_size, stride):
+    def _calculate_output_dimension_after_pool(self, input_dim, kernel_size, stride):
         return ((input_dim - kernel_size) // stride) + 1
 
     def forward(self, x, camera_length, photon_energy):
@@ -203,25 +203,25 @@ class Optuna_Simple_CNN(nn.Module): #
         self._pool = nn.MaxPool2d(self._pool_kernel_size, self._pool_kernel_size)
          
         #after first conv and pool        
-        out_height_conv1 = self.calculate_output_dimension_after_conv(input_size[0], self._conv_kernel_size, self._stride, self._padding)
-        out_width_conv1 = self.calculate_output_dimension_after_conv(input_size[1], self._conv_kernel_size, self._stride, self._padding)
+        out_height_conv1 = self._calculate_output_dimension_after_conv(input_size[0], self._conv_kernel_size, self._stride, self._padding)
+        out_width_conv1 = self._calculate_output_dimension_after_conv(input_size[1], self._conv_kernel_size, self._stride, self._padding)
         
-        out_height_pool1 = self.calculate_output_dimension_after_pool(out_height_conv1, self._pool_kernel_size, self._stride*2)
-        out_width_pool1 = self.calculate_output_dimension_after_pool(out_width_conv1, self._pool_kernel_size, self._stride*2)
+        out_height_pool1 = self._calculate_output_dimension_after_pool(out_height_conv1, self._pool_kernel_size, self._stride*2)
+        out_width_pool1 = self._calculate_output_dimension_after_pool(out_width_conv1, self._pool_kernel_size, self._stride*2)
 
         #after second conv and pool
-        out_height_conv2 = self.calculate_output_dimension_after_conv(out_height_pool1, self._conv_kernel_size, self._stride, self._padding)
-        out_width_conv2 = self.calculate_output_dimension_after_conv(out_width_pool1, self._conv_kernel_size, self._stride, self._padding)
-        out_height_pool2 = self.calculate_output_dimension_after_pool(out_height_conv2, self._pool_kernel_size, self._stride*2)
-        out_width_pool2 = self.calculate_output_dimension_after_pool(out_width_conv2, self._pool_kernel_size, self._stride*2)
+        out_height_conv2 = self._calculate_output_dimension_after_conv(out_height_pool1, self._conv_kernel_size, self._stride, self._padding)
+        out_width_conv2 = self._calculate_output_dimension_after_conv(out_width_pool1, self._conv_kernel_size, self._stride, self._padding)
+        out_height_pool2 = self._calculate_output_dimension_after_pool(out_height_conv2, self._pool_kernel_size, self._stride*2)
+        out_width_pool2 = self._calculate_output_dimension_after_pool(out_width_conv2, self._pool_kernel_size, self._stride*2)
         
         #after thrid conv and pool
-        out_height_conv3 = self.calculate_output_dimension_after_conv(out_height_pool2, self._conv_kernel_size, self._stride, self._padding)
-        out_width_conv3 = self.calculate_output_dimension_after_conv(out_width_pool2, self._conv_kernel_size, self._stride, self._padding)
-        out_height_pool3 = self.calculate_output_dimension_after_pool(out_height_conv3, self._pool_kernel_size, self._stride*2)
-        out_width_pool3 = self.calculate_output_dimension_after_pool(out_width_conv3, self._pool_kernel_size, self._stride*2)
+        out_height_conv3 = self._calculate_output_dimension_after_conv(out_height_pool2, self._conv_kernel_size, self._stride, self._padding)
+        out_width_conv3 = self._calculate_output_dimension_after_conv(out_width_pool2, self._conv_kernel_size, self._stride, self._padding)
+        out_height_pool3 = self._calculate_output_dimension_after_pool(out_height_conv3, self._pool_kernel_size, self._stride*2)
+        out_width_pool3 = self._calculate_output_dimension_after_pool(out_width_conv3, self._pool_kernel_size, self._stride*2)
         
-        self._first_fc_size_input = out_height_pool3 * out_width_pool3 * self._conv_channel_size *4 #fully connected layer # times 4 because of the output of self.conv3
+        self._first_fc_size_input = out_height_pool3 * out_width_pool3 * self._conv_channel_size *4 #fully connected layer # times 4 because of the output of self._conv3
         self._last_fc_size_input = self._linear_layer_size
         self._mid_fc_size_input = 4 * self._linear_layer_size
         
@@ -247,10 +247,10 @@ class Optuna_Simple_CNN(nn.Module): #
             self._fc3 = nn.Linear(self._last_fc_size_input, self._output_channels)
             
 
-    def calculate_output_dimension_after_conv(self, input_dim, kernel_size, stride, padding):
+    def _calculate_output_dimension_after_conv(self, input_dim, kernel_size, stride, padding):
         return ((input_dim - kernel_size + padding*2) // stride) + 1 
 
-    def calculate_output_dimension_after_pool(self, input_dim, kernel_size, stride):
+    def _calculate_output_dimension_after_pool(self, input_dim, kernel_size, stride):
         return ((input_dim - kernel_size) // stride) + 1
 
     def forward(self, x, camera_length, photon_energy):

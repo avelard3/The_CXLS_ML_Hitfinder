@@ -23,42 +23,41 @@ class ModelEvaluation:
             testing_data (DataLoader): Data that was set aside for testing/evaluating hitfinder
         """
         
-        self.test_loader = testing_data
-        self.batch_size = cfg['batch size']
-        self.device = cfg['device']
-        self.model = trained_model
+        self._test_loader = testing_data
+        self._device = cfg['device']
+        self._model = trained_model
 
         
-        self.cm = None
-        self.all_labels = []
-        self.all_predictions = []
-        self.classification_report_dict = {}
+        self._confusion_matrix = None
+        self._all_labels = []
+        self._all_predictions = []
+        self._classification_report_dict = {}
 
 
     def run_testing_set(self) -> None:
         """ 
         Runs the trained model in evaluation mode, by creating arrays of labels and predictions to compare against each other for metrics. 
         """
-        print(f'Running evaluation on model: {self.model.__class__.__name__}')
-        self.model.eval()
+        print(f'Running evaluation on model: {self._model.__class__.__name__}')
+        self._model.eval()
 
         try:
             with torch.no_grad():
-                for images, camera_length, photon_energy, hit_parameter, _ in self.test_loader:
-                    inputs = torch.Tensor(images).to(self.device, dtype=torch.float32)
-                    cam_len = torch.Tensor(camera_length).to(self.device, dtype=torch.float32).squeeze(1)                    
-                    phot_en = torch.Tensor(photon_energy).to(self.device, dtype=torch.float32).squeeze(1)                    
+                for images, camera_length, photon_energy, hit_parameter, _ in self._test_loader:
+                    inputs = torch.Tensor(images).to(self._device, dtype=torch.float32)
+                    cam_len = torch.Tensor(camera_length).to(self._device, dtype=torch.float32).squeeze(1)                    
+                    phot_en = torch.Tensor(photon_energy).to(self._device, dtype=torch.float32).squeeze(1)                    
 
-                    score = self.model(inputs, cam_len, phot_en)
-                    truth = hit_parameter.reshape(-1, 1).float().to(self.device)
+                    score = self._model(inputs, cam_len, phot_en)
+                    truth = hit_parameter.reshape(-1, 1).float().to(self._device)
                                     
                     predictions = (torch.sigmoid(score) > 0.5).long()
-                    self.all_labels.extend(torch.flatten(truth.cpu()))
-                    self.all_predictions.extend(torch.flatten(predictions.cpu()))
+                    self._all_labels.extend(torch.flatten(truth.cpu()))
+                    self._all_predictions.extend(torch.flatten(predictions.cpu()))
                     
             # No need to reshape - arrays should already be flat
-            self.all_labels = np.array(self.all_labels)
-            self.all_predictions = np.array(self.all_predictions)
+            self._all_labels = np.array(self._all_labels)
+            self._all_predictions = np.array(self._all_predictions)
         except RuntimeError as e:
             print(f"RuntimeError during training: {e}")  
         except AttributeError as e:
@@ -74,9 +73,9 @@ class ModelEvaluation:
         """
         try:
             print('Creating classification report...')
-            self.classification_report_dict = classification_report(self.all_labels, self.all_predictions, output_dict=True)
+            self._classification_report_dict = classification_report(self._all_labels, self._all_predictions, output_dict=True)
             print('Classification Matrix: ')
-            [print(f"{key}: {value}") for key, value in self.classification_report_dict.items()]
+            [print(f"{key}: {value}") for key, value in self._classification_report_dict.items()]
         except Exception as e:
             print(f"An error occurred while creating the clasification report: {e}")       
         
@@ -84,7 +83,7 @@ class ModelEvaluation:
         """
         Returns the classification report for the model.
         """
-        return self.classification_report_dict
+        return self._classification_report_dict
 
         
     def plot_confusion_matrix(self, path:str = None) -> None:
@@ -99,14 +98,14 @@ class ModelEvaluation:
         
         try:
             print('Creating confusion matrix...')
-            self.cm = confusion_matrix(self.all_labels, self.all_predictions, normalize='true')
+            self._confusion_matrix = confusion_matrix(self._all_labels, self._all_predictions, normalize='true')
         except Exception as e:
             print(f"An error occurred while creating the confusion matrix: {e}")      
              
         # Plotting the confusion matrix
         try:
-            plt.matshow(self.cm, cmap="Blues")
-            plt.title(f'CM for {self.model.__class__.__name__}')
+            plt.matshow(self._confusion_matrix, cmap="Blues")
+            plt.title(f'CM for {self._model.__class__.__name__}')
             plt.colorbar()
             plt.ylabel('True Label')
             plt.xlabel('Predicted Label')
@@ -130,7 +129,7 @@ class ModelEvaluation:
         """
         try:
             print('Creating ROC curve...')
-            roc_display = RocCurveDisplay.from_predictions(self.all_labels, self.all_predictions)
+            roc_display = RocCurveDisplay.from_predictions(self._all_labels, self._all_predictions)
             _ = roc_display.ax_.set(
                 xlabel="False Positive Rate",
                 ylabel="True Positive Rate",
@@ -151,4 +150,4 @@ class ModelEvaluation:
         """ 
         Returns the confusion matrix of the testing set as a numpy array.
         """
-        return self.cm
+        return self._confusion_matrix
