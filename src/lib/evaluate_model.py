@@ -10,7 +10,7 @@ import optuna
 
 from . import conf
 
-class ModelEvaluation:
+class EvaluateModel:
     
     def __init__(self, cfg: dict, trained_model: nn.Module, testing_data: DataLoader) -> None:
         """
@@ -59,11 +59,11 @@ class ModelEvaluation:
             self._all_labels = np.array(self._all_labels)
             self._all_predictions = np.array(self._all_predictions)
         except RuntimeError as e:
-            print(f"RuntimeError during training: {e}")  
+            print(f"RuntimeError during evaluation: {e}")  
         except AttributeError as e:
-            print(f"AttributeError during training: {e}")
+            print(f"AttributeError during evaluation: {e}")
         except TypeError as e:
-            print(f"TypeError during training: {e}")    
+            print(f"TypeError during evaluation: {e}")    
         except Exception as e:
             print(f"An unexpected error occurred during evaluation: {e}")
         

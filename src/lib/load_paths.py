@@ -6,6 +6,8 @@ from torch.utils.data import Dataset
 import datetime
 from lib.utils import SpecialCaseFunctions
 from . import conf
+
+from scipy.constants import h, c, e
 # from .The_CXLS_ML_Hitfinder.src.lib import read_scattering_matrix
 
 
@@ -27,11 +29,6 @@ class Paths:
         self._attribute_holding = {}
         self._number_of_events = 1
         self._executing_mode = executing_mode
-        
-        self._image_location = 'none'
-        self._camera_length_location = 'none'
-        self._photon_energy_location = 'none'
-        self._hit_parameter_location = 'none'
 
         
     def run_paths(self) -> None:
@@ -74,11 +71,10 @@ class Paths:
                     try:    
                         with h5.File(source_file, 'r') as f: # use h5.File to read the h5 file that you just opened
                             
-                            self._image_location = self._find_path_in_h5(conf.possible_image_paths, f)
+                            image_location = self._find_path_in_h5(conf.possible_image_paths, f)
                             
-                            dataset_shape = f[self._image_location].shape
+                            dataset_shape = f[image_location].shape
                             image_file_dim = len(dataset_shape)
-                            print("image_file_dim", dataset_shape[0])
 
                             if image_file_dim == 2:
                                 self._dim_and_shape_list.append([1, image_file_dim])
@@ -142,73 +138,58 @@ class Paths:
                             num_total_files -=1
                             master_files_encountered += 1
                             with h5.File(self._source_file, 'r') as f: #for master file, figure out where images are stored   
-                                self._camera_length_location = self._find_path_in_h5(conf.possible_camera_length_paths, f) 
-                                self._photon_energy_location = self._find_path_in_h5(conf.possible_photon_energy_paths, f)                                 
-                            continue         
+                                camera_length_location = self._find_path_in_h5(conf.possible_camera_length_paths, f) 
+                                photon_energy_location = self._find_path_in_h5(conf.possible_photon_energy_paths, f) 
+                            f.close()                         
+                            continue   
+                              
                         try:
-                            with h5.File(self._source_file, 'r') as f: # using h5.File to read the current h5 file in the list                         
-                                # Figure out where images are stored
-                                self._image_location = self._find_path_in_h5(conf.possible_image_paths, f) 
-                                self._camera_length_location = self._find_path_in_h5(conf.possible_camera_length_paths, f) 
-                                self._photon_energy_location = self._find_path_in_h5(conf.possible_photon_energy_paths, f)
-                                
-                                # Image data source
-                                vsource_image = h5.VirtualSource(f[self._image_location])
-                                i = i - master_files_encountered
+                            with h5.File(self._source_file, 'r') as f: # using h5.File to read the current h5 file in the list     
                                 
                                 if most_recent_master != None:
-                                    with h5.File(most_recent_master, 'r') as mrm: #find the metadata info in master file
-                                        vsource_camera_length = h5.VirtualSource(mrm[self._camera_length_location]) 
-                                        # if the photon_energy is given as wavelength, then convert and create a VDS off of that
-                                        if "wavelength" in self._photon_energy_location.lower():
-                                            scaled_value = SpecialCaseFunctions.incident_photon_wavelength_to_energy(mrm[self._photon_energy_location][()])
-                                            with h5.File("scaled_photon_energy.h5", "w") as f:
-                                                f.create_dataset('/photon_energy_eV', data=scaled_value)
-                                            vsource_photon_energy = h5.VirtualSource("scaled_photon_energy.h5", '/photon_energy_eV', shape=(1,))
-                                        else:
-                                            vsource_photon_energy = h5.VirtualSource(mrm[self._photon_energy_location])
-                                else: #find the metadata in each image data
-                                    vsource_camera_length = h5.VirtualSource(f[self._camera_length_location]) 
-                                    # if the photon_energy is given as wavelength, then convert and create a VDS off of that
-                                    if "wavelength" in self._photon_energy_location.lower():
-                                        scaled_value = SpecialCaseFunctions.incident_photon_wavelength_to_energy(f[self._photon_energy_location][()])
-                                        with h5.File("scaled_photon_energy.h5", "w") as f:
-                                            f.create_dataset('/photon_energy_eV', data=scaled_value)
-                                        vsource_photon_energy = h5.VirtualSource("scaled_photon_energy.h5", '/photon_energy_eV', shape=(1,))
-                                    else:
-                                        vsource_photon_energy = h5.VirtualSource(f[self._photon_energy_location])
+                                    mrm = h5.File(most_recent_master, 'r')
 
-                                # Single Event!!!
-                                if self._dim_and_shape_array[i,1] == 2: #if it's single event #change to Ks!!!!!!!!!!!!!!!!!!!!!#!
+                                else:
+                                    mrm = f
+                                                    
+                                # Figure out where images are stored
+                                image_location = self._find_path_in_h5(conf.possible_image_paths, f) 
+                                camera_length_location = self._find_path_in_h5(conf.possible_camera_length_paths, mrm) 
+                                photon_energy_location = self._find_path_in_h5(conf.possible_photon_energy_paths, mrm)
+                                
+                                # Image data source
+                                vsource_image = h5.VirtualSource(f[image_location])
+                                i = i - master_files_encountered
+                                                                
+                                vsource_camera_length = h5.VirtualSource(mrm[camera_length_location])
+                                vsource_photon_energy = self._define_photon_energy(mrm, photon_energy_location) # Check if it's photon_energy or wavelength and create a Virtual Source out of it
+
+                                ## SINGLE EVENT ##
+                                if self._dim_and_shape_array[i,1] == 2: 
                                     print("Single event has not been tested recently")
                                     self.add_file_to_list(self._source_file, 1)
+                                    
+                                    if vsource_image.shape[1] != 512:
+                                        vsource_image = self._crop_image(vsource_image) # Crop the image to the correct size
+                                    
                                     self._image_layout[i, 0, :, :] = vsource_image
                                     self._camera_length_layout[i] = vsource_camera_length
-                                    
                                     self._photon_energy_layout[i] = vsource_photon_energy
+                                    
                                     if self._executing_mode == 'training':
-                                        self._hit_parameter_location = self._find_path_in_h5(conf.possible_hit_parameter_paths, f)                                        
-                                        vsource_hit_parameter = h5.VirtualSource(f[self._hit_parameter_location])
+                                        hit_parameter_location = self._find_path_in_h5(conf.possible_hit_parameter_paths, f)                                        
+                                        vsource_hit_parameter = h5.VirtualSource(f[hit_parameter_location])
                                         self._hit_parameter_layout[i] = vsource_hit_parameter
                                 
-                                # Multi Event 
-                                elif self._dim_and_shape_array[i,1] == 3: # (need to have a metadata check eventually) and self._attr_shape[0] > 1: # if it's multievent with indiv metadata
-                                    # Crop the image to the correct size
-                                    if vsource_image.shape[1] != 512:
-                                        #TODO add an option of quadrants 1-4 so that beam stop is not in any pictures later
-                                        print(f"Going to crop to 512x512 from current shape {vsource_image.shape} on file {self._source_file}")
-                                        shape_of_img = vsource_image.shape
-                                        center_x = shape_of_img[1]//2
-                                        center_y = shape_of_img[2]//2
-                                        vsource_image = vsource_image[:, center_x: (center_x + 512), center_y: (center_y + 512)]
-                                    
+                                ## MULTI EVENT ##
+                                elif self._dim_and_shape_array[i,1] == 3: 
+
                                     # Add files to list
                                     for j in range(self._dim_and_shape_array[i,0]):
                                         self.add_file_to_list(self._source_file, j+1)
-                                    
+                                    if vsource_image.shape[1] != 512:
+                                        vsource_image = self._crop_image(vsource_image) # Crop the image to the correct size
                                     self._image_layout[k:(k+self._dim_and_shape_array[i,0]), 0, :, :] = vsource_image
-
-                                        
                                     # Add metadata to VDS (different with and without master file)
                                     if most_recent_master != None:
                                         self._camera_length_layout[i] = vsource_camera_length
@@ -216,20 +197,18 @@ class Paths:
                                     else:
                                         self._camera_length_layout[k:(k+self._dim_and_shape_array[i,0]),0] = vsource_camera_length
                                         self._photon_energy_layout[k:(k+self._dim_and_shape_array[i,0]),0] = vsource_photon_energy
-                                    
-                                    # Find the path where hit is stored and add to VDS    
+                                    # Add hit parameter to VDS
                                     if self._executing_mode == 'training':
-                                        for path in conf.possible_hit_parameter_paths:
-                                            if path in f:
-                                                self._hit_parameter_location = path
-                                                
-                                        vsource_hit_parameter = h5.VirtualSource(f[self._hit_parameter_location])
-                                        self._hit_parameter_layout[k:(k+self._dim_and_shape_array[i,0]),0] = vsource_hit_parameter                                    
+                                        hit_parameter_location = self._find_path_in_h5(conf.possible_hit_parameter_paths, f)        
+                                        vsource_hit_parameter = h5.VirtualSource(f[hit_parameter_location])
+                                        self._hit_parameter_layout[k:(k+self._dim_and_shape_array[i,0]),0] = vsource_hit_parameter               
+                                        
                                 else:
                                     print("ERROR: Mapping data to VDS. Likely an issue with metadata")
 
-                                # self.add_file_to_list(self._source_file, i) #STOPPED CHECKING HERE #!@@@!!!!!!!!!!!!!!!!!!!!!!!!!!!! #FIXME I THINK THIS CAN BE DELETED BUT IDK WHY ITS HERE
+                                # self.add_file_to_list(self._source_file, i) #FIXME I THINK THIS CAN BE DELETED BUT IDK WHY ITS HERE
                                 f.close()
+                                mrm.close()
                                 num_complete_files +=1
                             k += self._dim_and_shape_array[i,0]   #keep track of number of images for mix of single/multievent
                         
@@ -273,7 +252,23 @@ class Paths:
         """ 
         return self._h5_file_list
 
-    def _find_path_in_h5(self, possible_path: list, h5_file):
-        for path in possible_path:
+    def _find_path_in_h5(self, possible_paths, h5_file):
+        for path in possible_paths:
             if path in h5_file:
                 return path
+        raise KeyError(f"None of these paths found in file: {possible_paths}")
+            
+    def _define_photon_energy(self, current_file, photon_energy_location):
+        if "wavelength" in photon_energy_location.lower():
+            scaled_value = SpecialCaseFunctions.incident_photon_wavelength_to_energy(current_file[photon_energy_location][()])
+            with h5.File("scaled_photon_energy.h5", "w") as f:
+                f.create_dataset('/photon_energy_eV', data=scaled_value)
+        return h5.VirtualSource(current_file[photon_energy_location])
+    
+    def _crop_image(self, vsource_image):
+        print(f"Going to crop to 512x512 from current shape {vsource_image.shape} on file {self._source_file}")
+        shape_of_img = vsource_image.shape
+        center_x = shape_of_img[1]//2
+        center_y = shape_of_img[2]//2
+        vsource_image = vsource_image[:, center_x: (center_x + 512), center_y: (center_y + 512)]
+        return vsource_image

@@ -3,8 +3,8 @@
 required_image_size = (512, 512) 
 
 possible_image_paths = ['/images/', '/entry/data/data']
-possible_camera_length_paths = ['/detector_distance', '/entry/instrument/detector/detector_distance']
-possible_photon_energy_paths = ['/photon_energy_eV', '/entry/instrument/beam/incident_wavelength']
+possible_camera_length_paths = ['/detector_distance', 'entry/instrument/detector/detector_distance/']
+possible_photon_energy_paths = ['/photon_energy_eV', 'entry/instrument/beam/incident_wavelength/']
 possible_hit_parameter_paths = ['/hit/']
 
 

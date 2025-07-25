@@ -27,3 +27,20 @@ class SpecialCaseFunctions:
         energy_eV = energy_J / e
         
         return energy_eV
+    
+    
+class ModelEvaluationMode:
+    def __init__(self) -> None:
+        pass 
+    
+    @staticmethod
+    def do_evaluation(model, device, data_loader):
+        with torch.no_grad():
+                
+            for images, camera_length, photon_energy, hit_parameter, _ in data_loader:
+
+                inputs = torch.Tensor(images).to(device, dtype=torch.float32)
+                cam_len = torch.Tensor(camera_length).to(device, dtype=torch.float32).squeeze(1)                    
+                phot_en = torch.Tensor(photon_energy).to(self._device, dtype=torch.float32).squeeze(1)      
+                score = model(inputs, cam_len, phot_en)
+                truth = hit_parameter.reshape(-1, 1).float().to(self._device)
