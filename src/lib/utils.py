@@ -1,5 +1,7 @@
 import torch
 import numpy as np
+import torch.nn as nn
+
 from scipy.constants import h, c, e
 
 from . import train_model
@@ -29,7 +31,7 @@ class SpecialCaseFunctions:
         return energy_eV
     
     
-class ModelEvaluationMode:
+class LoadModel:
     def __init__(self) -> None:
         pass 
     
@@ -44,3 +46,25 @@ class ModelEvaluationMode:
                 phot_en = torch.Tensor(photon_energy).to(self._device, dtype=torch.float32).squeeze(1)      
                 score = model(inputs, cam_len, phot_en)
                 truth = hit_parameter.reshape(-1, 1).float().to(self._device)
+                
+                
+    @staticmethod
+    def load_and_return_model(model_path, model, device) -> nn.Module: 
+        """
+        Load the state dictionary into the model class and prepare it for evaluation.
+        """
+        try:
+            state_dict = torch.load(model_path)
+            model.load_state_dict(state_dict)
+            model.to(device)
+            print(f'The model state dict has been loaded into: {model.__class__.__name__}')
+            return model 
+            
+        except FileNotFoundError:
+            print(f"Error: The file '{model_path}' was not found.")
+        except torch.serialization.pickle.UnpicklingError:
+            print(f"Error: The file '{model_path}' is not a valid PyTorch model file.")
+        except RuntimeError as e:
+            print(f"Error: There was an issue loading the state dictionary into the model: {e}")
+        except Exception as e:
+            print(f"An unexpected error occurred: {e}")

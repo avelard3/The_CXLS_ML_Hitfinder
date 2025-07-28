@@ -48,27 +48,31 @@ class RunModel:
         """
         Load the state dictionary into the model class and prepare it for evaluation.
         """
-        try:
-            state_dict = torch.load(self._model_path)
-            self._model.load_state_dict(state_dict)
-            self._model.eval() 
-            self._model.to(self._device)
-            print(f'The model state dict has been loaded into: {self._model.__class__.__name__}')
+        self._model = u.LoadModel.load_and_return_model(self._model_path, self._model, self._device)
+        
+        # try:
+        #     state_dict = torch.load(self._model_path)
+        #     self._model.load_state_dict(state_dict)
+        #     #self._model.eval() 
+        #     self._model.to(self._device)
+        #     print(f'The model state dict has been loaded into: {self._model.__class__.__name__}')
             
-        except FileNotFoundError:
-            print(f"Error: The file '{self.transfer_learning_path}' was not found.")
-        except torch.serialization.pickle.UnpicklingError:
-            print(f"Error: The file '{self.transfer_learning_path}' is not a valid PyTorch model file.")
-        except RuntimeError as e:
-            print(f"Error: There was an issue loading the state dictionary into the model: {e}")
-        except Exception as e:
-            print(f"An unexpected error occurred: {e}")
+        # except FileNotFoundError:
+        #     print(f"Error: The file '{self.transfer_learning_path}' was not found.")
+        # except torch.serialization.pickle.UnpicklingError:
+        #     print(f"Error: The file '{self.transfer_learning_path}' is not a valid PyTorch model file.")
+        # except RuntimeError as e:
+        #     print(f"Error: There was an issue loading the state dictionary into the model: {e}")
+        # except Exception as e:
+        #     print(f"An unexpected error occurred: {e}")
         
     def classify_data(self, data_loader) -> None:
         """
         Classify the input data using the model and segregate the data based on the classification results.
         """
         print('Starting classification...')
+        
+        self._model.eval()
         try:
             with torch.no_grad(): #? what does this mean
                 for images, camera_length, photon_energy, _, paths in data_loader:

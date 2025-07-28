@@ -10,6 +10,8 @@ from torch.utils.data import DataLoader
 
 from . import models as m
 from . import conf
+from . import utils as u
+
 
 class TrainModel:
     
@@ -101,14 +103,10 @@ class TrainModel:
         This function loads in the state dict of a model if provided.
         """
         if self._transfer_learning_path != None:
+            print("WE MADE IT INSIDE THE IF")
             try:
-                state_dict = torch.load(self._transfer_learning_path)
-                self._model.load_state_dict(state_dict)
-                self._model = self._model.eval() 
-                self._model.to(self._device)
-                
-                print(f'The model state dict has been loaded into: {self._model.__class__.__name__}')
-                
+                self._model = u.LoadModel.load_and_return_model(self._transfer_learning_path, self._model, self._device)
+                                
             except FileNotFoundError:
                 print(f"Error: The file '{self._transfer_learning_path}' was not found.")
             except torch.serialization.pickle.UnpicklingError:

@@ -66,6 +66,7 @@ class EvaluateModel:
             print(f"TypeError during evaluation: {e}")    
         except Exception as e:
             print(f"An unexpected error occurred during evaluation: {e}")
+
         
     def make_classification_report(self) -> None:
         """

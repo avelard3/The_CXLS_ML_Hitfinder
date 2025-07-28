@@ -108,12 +108,22 @@ def main() -> None:
     batch_norm_2d_momentum = conf.batch_norm_2d_momentum
     batch_norm_1d_momentum = conf.batch_norm_1d_momentum
     
+    h5_file_list = args.list
+    model_arch = args.model
+    model_path = args.dict
+    save_output_list = args.output 
+
+    batch_size = args.batch
+    
     
 
     
     cfg = {
-        'batch size': batch_size,
+        'model': model_arch,
+        'model_path': model_path,
+        'save_output_list': save_output_list,
         'device': device,
+        'batch size': batch_size,
         'epochs': num_epoch,
         'optimizer': optimizer,
         'scheduler': scheduler,
@@ -128,45 +138,36 @@ def main() -> None:
     }
     
     model_inputs = {
-        "conv_channel_size" : conv_channel_size,  
-        "conv_kernel_size" : conv_kernel_size,
-        "num_linear_dropout_layers" : num_linear_dropout_layers,
-        "linear_layer_size" : linear_layer_size,
-        "dropout_probability" : dropout_probability,
-        "batch_norm_2d_momentum" : batch_norm_2d_momentum,
-        "batch_norm_1d_momentum" : batch_norm_1d_momentum
+        "conv_channel_size" : conf.conv_channel_size,  
+        "conv_kernel_size" : conf.conv_kernel_size,
+        "num_linear_dropout_layers" : conf.num_linear_dropout_layers,
+        "linear_layer_size" : conf.linear_layer_size,
+        "dropout_probability" : conf.dropout_probability,
+        "batch_norm_2d_momentum" : conf.batch_norm_2d_momentum,
+        "batch_norm_1d_momentum" : conf.batch_norm_1d_momentum
     }
 
     executing_mode = 'training'
     path_manager = load_paths.Paths(h5_file_list, executing_mode) #init Paths object
-    
     path_manager.run_paths() 
-    
-    training_manager = train_model.TrainModel(cfg, model_inputs, transfer_learning_state_dict) #init TrainModel object
-    training_manager.make_training_instances() 
-    training_manager.load_model_state_dict() 
     
     vds_dataset = path_manager.get_vds() 
     h5_file_paths = path_manager.get_file_names() 
     
     data_manager = load_data.Data(vds_dataset, h5_file_paths, executing_mode, transform) #init Data object
-    
-    create_data_loader = load_data.CreateDataLoader(data_manager, batch_size) #init CreateDataLoader object that create DataLoader object
-    
-    create_data_loader.split_training_data()   
-    train_loader, test_loader = create_data_loader.get_training_data_loaders() 
-    
-    training_manager.assign_new_data(train_loader, test_loader) 
-    
-    training_manager.epoch_loop() 
-    training_manager.plot_loss_accuracy(training_results) 
-        
-    # Saving model
-    training_manager.save_model(model_dict_save_path) 
-    trained_model = training_manager.get_model()
+
+    create_data_loader = load_data.CreateDataLoader(data_manager, batch_size) #init CreateDataLoader object that creates DataLoader object
+    create_data_loader.run_data_loader() #rename the loader, but single
+
+    data_loader = create_data_loader.get_run_data_loader() 
+
+    # NEED TO GET TRAINED_MODEL SOMEHOW
+    # normally train_model.get_model() to get self._model
     
     # Checking and reporting accuracy of model
-    evaluation_manager = evaluate_model.EvaluateModel(cfg, trained_model, test_loader) #init EvaluateModel object
+    evaluation_manager = evaluate_model_alone.EvaluateModel(cfg, data_loader, model_inputs) #init EvaluateModel object
+    evaluation_manager.make_model_instance()
+    evaluation_manager.load_model()
     evaluation_manager.run_testing_set() 
     evaluation_manager.make_classification_report()  
     evaluation_manager.plot_confusion_matrix(training_results) 
