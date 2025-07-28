@@ -33,38 +33,14 @@ class RunModel:
         """
         Create an instance of the model class specified by the model architecture.
         """
-        try:
-            self._model = getattr(m, self._model_arch)(model_inputs=self._model_in)
-            print(f'Model object has been created: {self._model.__class__.__name__}')
-        except AttributeError:
-            print(f"Error: Model '{self._model_arch}' not found in the module.")
-            print(f'Available models: {inspect.getmembers(m, inspect.isclass)}')
-        except TypeError:
-            print(f"Error: '{self._model_arch}' found in module is not callable.")
-        except Exception as e:
-            print(f"An unexpected error occurred: {e}")
+        self._model = u.LoadModel.make_model_instance(self._model_arch, self._model_in)
             
     def load_model(self) -> None:
         """
         Load the state dictionary into the model class and prepare it for evaluation.
         """
         self._model = u.LoadModel.load_and_return_model(self._model_path, self._model, self._device)
-        
-        # try:
-        #     state_dict = torch.load(self._model_path)
-        #     self._model.load_state_dict(state_dict)
-        #     #self._model.eval() 
-        #     self._model.to(self._device)
-        #     print(f'The model state dict has been loaded into: {self._model.__class__.__name__}')
-            
-        # except FileNotFoundError:
-        #     print(f"Error: The file '{self.transfer_learning_path}' was not found.")
-        # except torch.serialization.pickle.UnpicklingError:
-        #     print(f"Error: The file '{self.transfer_learning_path}' is not a valid PyTorch model file.")
-        # except RuntimeError as e:
-        #     print(f"Error: There was an issue loading the state dictionary into the model: {e}")
-        # except Exception as e:
-        #     print(f"An unexpected error occurred: {e}")
+
         
     def classify_data(self, data_loader) -> None:
         """

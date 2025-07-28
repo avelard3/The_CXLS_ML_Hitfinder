@@ -72,7 +72,7 @@ class TrainModel:
         - the loss criterion
         """
         try:
-            self._model = getattr(m, self._model)(model_inputs=self._model_in).to(self._device)
+            self._model = u.LoadModel.make_model_instance(self._model_arch, self._model_in) #I can prob get rid of some print statements with this
             self._optimizer = getattr(optim, self._optimizer)(self._model.parameters(), lr=self._learning_rate, betas=[self._adam_param_beta1, self._adam_param_beta2], weight_decay=self._adam_param_weight_decay)            
             self._scheduler = getattr(lrs, self._scheduler)(self._optimizer, mode='min', factor=0.1, patience=self._lr_param_patience, threshold=self._lr_param_threshold) # learning rate scheduler #probably specific to optimizer
             self._criterion = getattr(nn, self._criterion)() # loss function. should probably leave that alone for now
@@ -103,18 +103,9 @@ class TrainModel:
         This function loads in the state dict of a model if provided.
         """
         if self._transfer_learning_path != None:
-            print("WE MADE IT INSIDE THE IF")
-            try:
-                self._model = u.LoadModel.load_and_return_model(self._transfer_learning_path, self._model, self._device)
-                                
-            except FileNotFoundError:
-                print(f"Error: The file '{self._transfer_learning_path}' was not found.")
-            except torch.serialization.pickle.UnpicklingError:
-                print(f"Error: The file '{self._transfer_learning_path}' is not a valid PyTorch model file.")
-            except RuntimeError as e:
-                print(f"Error: There was an issue loading the state dictionary into the model: {e}")
-            except Exception as e:
-                print(f"An unexpected error occurred: {e}")
+            print("Reading transfer learning", self._transfer_learning_path)
+            self._model = u.LoadModel.load_and_return_model(self._transfer_learning_path, self._model, self._device)
+
         else:
             print(f'There is no model state dict to load into: {self._model.__class__.__name__}')
     

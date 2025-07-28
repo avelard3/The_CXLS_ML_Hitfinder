@@ -1,6 +1,10 @@
 import torch
 import numpy as np
 import torch.nn as nn
+from . import models as m
+import inspect
+
+
 
 from scipy.constants import h, c, e
 
@@ -46,7 +50,24 @@ class LoadModel:
                 phot_en = torch.Tensor(photon_energy).to(self._device, dtype=torch.float32).squeeze(1)      
                 score = model(inputs, cam_len, phot_en)
                 truth = hit_parameter.reshape(-1, 1).float().to(self._device)
-                
+    
+    @staticmethod
+    def make_model_instance(model_arch, model_in) -> None:
+        """
+        Create an instance of the model class specified by the model architecture.
+        """
+        try:
+            model = getattr(m, model_arch)(model_inputs=model_in)
+            print(f'Model object has been created: {model.__class__.__name__}')
+            return model
+        except AttributeError:
+            print(f"Error: Model '{model_arch}' not found in the module.")
+            print(f'Available models: {inspect.getmembers(m, inspect.isclass)}')
+        except TypeError:
+            print(f"Error: '{model_arch}' found in module is not callable.")
+        except Exception as e:
+            print(f"An unexpected error occurred: {e}")            
+
                 
     @staticmethod
     def load_and_return_model(model_path, model, device) -> nn.Module: 
