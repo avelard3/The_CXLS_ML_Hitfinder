@@ -80,6 +80,7 @@ def main() -> None:
     learning_rate = args.learning_rate
     
     transfer_learning_state_dict = args.transfer_learn
+    
     transform = args.apply_transform # Parameter for Data class
     
     if transform.lower() == "false":

@@ -6,6 +6,8 @@ from queue import Queue
 import numpy as np
 import os
 from lib import conf
+from lib import utils as u
+
 
 def arguments(parser) -> argparse.ArgumentParser:
     """
@@ -165,9 +167,10 @@ def main() -> None:
     # normally train_model.get_model() to get self._model
     
     # Checking and reporting accuracy of model
-    evaluation_manager = evaluate_model_alone.EvaluateModel(cfg, data_loader, model_inputs) #init EvaluateModel object
-    evaluation_manager.make_model_instance()
-    evaluation_manager.load_model()
+    
+    model = u.LoadModel.make_model_instance(model_arch, model_inputs)
+    model = u.LoadModel.load_and_return_model(model_path, model, device)
+    evaluation_manager = evaluate_model.EvaluateModel(cfg, model, data_loader) #init EvaluateModel object
     evaluation_manager.run_testing_set() 
     evaluation_manager.make_classification_report()  
     evaluation_manager.plot_confusion_matrix(training_results) 

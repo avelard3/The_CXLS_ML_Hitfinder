@@ -7,6 +7,8 @@ from torch.cuda.amp import autocast
 import datetime
 from torch.utils.data import DataLoader
 import optuna
+from . import models as m
+
 
 from . import conf
 
