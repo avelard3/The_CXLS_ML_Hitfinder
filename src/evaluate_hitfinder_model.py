@@ -25,16 +25,7 @@ def arguments(parser) -> argparse.ArgumentParser:
     parser.add_argument('-o', '--output', type=str, help='Output file path only for training confusion matrix and results.')
     parser.add_argument('-d', '--dict', type=str, help='Output state dict for the trained model that can be used to load the trained model later.')
     
-    parser.add_argument('-e', '--epoch', type=int, help='Number of training epochs.')
-    parser.add_argument('-b', '--batch', type=int, help='Batch size per epoch for training.')
-    parser.add_argument('-op', '--optimizer', type=str, help='Training optimizer function.')
-    parser.add_argument('-s', '--scheduler', type=str, help='Training learning rate scheduler.')
-    parser.add_argument('-c', '--criterion', type=str, help='Training loss function.')
-    parser.add_argument('-lr', '--learning_rate', type=float, help='Training inital learning rate.')
-    
-    parser.add_argument('-tl', '--transfer_learn', type=str, default=None, help='File path to state dict file for transfer learning.' )
-    parser.add_argument('-at', '--apply_transform', type=str, default=False, help='Apply transform to images (true or false)')
-  
+    parser.add_argument('-b', '--batch', type=int, help='Batch size per epoch for training.')  
     
     try:
         args = parser.parse_args()
@@ -72,72 +63,14 @@ def main() -> None:
     h5_file_list = args.list
     model_arch = args.model
     training_results = args.output
-    model_dict_save_path = args.dict
-    
-    num_epoch = args.epoch
-    batch_size = args.batch
-    optimizer = args.optimizer
-    scheduler = args.scheduler
-    criterion = args.criterion
-    learning_rate = args.learning_rate
-    
-    transfer_learning_state_dict = args.transfer_learn
-    transform = args.apply_transform # Parameter for Data class
-    
-    if transform.lower() == "false":
-        transform = False  
-    else:
-        transform = True
 
 
-    # Transfer learning (yes or no)
-    if transfer_learning_state_dict.lower() == 'none':
-        transfer_learning_state_dict = None
-        
-    
-    
-    lr_param_patience = conf.lr_param_patience
-    lr_param_threshold = conf.lr_param_threshold
-    
-    conv_channel_size = conf.conv_channel_size
-    conv_kernel_size = conf.conv_kernel_size
-    num_linear_dropout_layers = conf.num_linear_dropout_layers
-    linear_layer_size = conf.linear_layer_size
-    dropout_probability = conf.dropout_probability
-    adam_param_beta1 = conf.adam_param_beta1
-    adam_param_beta2 = conf.adam_param_beta2
-    adam_param_weight_decay = conf.adam_param_weight_decay
-    batch_norm_2d_momentum = conf.batch_norm_2d_momentum
-    batch_norm_1d_momentum = conf.batch_norm_1d_momentum
     
     h5_file_list = args.list
     model_arch = args.model
     model_path = args.dict
-    save_output_list = args.output 
 
     batch_size = args.batch
-    
-    
-
-    
-    cfg = {
-        'model': model_arch,
-        'model_path': model_path,
-        'save_output_list': save_output_list,
-        'device': device,
-        'batch size': batch_size,
-        'epochs': num_epoch,
-        'optimizer': optimizer,
-        'scheduler': scheduler,
-        'criterion': criterion,
-        'learning rate': learning_rate,
-        'model': model_arch,
-        "lr_param_patience" : lr_param_patience,
-        "lr_param_threshold" : lr_param_threshold,
-        "adam_param_beta1" : adam_param_beta1,
-        "adam_param_beta2" : adam_param_beta2,
-        "adam_param_weight_decay" : adam_param_weight_decay,
-    }
     
     model_inputs = {
         "conv_channel_size" : conf.conv_channel_size,  
@@ -156,21 +89,19 @@ def main() -> None:
     vds_dataset = path_manager.get_vds() 
     h5_file_paths = path_manager.get_file_names() 
     
-    data_manager = load_data.Data(vds_dataset, h5_file_paths, executing_mode, transform) #init Data object
+    data_manager = load_data.Data(vds_dataset, h5_file_paths, executing_mode) #init Data object
 
     create_data_loader = load_data.CreateDataLoader(data_manager, batch_size) #init CreateDataLoader object that creates DataLoader object
     create_data_loader.run_data_loader() #rename the loader, but single
 
     data_loader = create_data_loader.get_run_data_loader() 
 
-    # NEED TO GET TRAINED_MODEL SOMEHOW
-    # normally train_model.get_model() to get self._model
     
     # Checking and reporting accuracy of model
     
     model = u.LoadModel.make_model_instance(model_arch, model_inputs)
     model = u.LoadModel.load_and_return_model(model_path, model, device)
-    evaluation_manager = evaluate_model.EvaluateModel(cfg, model, data_loader) #init EvaluateModel object
+    evaluation_manager = evaluate_model.EvaluateModel(device, model, data_loader) #init EvaluateModel object
     evaluation_manager.run_testing_set() 
     evaluation_manager.make_classification_report()  
     evaluation_manager.plot_confusion_matrix(training_results) 

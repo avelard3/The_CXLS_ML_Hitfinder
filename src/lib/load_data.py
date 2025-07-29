@@ -1,7 +1,6 @@
 import h5py as h5
 import torch
 from torch.utils.data import DataLoader, Dataset
-from torchvision import transforms
 from . import conf
 import sys
 from typing import Optional
@@ -9,12 +8,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.colors as colors
 
-# data_manager = load_data.Data(vds_dataset, h5_file_paths, executing_mode, transform)
-# create_data_loader = load_data.CreateDataLoader(data_manager, batch_size)
 
 class Data(Dataset):
     
-    def __init__(self, vds_path: str, file_list: list, executing_mode: str, use_transform: bool) -> None:
+    def __init__(self, vds_path: str, file_list: list, executing_mode: str) -> None:
         """
         Initialize the Data object with classification and attribute data.
 
@@ -22,7 +19,6 @@ class Data(Dataset):
             vds_path (str): 
             file_list (list):
             executing mode (str): Indicates whether hitfinder is in training or running mode
-            use_transform (bool): Whether you want the transforms to be applied to the images to create more data or not
         """
         self._run_loader = None
         self._vds_path = vds_path
@@ -36,12 +32,6 @@ class Data(Dataset):
         self._photon_energy = self.file['vsource_photon_energy']
         if self._executing_mode == "training":
             self._hit_parameter = self.file['vsource_hit_parameter']
-        
-        self._use_transform = use_transform
-        
-        # If transforms will be used, then it creates the pytorch object that will be used to transform future data
-        if self._use_transform:
-            self.make_transform()
 
     def __len__(self) -> int:
         """
@@ -54,16 +44,13 @@ class Data(Dataset):
         Get a sample from the dataset (tuple of image data and metadata) at the given index.
         """
         x = 0 
-        # Check if a transform needs to be applied and apply it
         try:
             self._file_index = self._file_list[idx]
-            if self._use_transform:
-                print("You tried to use a transform when transforms don't work")
-                imgg = self.transforms(self._images[idx])
-                if idx == 0 and x==0:
-                    print("Creating a plot of one of the images that is being used")
-                    self.graph_image(imgg)
-                    x+=1
+            
+            if idx == 0 and x==0:
+                print("Creating a plot of one of the images that is being used")
+                self.graph_image(imgg)
+                x+=1
                 return imgg, self._camera_length[idx], self._photon_energy[idx], self._hit_parameter[idx], self._file_list[idx] #change
 
             else:
@@ -72,8 +59,6 @@ class Data(Dataset):
                 #*
                 if self._executing_mode == "running":
                     self._hit_parameter = np.empty(self._camera_length.shape)
-                if self._use_transform:
-                    print("lol why is transform true this was supossed to be false") #FIXME
                 imgg = self._images[idx]
                 if idx == 0 and x==0:
                     self.graph_image(imgg)
@@ -83,17 +68,7 @@ class Data(Dataset):
                 #*
         except Exception as e:
             print(f"An unexpected error occurred while getting item at index {idx}: {e} and this is with file {self._file_index}")
-            
-    def make_transform(self) -> None:
-        """
-        If the transfom flag is true, this function creates the global variable for the transform for image data. 
-        This part doesn't interact with the actual data; it just stores pytorch object data for a future transform.
-        """
-        self.transforms = transforms.Compose([
-            transforms.Resize(200) #Resize transform doesn't work for hitfinder, but transforms in general do work
-        ])
-        
-        
+
     def graph_image(self, smaller_array):        
         smaller_array = smaller_array[0,:,:]
         fig, ax = plt.subplots()

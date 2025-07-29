@@ -14,7 +14,7 @@ from . import conf
 
 import optuna
 
-from torchvision import datasets, transforms
+from torchvision import datasets
 
 class TuneModel:
     

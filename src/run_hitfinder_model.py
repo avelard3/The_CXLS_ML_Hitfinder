@@ -68,8 +68,6 @@ def main():
 
     batch_size = args.batch
     
-    # Temperary hold
-    transform = False # there's no reason for transform to be true for running; the only thing that might be done is 
     
     cfg = {
         'model': model_arch,
@@ -107,7 +105,7 @@ def main():
     vds_dataset = path_manager.get_vds() 
     h5_file_paths = path_manager.get_file_names() 
 
-    data_manager = load_data.Data(vds_dataset, h5_file_paths, executing_mode, transform) #init Data object
+    data_manager = load_data.Data(vds_dataset, h5_file_paths, executing_mode) #init Data object
 
     create_data_loader = load_data.CreateDataLoader(data_manager, batch_size) #init CreateDataLoader object that creates DataLoader object
     create_data_loader.run_data_loader() #rename the loader, but single

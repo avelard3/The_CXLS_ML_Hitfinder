@@ -31,7 +31,6 @@ def arguments(parser) -> argparse.ArgumentParser:
     parser.add_argument('-lr', '--learning_rate', type=float, help='Training inital learning rate.')
     
     parser.add_argument('-tl', '--transfer_learn', type=str, default=None, help='File path to state dict file for transfer learning.' )
-    parser.add_argument('-at', '--apply_transform', type=str, default=False, help='Apply transform to images (true or false)')
   
     
     try:
@@ -80,13 +79,6 @@ def main() -> None:
     learning_rate = args.learning_rate
     
     transfer_learning_state_dict = args.transfer_learn
-    
-    transform = args.apply_transform # Parameter for Data class
-    
-    if transform.lower() == "false":
-        transform = False  
-    else:
-        transform = True
 
 
     # Transfer learning (yes or no)
@@ -150,7 +142,7 @@ def main() -> None:
     vds_dataset = path_manager.get_vds() 
     h5_file_paths = path_manager.get_file_names() 
     
-    data_manager = load_data.Data(vds_dataset, h5_file_paths, executing_mode, transform) #init Data object
+    data_manager = load_data.Data(vds_dataset, h5_file_paths, executing_mode) #init Data object
     
     create_data_loader = load_data.CreateDataLoader(data_manager, batch_size) #init CreateDataLoader object that create DataLoader object
     
@@ -167,7 +159,7 @@ def main() -> None:
     trained_model = training_manager.get_model()
     
     # Checking and reporting accuracy of model
-    evaluation_manager = evaluate_model.EvaluateModel(cfg, trained_model, test_loader) #init EvaluateModel object
+    evaluation_manager = evaluate_model.EvaluateModel(device, trained_model, test_loader) #init EvaluateModel object
     evaluation_manager.run_testing_set() 
     evaluation_manager.make_classification_report()  
     evaluation_manager.plot_confusion_matrix(training_results) 

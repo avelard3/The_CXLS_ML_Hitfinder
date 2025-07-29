@@ -14,7 +14,7 @@ from . import conf
 
 class EvaluateModel:
     
-    def __init__(self, cfg: dict, trained_model: nn.Module, testing_data: DataLoader) -> None:
+    def __init__(self, device, trained_model: nn.Module, testing_data: DataLoader) -> None:
         """
         Breaks out important dictonaries, takes in the trained model, creates a logger object, and creates parameters to store evaluation metrics. 
 
@@ -26,7 +26,7 @@ class EvaluateModel:
         """
         
         self._test_loader = testing_data
-        self._device = cfg['device']
+        self._device = device
         self._model = trained_model
 
         

@@ -35,7 +35,6 @@ def arguments(parser) -> argparse.ArgumentParser:
     parser.add_argument('-pk', '--peaks', type=str, help='Attribute name for is there are peaks present.') #aka hit_parameter
     
     parser.add_argument('-tl', '--transfer_learn', type=str, default=None, help='File path to state dict file for transfer learning.' )
-    parser.add_argument('-at', '--apply_transform', type=bool, default = False, help = 'Apply transform to images (true or false)')
     
     #FIXME: Need to add all the hyperparameters, thre are some missing rn
     parser.add_argument('-er', '--epoch_range', type=int, nargs=2, default=[5,100], help='Lower and upper limit of number of epochs') #optimizer
@@ -97,12 +96,7 @@ def objective(trial): #learning rate is a log=true!?
     # FIXME: There should be a way to get bool to work for this?
     if transfer_learning_state_dict.lower() == 'none':
         transfer_learning_state_dict = None
-        
-    transform = args.apply_transform # Parameter for Data class
-    if transform.lower() == "false":
-        transform = False  
-    else:
-        transform = True
+
         
     # hyperparameter tuning #? maybe add them all to a dictionary here
     epoch_range = tuple(args.epoch_range)
@@ -194,7 +188,7 @@ def objective(trial): #learning rate is a log=true!?
     print("Get file names")
     h5_file_paths = path_manager.get_file_names()
     print("Creating Data object")
-    data_manager = load_data.Data(vds_dataset, h5_file_paths, executing_mode, transform)
+    data_manager = load_data.Data(vds_dataset, h5_file_paths, executing_mode)
     print("Creating DataLoader")
     create_data_loader = load_data.CreateDataLoader(data_manager, batch_size)
     print("Split training data")
