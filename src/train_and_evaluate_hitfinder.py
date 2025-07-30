@@ -9,14 +9,9 @@ from lib import conf
 
 def arguments(parser) -> argparse.ArgumentParser:
     """
-    This function is for adding arguments to configure the parameters used for training different models.
-    These parameters are defined the the job sbatch script.
+    Adds arguments to configure the parameters used for training different models.
+    Defined for each input in sbatch script
 
-    Args:
-        parser (argparse.ArgumentParser): The argument parser to which the arguments will be added.
-        
-    Returns:
-        argparse.ArgumentParser: The parser with the added arugments.
     """
     parser.add_argument('-l', '--list', type=str, help='File path to the .lst file containing file paths to the .h5 file to run through the model.')
     parser.add_argument('-m', '--model', type=str, help='Name of the model architecture class found in models.py that corresponds to the model state dict.')

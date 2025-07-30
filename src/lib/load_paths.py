@@ -12,15 +12,18 @@ from scipy.constants import h, c, e
 
 
 class Paths:
-    def __init__(self, list_path: list, executing_mode: str, is_multi_event: bool = False) -> None:
-        """
-        Constructor for Paths class that handles both single and multi-event files.
+    def __init__(self, list_path: list, executing_mode: str) -> None:
+        """Constructor for Paths class
+
+        This function instantiates all variables necessary for Paths class
+
         Args:
             list_path (list): Path to an lst file with h5 file paths.
             h5_location (dict): The image or hyperparameter path name in the h5 file
-            executing_mode (str): if it's running or training mode
-            is_multi_event (bool, optional): Flag to distinguish between single and multi-event processing. Defaults to False.
+            executing_mode (str): Assert whether hitfinder is in training mode or inference (running) mode
+
         """
+        
         self._list_path = list_path
         self._h5_tensor_list, self._h5_attr_list, self._h5_file_list = [], [], []
         self._loaded_h5_tensor = None
@@ -32,21 +35,25 @@ class Paths:
 
         
     def run_paths(self) -> None:
-        """
-        Calls the function that sets up the files to b read and then maps the dataset to a virtual dataset (VDS)
+        """ FIXME Fancy Title with Better Words
+        
+        This function calls the functions that set up the files to be read and then maps the data to a virtual dataset (VDS)
         """
         self._prepare_file_info()
         self._map_dataset_to_vds()
             
     def _prepare_file_info(self) -> None:
-        """
-        Prepares files to be entered into VDS by checking dimensions/shape and storing this information in a vds file
+        """Pre-processing file info for input into VDS.
+        
+        This function checks and stores dimensions/shape of image and metadata and storing this information in a vds file
+        
+        Raises:
+            OSError & FileNotFoundError: If there is an issue reading a particular file
+            Exception: Other
         """
         # add decorators
         
         try:
-            now = datetime.datetime.now()
-            formatted_date_time = now.strftime('%m%d%y-%H:%M')
             self.vds_name = f'{self._executing_mode}_vds_delete_me.h5'
             print(f'Creating vds with name: {self.vds_name}')
                     
@@ -106,8 +113,14 @@ class Paths:
             print(f"An unexpected error occurred while preparing file info for loading paths: {e}")
 
     def _map_dataset_to_vds(self) -> None:
-        """
-        Maps the images and metadata into a virtual dataset (with different methods depending on training/running and data format)
+        """Create a virtual dataset to store image and metadata
+        
+        This function maps the images and metadata into a virtual dataset (with different methods depending on training/running and data format)
+        Creates a Virtual Layout based on dimensions from _prepare_file_info and creates a Virtual Source based on data, maps Virtual Source to Virtual Layout then creates the virtual dataset.
+        
+        Raises:
+            OSError & FileNotFoundError: If there is an issue reading a particular file
+            Exception: Other
         """
         try: 
             with h5.File(self.vds_name, 'w') as vds_file: #start creating vds file
@@ -167,7 +180,7 @@ class Paths:
                                 ## SINGLE EVENT ##
                                 if self._dim_and_shape_array[i,1] == 2: 
                                     print("Single event has not been tested recently")
-                                    self.add_file_to_list(self._source_file, 1)
+                                    self._add_file_to_list(self._source_file, 1)
                                     
                                     if vsource_image.shape[1] != 512:
                                         vsource_image = self._crop_image(vsource_image) # Crop the image to the correct size
@@ -186,7 +199,7 @@ class Paths:
 
                                     # Add files to list
                                     for j in range(self._dim_and_shape_array[i,0]):
-                                        self.add_file_to_list(self._source_file, j+1)
+                                        self._add_file_to_list(self._source_file, j+1)
                                     if vsource_image.shape[1] != 512:
                                         vsource_image = self._crop_image(vsource_image) # Crop the image to the correct size
                                     self._image_layout[k:(k+self._dim_and_shape_array[i,0]), 0, :, :] = vsource_image
@@ -206,7 +219,6 @@ class Paths:
                                 else:
                                     print("ERROR: Mapping data to VDS. Likely an issue with metadata")
 
-                                # self.add_file_to_list(self._source_file, i) #FIXME I THINK THIS CAN BE DELETED BUT IDK WHY ITS HERE
                                 f.close()
                                 mrm.close()
                                 num_complete_files +=1
@@ -230,15 +242,76 @@ class Paths:
         except Exception as e:
             print(f"An unexpected error occurred while mapping the dataset to VDS: {e}")
 
-    def add_file_to_list(self, numbered_file: str, i: int) -> None:
+    def _add_file_to_list(self, numbered_file: str, pic_num: int) -> None:
+        """Add h5 file name to list
+        
+        This function adds h5 file name into list of images for use in output file later, 
+        and it includes number at the end to show which image in file is viewed for multievent files
+        
+        Args:
+            numbered_file (str): The current file being added.
+            pic_num (int): The image number that is currently being added
         """
-        Adds h5 file name into list of images for use in output file later
-        """
-        pic_num = i
+        
         numbered_file =f'{numbered_file}_{str(pic_num)}'
         self._h5_file_list.append(numbered_file)
 
+
+    def _find_path_in_h5(self, possible_paths: list, h5_file) -> str: #FIXME input type
+        """
+        This function looks for path in h5 file by iterating through a list of possible paths
+        
+        Args:
+            possible_paths (list: str): List of strings of file paths where data is normally stored in h5 file
+            h5_file (FIXME): h5 file that is currently being read
             
+        Returns:
+            path (str): The path to where the metadata is found in the h5 file
+            
+        Raises:
+            KeyError: If none of the paths in the list are in the h5 file
+        """
+        
+        for path in possible_paths:
+            if path in h5_file:
+                return path
+        raise KeyError(f"None of these paths found in file: {possible_paths}")
+            
+    def _define_photon_energy(self, current_file, photon_energy_location: str): #FIXME input type and output type
+        """
+        This function checks if given wavelength to change to photon energy, and creates Virtual Source from photon energy 
+        
+        Args:
+            current_file (FIXME): The h5 file that is currently being read
+            photon_energy_location (str): Place in h5 file where photon energy or wavelength is stored
+            
+        Returns:
+            h5py.VirtualSource: A virtual source of the photon energy of the current file
+        """
+        if "wavelength" in photon_energy_location.lower():
+            scaled_value = SpecialCaseFunctions.incident_photon_wavelength_to_energy(current_file[photon_energy_location][()])
+            with h5.File("scaled_photon_energy.h5", "w") as f:
+                f.create_dataset('/photon_energy_eV', data=scaled_value)
+        return h5.VirtualSource(current_file[photon_energy_location])
+    
+    def _crop_image(self, vsource_image): #FIXME input type and output type
+        """
+        Crops Virtual Source image to make sure all images are 512x512
+        
+        Args:
+            vsource_image (h5py.VirtualSource): The VirtualSource of the image that needs to be cropped
+            
+        Returns:
+            h5py.VirtualSource: The cropped image
+        """
+        print(f"Going to crop to 512x512 from current shape {vsource_image.shape} on file {self._source_file}")
+        shape_of_img = vsource_image.shape
+        center_x = shape_of_img[1]//2
+        center_y = shape_of_img[2]//2
+        vsource_image = vsource_image[:, center_x: (center_x + 512), center_y: (center_y + 512)]
+        return vsource_image
+    
+    
     def get_vds(self) -> str:
         """
         Returns vds
@@ -251,24 +324,3 @@ class Paths:
         Returns list of file names put into h5 file
         """ 
         return self._h5_file_list
-
-    def _find_path_in_h5(self, possible_paths, h5_file):
-        for path in possible_paths:
-            if path in h5_file:
-                return path
-        raise KeyError(f"None of these paths found in file: {possible_paths}")
-            
-    def _define_photon_energy(self, current_file, photon_energy_location):
-        if "wavelength" in photon_energy_location.lower():
-            scaled_value = SpecialCaseFunctions.incident_photon_wavelength_to_energy(current_file[photon_energy_location][()])
-            with h5.File("scaled_photon_energy.h5", "w") as f:
-                f.create_dataset('/photon_energy_eV', data=scaled_value)
-        return h5.VirtualSource(current_file[photon_energy_location])
-    
-    def _crop_image(self, vsource_image):
-        print(f"Going to crop to 512x512 from current shape {vsource_image.shape} on file {self._source_file}")
-        shape_of_img = vsource_image.shape
-        center_x = shape_of_img[1]//2
-        center_y = shape_of_img[2]//2
-        vsource_image = vsource_image[:, center_x: (center_x + 512), center_y: (center_y + 512)]
-        return vsource_image

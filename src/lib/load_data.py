@@ -16,8 +16,8 @@ class Data(Dataset):
         Initialize the Data object with classification and attribute data.
 
         Args:
-            vds_path (str): 
-            file_list (list):
+            vds_path (str): path to where VDS is saved 
+            file_list (list): list of paths to every file being run
             executing mode (str): Indicates whether hitfinder is in training or running mode
         """
         self._run_loader = None
@@ -39,48 +39,47 @@ class Data(Dataset):
         """
         return self._images.shape[0]
     
-    def __getitem__(self, idx: int) -> tuple:
+    def __getitem__(self, idx: int) -> tuple: #FIXME is it even returning a tuple?? is this completely wrong #?
         """
         Get a sample from the dataset (tuple of image data and metadata) at the given index.
+        
+        Args:
+            idx (int): index of item that is being got
+            
+        Returns:
+            #FIXME IDFK
         """
         x = 0 
         try:
             self._file_index = self._file_list[idx]
-            
-            if idx == 0 and x==0:
-                print("Creating a plot of one of the images that is being used")
-                self.graph_image(imgg)
-                x+=1
-                return imgg, self._camera_length[idx], self._photon_energy[idx], self._hit_parameter[idx], self._file_list[idx] #change
 
-            else:
-
-                #if statement with return only one thing in masterfile metadata #! 
+            #if statement with return only one thing in masterfile metadata #! 
                 #*
-                if self._executing_mode == "running":
-                    self._hit_parameter = np.empty(self._camera_length.shape)
-                imgg = self._images[idx]
-                if idx == 0 and x==0:
-                    self.graph_image(imgg)
-                    x+=1
-                return self._images[idx], self._camera_length[idx], self._photon_energy[idx], self._hit_parameter[idx], self._file_list[idx] #change
+            if self._executing_mode == "running":
+                self._hit_parameter = np.empty(self._camera_length.shape)
+            return self._images[idx], self._camera_length[idx], self._photon_energy[idx], self._hit_parameter[idx], self._file_list[idx] #change
 
                 #*
         except Exception as e:
             print(f"An unexpected error occurred while getting item at index {idx}: {e} and this is with file {self._file_index}")
 
-    def graph_image(self, smaller_array):        
-        smaller_array = smaller_array[0,:,:]
+    def graph_image(self, array):   
+        """Plot an image to see what an example of the data looks like to check orientation"""     
+        array = array[0,:,:]
         fig, ax = plt.subplots()
-        heatmap = ax.imshow(smaller_array, norm=colors.SymLogNorm(linthresh=100, linscale=1, base=10), cmap='viridis', origin = 'lower')
+        heatmap = ax.imshow(array, norm=colors.SymLogNorm(linthresh=100, linscale=1, base=10), cmap='viridis', origin = 'lower')
 
         cbar = plt.colorbar(heatmap, ax=ax)
         plt.show()
-        plt.savefig("/scratch/avelard3/cxls_hitfinder_joblogs/zseedata_trial5.png")
+        plt.savefig("/scratch/avelard3/cxls_hitfinder_joblogs/zseedata_trial5.png") #FIXME: Delete or make path a variable
 
         
 class CreateDataLoader():
     def __init__(self, hitfinder_dataset: Data, batch_size: int) -> None:
+        
+        """Takes a Data object as an input and uses DataLoader to split data into training and testing, or into running. Also includes getters
+        """
+        
         # Global variables that are inputs
         self._hitfinder_dataset = hitfinder_dataset
         self._batch_size = batch_size
@@ -121,12 +120,7 @@ class CreateDataLoader():
             print(f"ValueError: {e}")
         except Exception as e:
             print(f"An unexpected error occurred: {e}")
-        
-    def get_training_data_loaders(self) -> tuple:
-        """
-        Get the training and testing data loaders.
-        """
-        return self._train_loader, self._test_loader
+
     
     def run_data_loader(self) -> None: 
         """
@@ -149,6 +143,12 @@ class CreateDataLoader():
             print(f"ValueError: {e}")
         except Exception as e:
             print(f"An unexpected error occurred: {e}")
+    
+    def get_training_data_loaders(self) -> tuple:
+        """
+        Get the training and testing data loaders.
+        """
+        return self._train_loader, self._test_loader
             
     def get_run_data_loader(self) -> DataLoader:
         """

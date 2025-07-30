@@ -16,7 +16,7 @@ class RunModel:
 
         Args:
             cfg (dict): Dictionary containing important information for training including: data loaders, batch size, training device, number of epochs, the optimizer, the scheduler, the criterion, the learning rate, and the model class. Everything besides the data loaders and device are arguments in the sbatch script.
-            attributes (dict): Dictionary containing the names of the metadata contained in the h5 image files. These names could change depending on whom created the metadata, so the specific names are arguments in the sbatch script. 
+            model_inputs (dict): Inputs that were used when the model was trained (inputs in models.py) #FIXME maybe this isn't necessary now
         """
         self._device = cfg['device']
         self._model_arch = cfg['model']
@@ -42,9 +42,15 @@ class RunModel:
         self._model = u.LoadModel.load_and_return_model(self._model_path, self._model, self._device)
 
         
-    def classify_data(self, data_loader) -> None:
+    def classify_data(self, data_loader) -> None: #FIXME input type
         """
         Classify the input data using the model and segregate the data based on the classification results.
+        
+        Args: 
+            data_loader (FIXME):  FIXME
+            
+        Raises:
+            Exception
         """
         print('Starting classification...')
         
@@ -82,6 +88,10 @@ class RunModel:
     def create_model_output_lst_files(self) -> None:
         """
         Create .lst files for the classified data based on the model's predictions.
+        
+        Raises:
+            Exception while writing to list file
+            Exception while creating .lst file
         """
         try:
             now = datetime.datetime.now()
@@ -117,6 +127,10 @@ class RunModel:
     def output_verification(self, size: int, events: int) -> None:
         """
         Verify that the number of input file paths matches the sum of the output file paths by comparing the size of input file list to sum of two output file lists.
+        
+        Args:
+            size (int): #FIXME IDK
+            events (int): #FIXME IDK
         """
         if size == len(self._list_containing_peaks) // events + len(self._list_not_containing_peaks) // events:
             print("There is the same amount of input files as output files.")

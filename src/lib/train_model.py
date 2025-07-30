@@ -23,9 +23,9 @@ class TrainModel:
         Args:
             cfg (dict): Dictionary containing important information for training including: data loaders, batch size, training device, number of epochs, the optimizer, the scheduler, the criterion, the learning rate, and the model class. Everything besides the data loaders and device are arguments in the sbatch script.
             attributes (dict): Dictionary containing the names of the metadata contained in the h5 image files. These names could change depending on whom created the metadata, so the specific names are arguments in the sbatch script. 
+            transfer_learning_state_dict (str): String to location of transfer learning state dictionary
         """
 
-        
         self._transfer_learning_path = transfer_learning_state_dict
 
         self._train_loader = None
@@ -56,7 +56,11 @@ class TrainModel:
         
     def assign_new_data(self, train: DataLoader, test: DataLoader) -> None:
         """
-        Assigns new data loaders. (Train is training data loader and test is testing data loader.)
+        Assigns new data loaders. 
+        
+        Args:
+            train (DataLoader): DataLoader for loading data for training only
+            test (DataLoader): DataLoader for loading data for testing only
         """
         self._train_loader = train
         self._test_loader = test
@@ -70,6 +74,11 @@ class TrainModel:
         - the optimizer
         - the learning rate scheduler
         - the loss criterion
+        
+        Raises:
+            AttributeError: If variable name is not found in torch
+            TypeError: If variable is not callable
+            Exception: other
         """
         try:
             self._model = getattr(m, self._model)(model_inputs=self._model_in).to(self._device)
@@ -102,7 +111,6 @@ class TrainModel:
         """
         This function loads in the state dict of a model if provided.
         """
-        print("THE TRANSFER LEARNING PATH", self._transfer_learning_path)
         if self._transfer_learning_path != None:
             print("Reading transfer learning", self._transfer_learning_path)
             self._model = u.LoadModel.load_and_return_model(self._transfer_learning_path, self._model, self._device)
@@ -132,6 +140,15 @@ class TrainModel:
         
         """
         This function trains the model and prints the loss and accuracy of the training sets per epoch.
+        
+        Args:
+            epoch (int): The current epoch number for plotting model performance over number of epochs.
+            
+        Raises:
+            RuntimeError
+            AttributeError
+            TypeError
+            Exception
         """
         
         running_loss_train, accuracy_train, predictions, total_predictions = 0.0, 0.0, 0.0, 0.0
@@ -178,6 +195,15 @@ class TrainModel:
         
         """ 
         This function test the model in evaluation mode and prints the loss and accuracy of the testing sets per epoch.
+        
+        Args:
+            epoch (int): The current epoch number for plotting model performance over number of epochs.
+            
+        Raises:
+            RuntimeError
+            AttributeError
+            TypeError
+            Exception
         """
         
         running_loss_test, accuracy_test, predictions, total = 0.0, 0.0, 0.0, 0.0
@@ -226,6 +252,12 @@ class TrainModel:
     def plot_loss_accuracy(self, path:str = None) -> None:
         """ 
         This function plots the loss and accuracy of the training and testing sets per epoch.
+        
+        Args:
+            path (str): The location where the plot should be saved
+            
+        Raises:
+            Exception
         """
         try:
             plt.plot(range(self._epochs), self._plot_train_accuracy, marker='.', color='red')
@@ -255,7 +287,10 @@ class TrainModel:
         Save as .pt file.
 
         Args:
-            path (str): Path to save the model's state_dict.
+            path (str): The location wherew the model's state_dict should be saved.
+        
+        Raises:
+            Exception
         """
 
         try:
