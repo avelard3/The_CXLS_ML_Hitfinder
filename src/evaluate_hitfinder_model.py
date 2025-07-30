@@ -72,16 +72,6 @@ def main() -> None:
 
     batch_size = args.batch
     
-    model_inputs = {
-        "conv_channel_size" : conf.conv_channel_size,  
-        "conv_kernel_size" : conf.conv_kernel_size,
-        "num_linear_dropout_layers" : conf.num_linear_dropout_layers,
-        "linear_layer_size" : conf.linear_layer_size,
-        "dropout_probability" : conf.dropout_probability,
-        "batch_norm_2d_momentum" : conf.batch_norm_2d_momentum,
-        "batch_norm_1d_momentum" : conf.batch_norm_1d_momentum
-    }
-
     executing_mode = 'training'
     path_manager = load_paths.Paths(h5_file_list, executing_mode) #init Paths object
     path_manager.run_paths() 
@@ -89,7 +79,7 @@ def main() -> None:
     vds_dataset = path_manager.get_vds() 
     h5_file_paths = path_manager.get_file_names() 
     
-    data_manager = load_data.Data(vds_dataset, h5_file_paths, executing_mode) #init Data object
+    data_manager = load_data.Data(h5_file_paths, executing_mode) #init Data object
 
     create_data_loader = load_data.CreateDataLoader(data_manager, batch_size) #init CreateDataLoader object that creates DataLoader object
     create_data_loader.run_data_loader() #rename the loader, but single
@@ -99,7 +89,7 @@ def main() -> None:
     
     # Checking and reporting accuracy of model
     
-    model = u.LoadModel.make_model_instance(model_arch, model_inputs)
+    model = u.LoadModel.make_model_instance(model_arch)
     model = u.LoadModel.load_and_return_model(model_path, model, device)
     evaluation_manager = evaluate_model.EvaluateModel(device, model, data_loader) #init EvaluateModel object
     evaluation_manager.run_testing_set() 

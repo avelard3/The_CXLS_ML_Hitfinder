@@ -75,21 +75,7 @@ def main():
         'save_output_list': save_output_list,
         'device': device,
     }
-    
-    #! DELETE ME LATER
 
-
-    model_inputs = {
-        "conv_channel_size" : conf.conv_channel_size,  
-        "conv_kernel_size" : conf.conv_kernel_size,
-        "num_linear_dropout_layers" : conf.num_linear_dropout_layers,
-        "linear_layer_size" : conf.linear_layer_size,
-        "dropout_probability" : conf.dropout_probability,
-        "batch_norm_2d_momentum" : conf.batch_norm_2d_momentum,
-        "batch_norm_1d_momentum" : conf.batch_norm_1d_momentum
-    }
-
-    #! DELETE ME LATER END except that i had to change things other places so i might just be stuck like this now
     
     
     executing_mode = 'running'
@@ -98,14 +84,14 @@ def main():
     path_manager.run_paths() 
     
     
-    process_data = run_model.RunModel(cfg, model_inputs) # init RunModel Object
+    process_data = run_model.RunModel(cfg) # init RunModel Object
     process_data.make_model_instance() 
     process_data.load_model() 
 
     vds_dataset = path_manager.get_vds() 
     h5_file_paths = path_manager.get_file_names() 
 
-    data_manager = load_data.Data(vds_dataset, h5_file_paths, executing_mode) #init Data object
+    data_manager = load_data.Data(h5_file_paths, executing_mode) #init Data object
 
     create_data_loader = load_data.CreateDataLoader(data_manager, batch_size) #init CreateDataLoader object that creates DataLoader object
     create_data_loader.run_data_loader() #rename the loader, but single

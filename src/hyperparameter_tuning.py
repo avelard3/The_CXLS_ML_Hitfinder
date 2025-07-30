@@ -188,7 +188,7 @@ def objective(trial): #learning rate is a log=true!?
     print("Get file names")
     h5_file_paths = path_manager.get_file_names()
     print("Creating Data object")
-    data_manager = load_data.Data(vds_dataset, h5_file_paths, executing_mode)
+    data_manager = load_data.Data(h5_file_paths, executing_mode)
     print("Creating DataLoader")
     create_data_loader = load_data.CreateDataLoader(data_manager, batch_size)
     print("Split training data")

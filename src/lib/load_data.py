@@ -11,19 +11,18 @@ import matplotlib.colors as colors
 
 class Data(Dataset):
     
-    def __init__(self, vds_path: str, file_list: list, executing_mode: str) -> None:
+    def __init__(self, file_list: list, executing_mode: str) -> None:
         """
         Initialize the Data object with classification and attribute data.
 
         Args:
-            vds_path (str): path to where VDS is saved 
             file_list (list): list of paths to every file being run
             executing mode (str): Indicates whether hitfinder is in training or running mode
         """
         self._run_loader = None
-        self._vds_path = vds_path
         self._file_list = file_list
         self._executing_mode = executing_mode
+        self._vds_path = f'{self._executing_mode}_vds_delete_me.h5'
         
         # add function that does this, make NONE in init
         self.file = h5.File(self._vds_path, 'r')

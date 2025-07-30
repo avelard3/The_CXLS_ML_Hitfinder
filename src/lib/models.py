@@ -51,20 +51,16 @@ class Simple_3_Layer_CNN(nn.Module):
     
 #*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#
 class CNN_with_Optunas_Best(nn.Module): #
-    def __init__(self, input_channels=1, output_channels=1, input_size=conf.required_image_size, model_inputs=None):
+    def __init__(self, input_channels=1, output_channels=1, input_size=conf.required_image_size):
         super(CNN_with_Optunas_Best, self).__init__()
         self._output_channels = output_channels
-        self._model_inputs = model_inputs
-        if model_inputs is None:
-            raise ValueError("Model inupts dictionary cannot be None -av")        
-        # needed in models.py
-        self._conv_channel_size = self._model_inputs['conv_channel_size'] 
-        self._conv_kernel_size = self._model_inputs['conv_kernel_size']
-        self._num_linear_dropout_layers = self._model_inputs['num_linear_dropout_layers']
-        self._linear_layer_size = self._model_inputs['linear_layer_size']
-        self._dropout_probability = self._model_inputs['dropout_probability'] 
-        self._momentum_2d = self._model_inputs['batch_norm_2d_momentum']
-        self._momentum_1d = self._model_inputs['batch_norm_1d_momentum']
+        self._conv_channel_size = conf.conv_channel_size
+        self._conv_kernel_size = conf.conv_kernel_size
+        self._num_linear_dropout_layers = conf.num_linear_dropout_layers
+        self._linear_layer_size = conf.linear_layer_size
+        self._dropout_probability = conf.dropout_probability
+        self._momentum_2d = conf.batch_norm_2d_momentum
+        self._momentum_1d = conf.batch_norm_1d_momentum
         
         self._stride = 1
         self._padding = 1

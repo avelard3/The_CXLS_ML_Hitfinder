@@ -15,7 +15,7 @@ from . import utils as u
 
 class TrainModel:
     
-    def __init__(self, cfg: dict, model_inputs: dict, transfer_learning_state_dict: str) -> None:
+    def __init__(self, cfg: dict, transfer_learning_state_dict: str) -> None:
         """
         This constructor breaks up the training configuration infomation dictionary and h5 metadata key dictionary.
         In addition, a logging object is created and global list are created for storing infomation about the training loss and accuracy. 
@@ -44,7 +44,6 @@ class TrainModel:
         self._adam_param_beta2 = cfg["adam_param_beta2"]
         self._adam_param_weight_decay = cfg["adam_param_weight_decay"]
         
-        self._model_in = model_inputs
 
         
         self._plot_train_accuracy = np.zeros(self._epochs)
@@ -81,7 +80,7 @@ class TrainModel:
             Exception: other
         """
         try:
-            self._model = getattr(m, self._model)(model_inputs=self._model_in).to(self._device)
+            self._model = getattr(m, self._model)().to(self._device)
             self._optimizer = getattr(optim, self._optimizer)(self._model.parameters(), lr=self._learning_rate, betas=[self._adam_param_beta1, self._adam_param_beta2], weight_decay=self._adam_param_weight_decay)            
             self._scheduler = getattr(lrs, self._scheduler)(self._optimizer, mode='min', factor=0.1, patience=self._lr_param_patience, threshold=self._lr_param_threshold) # learning rate scheduler #probably specific to optimizer
             self._criterion = getattr(nn, self._criterion)() # loss function. should probably leave that alone for now

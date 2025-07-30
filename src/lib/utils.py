@@ -40,12 +40,12 @@ class LoadModel:
         pass 
 
     @staticmethod
-    def make_model_instance(model_arch, model_in) -> None:
+    def make_model_instance(model_arch) -> None:
         """
         Create an instance of the model class specified by the model architecture.
         """
         try:
-            model = getattr(m, model_arch)(model_inputs=model_in)
+            model = getattr(m, model_arch)()
             print(f'Model object has been created: {model.__class__.__name__}')
             return model
         except AttributeError:

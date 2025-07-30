@@ -10,20 +10,18 @@ import importlib
 
 class RunModel:
     
-    def __init__(self, cfg: dict, model_inputs: dict) -> None:
+    def __init__(self, cfg: dict) -> None:
         """
         Initialize the RunModel class with model architecture, model path, output list path, h5 file paths, and device.
 
         Args:
             cfg (dict): Dictionary containing important information for training including: data loaders, batch size, training device, number of epochs, the optimizer, the scheduler, the criterion, the learning rate, and the model class. Everything besides the data loaders and device are arguments in the sbatch script.
-            model_inputs (dict): Inputs that were used when the model was trained (inputs in models.py) #FIXME maybe this isn't necessary now
         """
         self._device = cfg['device']
         self._model_arch = cfg['model']
         self._model_path = cfg['model_path']
         self._save_output_list = cfg['save_output_list']
 
-        self._model_in = model_inputs
         self._list_containing_peaks = []
         self._list_not_containing_peaks = []
         
@@ -33,7 +31,7 @@ class RunModel:
         """
         Create an instance of the model class specified by the model architecture.
         """
-        self._model = u.LoadModel.make_model_instance(self._model_arch, self._model_in)
+        self._model = u.LoadModel.make_model_instance(self._model_arch)
             
     def load_model(self) -> None:
         """

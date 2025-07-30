@@ -79,26 +79,7 @@ def main() -> None:
     # Transfer learning (yes or no)
     if transfer_learning_state_dict.lower() == 'none':
         transfer_learning_state_dict = None
-        
-    
-    
-    lr_param_patience = conf.lr_param_patience
-    lr_param_threshold = conf.lr_param_threshold
-    
-    conv_channel_size = conf.conv_channel_size
-    conv_kernel_size = conf.conv_kernel_size
-    num_linear_dropout_layers = conf.num_linear_dropout_layers
-    linear_layer_size = conf.linear_layer_size
-    dropout_probability = conf.dropout_probability
-    adam_param_beta1 = conf.adam_param_beta1
-    adam_param_beta2 = conf.adam_param_beta2
-    adam_param_weight_decay = conf.adam_param_weight_decay
-    batch_norm_2d_momentum = conf.batch_norm_2d_momentum
-    batch_norm_1d_momentum = conf.batch_norm_1d_momentum
-    
-    
 
-    
     cfg = {
         'batch size': batch_size,
         'device': device,
@@ -108,36 +89,27 @@ def main() -> None:
         'criterion': criterion,
         'learning rate': learning_rate,
         'model': model_arch,
-        "lr_param_patience" : lr_param_patience,
-        "lr_param_threshold" : lr_param_threshold,
-        "adam_param_beta1" : adam_param_beta1,
-        "adam_param_beta2" : adam_param_beta2,
-        "adam_param_weight_decay" : adam_param_weight_decay,
+        "lr_param_patience" : conf.lr_param_patience,
+        "lr_param_threshold" : conf.lr_param_threshold,
+        "adam_param_beta1" : conf.adam_param_beta1,
+        "adam_param_beta2" : conf.adam_param_beta2,
+        "adam_param_weight_decay" : conf.adam_param_weight_decay,
     }
-    
-    model_inputs = {
-        "conv_channel_size" : conv_channel_size,  
-        "conv_kernel_size" : conv_kernel_size,
-        "num_linear_dropout_layers" : num_linear_dropout_layers,
-        "linear_layer_size" : linear_layer_size,
-        "dropout_probability" : dropout_probability,
-        "batch_norm_2d_momentum" : batch_norm_2d_momentum,
-        "batch_norm_1d_momentum" : batch_norm_1d_momentum
-    }
+
 
     executing_mode = 'training'
     path_manager = load_paths.Paths(h5_file_list, executing_mode) #init Paths object
     
     path_manager.run_paths() 
     
-    training_manager = train_model.TrainModel(cfg, model_inputs, transfer_learning_state_dict) #init TrainModel object
+    training_manager = train_model.TrainModel(cfg, transfer_learning_state_dict) #init TrainModel object
     training_manager.make_training_instances() 
     training_manager.load_model_state_dict() 
     
     vds_dataset = path_manager.get_vds() 
     h5_file_paths = path_manager.get_file_names() 
     
-    data_manager = load_data.Data(vds_dataset, h5_file_paths, executing_mode) #init Data object
+    data_manager = load_data.Data(h5_file_paths, executing_mode) #init Data object
     
     create_data_loader = load_data.CreateDataLoader(data_manager, batch_size) #init CreateDataLoader object that create DataLoader object
     
