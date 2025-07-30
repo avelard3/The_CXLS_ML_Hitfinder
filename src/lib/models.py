@@ -54,69 +54,58 @@ class CNN_with_Optunas_Best(nn.Module): #
     def __init__(self, input_channels=1, output_channels=1, input_size=conf.required_image_size):
         super(CNN_with_Optunas_Best, self).__init__()
         self._output_channels = output_channels
-        self._conv_channel_size = conf.conv_channel_size
-        self._conv_kernel_size = conf.conv_kernel_size
-        self._num_linear_dropout_layers = conf.num_linear_dropout_layers
-        self._linear_layer_size = conf.linear_layer_size
-        self._dropout_probability = conf.dropout_probability
-        self._momentum_2d = conf.batch_norm_2d_momentum
-        self._momentum_1d = conf.batch_norm_1d_momentum
         
-        self._stride = 1
-        self._padding = 1
-        self._pool_kernel_size = 2
-
-        self._conv1 = nn.Conv2d(input_channels, self._conv_channel_size, kernel_size=self._conv_kernel_size, stride=self._stride, padding=self._padding)
-        self._bn2d_1 = nn.BatchNorm2d(self._conv_channel_size, momentum = self._momentum_2d)
-        self._conv2 = nn.Conv2d(self._conv_channel_size, 2*(self._conv_channel_size), kernel_size=self._conv_kernel_size, stride=self._stride, padding=self._padding)
-        self._bn2d_2 = nn.BatchNorm2d((2*self._conv_channel_size), momentum = self._momentum_2d)
-        self._conv3 = nn.Conv2d(2*(self._conv_channel_size), 4*(self._conv_channel_size), kernel_size=self._conv_kernel_size, stride=self._stride, padding=self._padding)        
-        self._bn2d_3 = nn.BatchNorm2d((4*self._conv_channel_size), momentum = self._momentum_2d)
+        self._conv1 = nn.Conv2d(input_channels, conf.conv_channel_size, kernel_size=conf.conv_kernel_size, stride=1, padding=1)
+        self._bn2d_1 = nn.BatchNorm2d(conf.conv_channel_size, momentum = conf.batch_norm_2d_momentum)
+        self._conv2 = nn.Conv2d(conf.conv_channel_size, 2*conf.conv_channel_size, kernel_size=conf.conv_kernel_size, stride=1, padding=1)
+        self._bn2d_2 = nn.BatchNorm2d(2*conf.conv_channel_size, momentum = conf.batch_norm_2d_momentum)
+        self._conv3 = nn.Conv2d(2*conf.conv_channel_size, 4*conf.conv_channel_size, kernel_size=conf.conv_kernel_size, stride=1, padding=1)        
+        self._bn2d_3 = nn.BatchNorm2d(4*conf.conv_channel_size, momentum = conf.batch_norm_2d_momentum)
         
-        self._pool = nn.MaxPool2d(self._pool_kernel_size, self._pool_kernel_size)
+        self._pool = nn.MaxPool2d(2, 2)
          
         #after first conv and pool        
-        out_height_conv1 = self._calculate_output_dimension_after_conv(input_size[0], self._conv_kernel_size, self._stride, self._padding)
-        out_width_conv1 = self._calculate_output_dimension_after_conv(input_size[1], self._conv_kernel_size, self._stride, self._padding)
+        out_height_conv1 = self._calculate_output_dimension_after_conv(input_size[0], conf.conv_kernel_size, 1, 1)
+        out_width_conv1 = self._calculate_output_dimension_after_conv(input_size[1], conf.conv_kernel_size, 1, 1)
         
-        out_height_pool1 = self._calculate_output_dimension_after_pool(out_height_conv1, self._pool_kernel_size, self._stride*2)
-        out_width_pool1 = self._calculate_output_dimension_after_pool(out_width_conv1, self._pool_kernel_size, self._stride*2)
+        out_height_pool1 = self._calculate_output_dimension_after_pool(out_height_conv1, 2, 2)
+        out_width_pool1 = self._calculate_output_dimension_after_pool(out_width_conv1, 2, 2)
 
         #after second conv and pool
-        out_height_conv2 = self._calculate_output_dimension_after_conv(out_height_pool1, self._conv_kernel_size, self._stride, self._padding)
-        out_width_conv2 = self._calculate_output_dimension_after_conv(out_width_pool1, self._conv_kernel_size, self._stride, self._padding)
-        out_height_pool2 = self._calculate_output_dimension_after_pool(out_height_conv2, self._pool_kernel_size, self._stride*2)
-        out_width_pool2 = self._calculate_output_dimension_after_pool(out_width_conv2, self._pool_kernel_size, self._stride*2)
+        out_height_conv2 = self._calculate_output_dimension_after_conv(out_height_pool1, conf.conv_kernel_size, 1, 1)
+        out_width_conv2 = self._calculate_output_dimension_after_conv(out_width_pool1, conf.conv_kernel_size, 1, 1)
+        out_height_pool2 = self._calculate_output_dimension_after_pool(out_height_conv2, 2, 2)
+        out_width_pool2 = self._calculate_output_dimension_after_pool(out_width_conv2, 2, 2)
         
         #after thrid conv and pool
-        out_height_conv3 = self._calculate_output_dimension_after_conv(out_height_pool2, self._conv_kernel_size, self._stride, self._padding)
-        out_width_conv3 = self._calculate_output_dimension_after_conv(out_width_pool2, self._conv_kernel_size, self._stride, self._padding)
-        out_height_pool3 = self._calculate_output_dimension_after_pool(out_height_conv3, self._pool_kernel_size, self._stride*2)
-        out_width_pool3 = self._calculate_output_dimension_after_pool(out_width_conv3, self._pool_kernel_size, self._stride*2)
+        out_height_conv3 = self._calculate_output_dimension_after_conv(out_height_pool2, conf.conv_kernel_size, 1, 1)
+        out_width_conv3 = self._calculate_output_dimension_after_conv(out_width_pool2, conf.conv_kernel_size, 1, 1)
+        out_height_pool3 = self._calculate_output_dimension_after_pool(out_height_conv3, 2, 2)
+        out_width_pool3 = self._calculate_output_dimension_after_pool(out_width_conv3, 2, 2)
         
-        self._first_fc_size_input = out_height_pool3 * out_width_pool3 * self._conv_channel_size *4 #fully connected layer # times 4 because of the output of self._conv3
-        self._last_fc_size_input = self._linear_layer_size
-        self._mid_fc_size_input = 4 * self._linear_layer_size
+        self._first_fc_size_input = out_height_pool3 * out_width_pool3 * conf.conv_channel_size *4 #fully connected layer # times 4 because of the output of self._conv3
+        self._last_fc_size_input = conf.linear_layer_size
+        self._mid_fc_size_input = 4 * conf.linear_layer_size
         
-        self._dropout = nn.Dropout(self._dropout_probability)
+        self._dropout = nn.Dropout(conf.dropout_probability)
         
         
-        if self._num_linear_dropout_layers == 1:
+        if conf.num_linear_dropout_layers == 1:
             print("Setting variables with 1 linear & dropout layer")
             self._fc1 = nn.Linear(self._first_fc_size_input, self._output_channels) 
             
-        if self._num_linear_dropout_layers == 2:
+        if conf.num_linear_dropout_layers == 2:
             print("Setting variables with 2 linear & dropout layer")
             self._fc1 = nn.Linear(self._first_fc_size_input, self._last_fc_size_input) 
-            self._bn1d_1 = nn.BatchNorm1d(self._last_fc_size_input, momentum = self._momentum_1d)
+            self._bn1d_1 = nn.BatchNorm1d(self._last_fc_size_input, momentum = conf.batch_norm_1d_momentum)
             self._fc2 = nn.Linear(self._last_fc_size_input, self._output_channels)
             
-        if self._num_linear_dropout_layers == 3:
+        if conf.num_linear_dropout_layers == 3:
             print("Setting variables with 3 linear & dropout layer")
             self._fc1 = nn.Linear(self._first_fc_size_input, self._mid_fc_size_input) 
-            self._bn1d_1 = nn.BatchNorm1d(self._mid_fc_size_input, momentum = self._momentum_1d)
+            self._bn1d_1 = nn.BatchNorm1d(self._mid_fc_size_input, momentum = conf.batch_norm_1d_momentum)
             self._fc2 = nn.Linear(self._mid_fc_size_input, self._last_fc_size_input)
-            self._bn1d_2 = nn.BatchNorm1d(self._last_fc_size_input, momentum = self._momentum_1d)
+            self._bn1d_2 = nn.BatchNorm1d(self._last_fc_size_input, momentum = conf.batch_norm_1d_momentum)
             self._fc3 = nn.Linear(self._last_fc_size_input, self._output_channels)
             
 
@@ -150,13 +139,13 @@ class CNN_with_Optunas_Best(nn.Module): #
         x = F.relu(x)
         x = self._dropout(x)
 
-        if (self._num_linear_dropout_layers - 1) != 0: # if the number of layers is 2 or 3, it will not be zero
+        if (conf.num_linear_dropout_layers - 1) != 0: # if the number of layers is 2 or 3, it will not be zero
             x = self._bn1d_1(x)
             x = self._fc2(x) 
             x = F.relu(x)
             x = self._dropout(x)
             
-        if self._num_linear_dropout_layers == 3: # if the number of layers is 3, it will not be zero
+        if conf.num_linear_dropout_layers == 3: # if the number of layers is 3, it will not be zero
             x = self._bn1d_2(x)
             x = self._fc3(x)
             x = F.relu(x)
