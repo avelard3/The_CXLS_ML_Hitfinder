@@ -38,7 +38,7 @@ class Data(Dataset):
         """
         return self._images.shape[0]
     
-    def __getitem__(self, idx: int) -> tuple: #FIXME is it even returning a tuple?? is this completely wrong #?
+    def __getitem__(self, idx: int) -> tuple[h5.Dataset, h5.Dataset, h5.Dataset, h5.Dataset, list[str]]: 
         """
         Get a sample from the dataset (tuple of image data and metadata) at the given index.
         
@@ -46,16 +46,27 @@ class Data(Dataset):
             idx (int): index of item that is being got
             
         Returns:
-            #FIXME IDFK
+            tuple[h5py.Dataset, h5py.Dataset, h5py.Dataset, h5py.Dataset, list[str]]: the data stored at that index for images, camera_length, photon_energy, hit_parameter and the file in the list that is currently being accessed
         """
         x = 0 
         try:
             self._file_index = self._file_list[idx]
 
             #if statement with return only one thing in masterfile metadata #! 
+            
+            if idx == 0 and x==0:
+                imgg = self._images[idx]
+                print("Creating a plot of one of the images that is being used")
+                self.graph_image(imgg)
+                x+=1
                 #*
             if self._executing_mode == "running":
                 self._hit_parameter = np.empty(self._camera_length.shape)
+            print("the index is", idx)
+            print("self._file_list[idx]", self._file_list[idx])
+            print("self._camera_length[idx]", self._camera_length[idx])
+            print("self._photon_energy[idx]", self._photon_energy[idx])
+            
             return self._images[idx], self._camera_length[idx], self._photon_energy[idx], self._hit_parameter[idx], self._file_list[idx] #change
 
                 #*
@@ -70,7 +81,7 @@ class Data(Dataset):
 
         cbar = plt.colorbar(heatmap, ax=ax)
         plt.show()
-        plt.savefig("/scratch/avelard3/cxls_hitfinder_joblogs/zseedata_trial5.png") #FIXME: Delete or make path a variable
+        plt.savefig("/scratch/avelard3/test_scattering_yr_later_try1/graph_during_load_data.png") #FIXME: Delete or make path a variable
 
         
 class CreateDataLoader():

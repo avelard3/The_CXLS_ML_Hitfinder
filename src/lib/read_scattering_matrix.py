@@ -8,7 +8,7 @@ import matplotlib.colors as colors
 
 
 class ScatteringMatrix():
-    def  __init__(self, file_name:str, file_path:str, data_file_path_name:np.array) -> None:
+    def  __init__(self, geom_file_path:str, data_file_path_name:np.array) -> None:
         """
         Has functions to read the geometry files, calculate the q_vector, create a new array and insert the data into new matrix using that information
 
@@ -17,8 +17,7 @@ class ScatteringMatrix():
             file_path (str): path to file that stores geometry information
             data_file_path_name (np.array): all images in an array
         """
-        self._current_geom_file =  file_name
-        self._current_geom_file_path = file_path
+        self._current_geom_file_path = geom_file_path
 
         self.read_geom_file()
         self.calculate_q_vec()
@@ -34,7 +33,7 @@ class ScatteringMatrix():
         """
         
         try:
-            with open(self._current_geom_file_path + self._current_geom_file, 'r') as file:
+            with open(self._current_geom_file_path, 'r') as file:
                 data = json.load(file)
 
             # Vectors from geom file
@@ -66,6 +65,7 @@ class ScatteringMatrix():
             self._fs_vec_arr = (np.array(self._fs_vec))
 
             orig_array_shape = self._fs_vec_arr.shape # FIXME: add a break point if t,fs,ss are different sizes
+            print("The original array shape (num_panels, vector_length)", orig_array_shape)
             self._num_panels = orig_array_shape[0]
             self._vector_length = orig_array_shape[1]
         except Exception as e:
@@ -139,6 +139,8 @@ class ScatteringMatrix():
             # Find the range in the x and y direction of the panels and convert it into pixels 
             self._final_array_x_len = int(np.ceil((self._max_x - self._min_x)/self._pixel_length_x)) +2
             self._final_array_y_len = int(np.ceil((self._max_y - self._min_y)/self._pixel_length_y)) +2 
+            
+            print(f"The final shape of x is {self._final_array_x_len} and the final shape of y is {self._final_array_y_len}")
         except Exception as e:
             print(f"An unexpected error occurred while creating a new array for the scattering matrix: {e}")
 
@@ -153,23 +155,29 @@ class ScatteringMatrix():
         
         try:
             self._all_data_array = all_data_array
+            print("Array shape:", self._all_data_array.shape)
+            print("Array ndim:", self._all_data_array.ndim)
+
             self._num_trials_in_data = self._all_data_array.shape[0]
-            
+            print("num_trials_in_data", self._num_trials_in_data)
             # Create the final array for the pixel data using the dimensions from create_new_array
             self._final_array = np.zeros((self._num_trials_in_data ,self._final_array_y_len, self._final_array_x_len)) # shape (num_trials_in_data (ex 82), fs * num_panels, x or ss)
-            
+            print("final array shape", self._final_array.shape)
             # FIXME add an if statement to correlate which dimension or axis goes with fs or ss
             #This is conditional on size and shape of data file
             
             # Splitting array in fs and then ss
             self._all_data_array_split_fs = np.array(np.array_split(self._all_data_array, self._all_data_array.shape[2]/self._n_fs_int, axis = 2)) # shape (self._all_data_array.shape[2]/self._n_fs_int , num_trials_in_data (ex 82) , self._all_data_array[1] , self._n_fs_int)
+            print("all data array split fs shape", self._all_data_array_split_fs.shape)
             self._all_data_array_split_ss = np.array(np.array_split(self._all_data_array_split_fs, self._all_data_array.shape[1]/self._n_ss_int, axis = 2)) # shape (self._all_data_array.shape[1]/self._n_ss_int , self._all_data_array.shape[2]/self._n_fs_int , num_trials_in_data (ex 82), self._n_ss_int, self._n_fs_int)
-
+            print("all data array split ss shape", self._all_data_array_split_ss.shape)
             # Reorganiznig array to be (num_trials_in_data, n_ss, n_fs, result of division ss, result of division fs)
+            print("before transpose")
             self._all_data_array_split = np.transpose(self._all_data_array_split_ss, (2,3,4,0,1))
 
             # Reshape data to be (num_trials, fs, ss, num_panels) again
             # The final result is each panel has it's own index with the corresponding data for the pixel and trial number
+            print("before reshape")
             self._all_data_array_reshape = np.reshape(self._all_data_array_split, (self._num_trials_in_data, self._n_fs_int, self._n_ss_int, self._all_data_array_split.shape[3] * self._all_data_array_split.shape[4])) # shape (num_trials_in_data (ex 82), y or fs per panel, x or ss per panel, num_panels but calc diff way for check)
 
             # Find the tv_vec for each panel; tv vec is the lowest, leftmost v_vector (and what we previously were assuming the t-vec was)
@@ -178,37 +186,50 @@ class ScatteringMatrix():
             
             self._i_ns = (self._t_vec_arr[:,0] + ((self._max_x - self._min_x)/2))/self._pixel_length_x 
             self._j_ns = (self._t_vec_arr[:,1] + ((self._max_y - self._min_y)/2))/self._pixel_length_y
-
+            print("shape of ins", self._i_ns.shape)
+            print("shape of jns", self._j_ns.shape)
             # for each panel, for y to y+fs and x to x+ss of the final pixel data array, add all the data from the particular panel 
             #order of if statements corresponds to the order in which the quadrants of the detector are put together
             #numpy.rot90 default is counterclockwise
-            
+            print("the number of panels is", self._num_panels)
             for num in range(self._num_panels):
+                print(f"current num is {num} of {self._num_panels}")
                 if self._fs_vec_arr[num,0] < 0 and self._ss_vec_arr[num,0] > 0: #fs neg and ss is pos
+                    print("top right")
                     #90 deg turn counterclockwise??
                     #top right
                     rot_all_data_array = np.flip(self._all_data_array_reshape[:, :, :, num], axis = 2)
+                    print("1a")
                     # self._final_array[:, int(np.ceil(self._j_ns[num] - self._n_fs_int)) : int(np.ceil(self._j_ns[num])), int(np.ceil(self._i_ns[num])) : int(np.ceil(self._i_ns[num] + self._n_ss_int))] = rot_all_data_array
                     self._final_array[:, int(np.ceil(self._j_ns[num] - self._n_fs_int)) : int(np.ceil(self._j_ns[num])), int(np.ceil(self._i_ns[num])) : int(np.ceil(self._i_ns[num] + self._n_ss_int))] = rot_all_data_array
-                    
-                if self._fs_vec_arr[num,0] > 0 and self._ss_vec_arr[num,0] > 0: #if theyre both positive
+                    print("1b")
+                elif self._fs_vec_arr[num,0] > 0 and self._ss_vec_arr[num,0] > 0: #if theyre both positive
                     #no rotation
                     #top left
+                    print("top left")
                     self._final_array[:, int(np.ceil(self._j_ns[num])) : int(np.ceil(self._j_ns[num] + self._n_fs_int)), int(np.ceil(self._i_ns[num])) : int(np.ceil(self._i_ns[num] + self._n_ss_int))] = self._all_data_array_reshape[:, :, :, num]
-                
-                if self._fs_vec_arr[num,0] > 0 and self._ss_vec_arr[num,0] < 0: #fs pos and ss neg
+                    print("2b")
+                elif self._fs_vec_arr[num,0] > 0 and self._ss_vec_arr[num,0] < 0: #fs pos and ss neg
                     #90 deg turn clockwise
                     #bottom left
+                    print("bottom left")
                     rot_all_data_array = np.flip(self._all_data_array_reshape[:, :, :, num], axis = 1)
+                    print("3a")
                     self._final_array[:, int(np.ceil(self._j_ns[num])) : int(np.ceil(self._j_ns[num] + self._n_fs_int)), int(np.ceil(self._i_ns[num] - self._n_ss_int)) : int(np.ceil(self._i_ns[num]))] = rot_all_data_array
-                
-                if self._fs_vec_arr[num,0] < 0 and self._ss_vec_arr[num,0] < 0: #if theyre both negative
+                    print("3b")
+                elif self._fs_vec_arr[num,0] < 0 and self._ss_vec_arr[num,0] < 0: #if theyre both negative
                     #180 rotation
                     #bottom right
+                    print("bottom_right")
                     rot_all_data_array = np.flip(self._all_data_array_reshape[:, :, :, num], axis = (1,2))
+                    print("4a")
                     self._final_array[:, int(np.ceil(self._j_ns[num] - self._n_fs_int)) : int(np.ceil(self._j_ns[num])), int(np.ceil(self._i_ns[num] - self._n_ss_int)) : int(np.ceil(self._i_ns[num]))] = rot_all_data_array
-                
-                
+                    print("4b")
+                    
+                else:
+                    print(f"Error: fs is {self._fs_vec_arr[num,0]} and ss is {self._ss_vec_arr[num,0]}")
+                print("just before returning array")
+            return self._final_array
                 # self._final_array[:, int(np.ceil(self._j_ns[num])) : int(np.ceil(self._j_ns[num] + self._n_fs_int)), int(np.ceil(self._i_ns[num])) : int(np.ceil(self._i_ns[num] + self._n_ss_int))] = self._all_data_array_reshape[:, :, :, num]
         except Exception as e:
             print(f"An unexpected error occurred while inserting data into new matrix: {e}")
@@ -216,19 +237,6 @@ class ScatteringMatrix():
        
             
     # Checking and graphing outputs
-    def graph_padded_data(self):
-        
-        reshaped = ReshapeData(self._final_array)
-        self._final_size_array = reshaped.result_array
-        
-        smaller_array = self._final_size_array[1,:,:]
-        fig, ax = plt.subplots()
-        heatmap = ax.imshow(smaller_array, norm=colors.SymLogNorm(linthresh=100, linscale=1, base=10), cmap='viridis')
-
-        cbar = plt.colorbar(heatmap, ax=ax)
-        plt.show()
-        plt.savefig("/scratch/avelard3/cxls_hitfinder_joblogs/zfinal_data_array_padded.png")
-        print("Created padded graph")
 
     def graph_heatmap_lengths(self, path_and_name_to_save):
         # Display heatmap
@@ -253,7 +261,7 @@ class ScatteringMatrix():
 
         cbar = plt.colorbar(heatmap, ax=ax)
         plt.show()
-        plt.savefig("/scratch/avelard3/cxls_hitfinder_joblogs/z_best_scattering.png")
+        plt.savefig("/scratch/avelard3/test_scattering_yr_later_try1/graph_first_piecetogether_only2.png")
         print("Created graph of all panels")
 
     def graph_relative_t_vec(self, path_and_name_to_save):
@@ -300,89 +308,14 @@ class ScatteringMatrix():
             y = ((self._t_vec_arr[i,1] + 100*self._fs_vec_arr[i,1]) + ((self._max_y - self._min_y)/2))/self._pixel_length_y
             plt.scatter(x,y, color = 'blue')
             print("blue fs")
-        
-        # for i in range(self._num_panels):
-        #     x = self._i_ns[i] + 50
-        #     y = self._j_ns[i]
-        #     plt.scatter(x,y, color = 'cyan')
-        #     print("cyan")
-        
-        # for i in range(self._num_panels):
-        #     x = self._i_ns[i]
-        #     y = self._j_ns[i] + 50
-        #     plt.scatter(x,y, color = 'magenta')
-        #     print("magenta")
 
         print("graphed t vec")
         plt.show()
-        plt.savefig("/scratch/avelard3/cxls_hitfinder_joblogs/z_best_scattering_and_vector.png")
-   
-# Methods for padding annd cropping data (the class is defined below but its called in ScatteringMatrix graph_padded_data())     
-#FIXME: I think I need to change this so that it stretches the image rather than adds space between
-#* I think this is all depreciated
-class ReshapeData():
-    def __init__(self,data_array: np.ndarray):
-        """
-        This class reshapes the input data array to the correct dimensions for the model.
-        
-        Args:
-            data_array (np.ndarray): The input data array to be reshaped.
-
-        """
-        required_image_size = (512, 512) #FIXME
-        self._crop_height, self._crop_width = required_image_size        
-        self._batch_size, self._height, self._width  = data_array.shape        
-        self.data_array = data_array
-
-        if self._crop_height < self._height or self._crop_width < self._width:
-            self.result_array = self.crop_input_data(self.data_array)
-        elif self._crop_height > self._height or self._crop_width > self._width:
-            self.result_array = self.pad_input_data(self.data_array)
-        else:
-            self.result_array = self.data_array
-         
-    
-    def crop_input_data(self, data_array: np.ndarray) -> np.ndarray:
-
-        # Calculate the center of the images
-        center_y, center_x = self._height // 2, self._width // 2
-        
-        # Calculate the start and end indices for the crop
-        start_y = center_y - self._crop_height // 2
-        end_y = start_y + self._crop_height
-        start_x = center_x - self._crop_width // 2
-        end_x = start_x + self._crop_width
-        
-        data_array = data_array[:, start_y:end_y, start_x:end_x]
-        
-        print(f'Cropped input data array from {self._height}, {self._width} to {self._crop_width}, {self._crop_height}.')
-        
-        return data_array
-    
-    def pad_input_data(self, data_array: np.ndarray) -> np.ndarray:
-        
-        desired_height, desired_width = self._crop_height, self._crop_width        
-        batch_size, current_height, current_width  = self._batch_size, self._height, self._width
-
-        # Calculate padding needed for each dimension
-        pad_height = (desired_height - current_height) // 2
-        pad_width = (desired_width - current_width) // 2
-
-        # Handle odd differences in desired vs. current size
-        pad_height_extra = (desired_height - current_height) % 2
-        pad_width_extra = (desired_width - current_width) % 2
-
-        
-        data_array = np.pad(data_array, pad_width=((0,0), (pad_width, pad_width + pad_width_extra), (pad_height, pad_height + pad_height_extra)), mode='constant', constant_values=0) 
-        
-        print(f'Padded input data array from {self._height}, {self._width} to {self._crop_width}, {self._crop_height}.') 
-        data_array = np.array(data_array)
-        return data_array
-
+        plt.savefig("/scratch/avelard3/test_scattering_yr_later_try1/z_best_scattering_and_vector.png")
 
 if __name__ == "__main__":
-    open_h5_file = h5.File('/scratch/sbotha/2024-hitfinder-data/epix10k2M-data/mfxly0020-r0130_294.cxi', 'r')
+    open_h5_file = h5.File("/data/bioxfel/data/2020/LCLS-2020-Aug-FrommeP172-P182/data/cheetah/hdf5/r0485-october/mfxp17218-r0485_28.cxi", 'r')
         
     all_data_array = np.array(open_h5_file['entry_1/data_1/data']).astype(np.float32)
-    print("all_data_array from read_scattering_matrix was done. I don't think this should run though", all_data_array.size())
-    ScatteringMatrix("epix10k_geometry.json", "/scratch/avelard3/big_files/geom_data/", all_data_array)
+    #print("all_data_array from read_scattering_matrix was done. I don't think this should run though", all_data_array.size())
+    ScatteringMatrix("/scratch/avelard3/big_files/geom_data/epix10k_geometry.json", all_data_array)

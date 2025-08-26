@@ -6,16 +6,17 @@ from . import utils as u
 from . import conf
 import inspect
 import importlib    
+from torch.utils.data import DataLoader
 
 
 class RunModel:
     
     def __init__(self, cfg: dict) -> None:
         """
-        Initialize the RunModel class with model architecture, model path, output list path, h5 file paths, and device.
+        Initialize the RunModel class with model architecture, model path, output list path, and device.
 
         Args:
-            cfg (dict): Dictionary containing important information for training including: data loaders, batch size, training device, number of epochs, the optimizer, the scheduler, the criterion, the learning rate, and the model class. Everything besides the data loaders and device are arguments in the sbatch script.
+            cfg (dict): Dictionary containing important information for running (model architecture, model path, output list path, and device)
         """
         self._device = cfg['device']
         self._model_arch = cfg['model']
@@ -29,30 +30,30 @@ class RunModel:
     
     def make_model_instance(self) -> None:
         """
-        Create an instance of the model class specified by the model architecture.
+        This function creates an instance of the model class specified by the model architecture using a function in utils.LoadModel
         """
         self._model = u.LoadModel.make_model_instance(self._model_arch)
             
     def load_model(self) -> None:
         """
-        Load the state dictionary into the model class and prepare it for evaluation.
+        This function loads the state dictionary into the model class to prepare it for evaluation using a function in utils.LoadModel
         """
         self._model = u.LoadModel.load_and_return_model(self._model_path, self._model, self._device)
 
         
-    def classify_data(self, data_loader) -> None: #FIXME input type
+    def classify_data(self, data_loader: DataLoader) -> None: 
         """
         Classify the input data using the model and segregate the data based on the classification results.
         
         Args: 
-            data_loader (FIXME):  FIXME
+            data_loader (DataLoader):  input data in the form of a torch DataLoader object
             
         Raises:
             Exception
         """
         print('Starting classification...')
-        
         self._model.eval()
+        
         try:
             with torch.no_grad(): #? what does this mean
                 for images, camera_length, photon_energy, _, paths in data_loader:
@@ -121,6 +122,21 @@ class RunModel:
 
         except Exception as e:
             print(f"An unexpected error occurred while creating .lst files: {e}")
+        
+    def output_verification(self, size: int, events: int) -> None:
+        """
+        Verify that the number of input file paths matches the sum of the output file paths by comparing the size of input file list to sum of two output file lists.
+        
+        Args:
+            size (int): #FIXME IDK
+            events (int): #FIXME IDK
+        """
+        if size == len(self._list_containing_peaks) // events + len(self._list_not_containing_peaks) // events:
+            print("There is the same amount of input files as output files.")
+        else:
+            print("OUTPUT VERIFICATION FAILED: The input paths do not match the output paths.")           
+            print(f'Input H5 files: {size}\nOutput peak files: {len(self._list_containing_peaks)}\nOutput empty files: {len(self._list_not_containing_peaks)}')
+
         
     def output_verification(self, size: int, events: int) -> None:
         """

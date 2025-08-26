@@ -27,6 +27,7 @@ def arguments(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
     parser.add_argument('-cl', '--camera_length', type=str, help='Attribute name for the camera length parameter.')
     parser.add_argument('-pe', '--photon_energy', type=str, help='Attribute name for the photon energy parameter.')
     parser.add_argument('-b', '--batch', type=int, help='Batch size for data running through the model.')
+    parser.add_argument('-g', '--geom_file', type=str, help='file path to geometry if multipanel detector, else put None') #FIXME
     
     try:
         args = parser.parse_args()
@@ -67,6 +68,7 @@ def main():
     save_output_list = args.output 
 
     batch_size = args.batch
+    path_to_geom = args.geom_file
     
     
     cfg = {
@@ -79,7 +81,7 @@ def main():
     
     
     executing_mode = 'running'
-    path_manager = load_paths.Paths(h5_file_list, executing_mode) # init Paths object
+    path_manager = load_paths.Paths(h5_file_list, executing_mode, path_to_geom) # init Paths object
 
     path_manager.run_paths() 
     

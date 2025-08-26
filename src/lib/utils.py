@@ -28,10 +28,11 @@ class SpecialCaseFunctions:
         Returns:
             photon energy (float)L 
         """
-        
+        print("before anything")
         energy_J = h * c / wavelength
+        print("energy_J is", energy_J)
         energy_eV = energy_J / e
-        
+        print("energy_eV is", energy_eV)
         return energy_eV
     
     
