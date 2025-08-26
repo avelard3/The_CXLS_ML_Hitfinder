@@ -7,8 +7,7 @@ from typing import Optional
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.colors as colors
-
-
+#
 class Data(Dataset):
     
     def __init__(self, file_list: list, executing_mode: str) -> None:
