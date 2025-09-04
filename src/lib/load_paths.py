@@ -92,9 +92,9 @@ class Paths:
                             dataset_shape = f[image_location].shape
                             image_file_dim = len(dataset_shape)
                             print("The current dataset shape is", dataset_shape[0])
-                            if image_file_dim == 2:
+                            if image_file_dim == 2: #Single Event
                                 self._dim_and_shape_list.append([1, image_file_dim])
-                            elif image_file_dim == 3:
+                            elif image_file_dim == 3: #Multi Event
                                 self._dim_and_shape_list.append([dataset_shape[0], image_file_dim])
                             else:
                                 raise IndexError(f"ERROR: Unexpected image file dimensions, expected shape of 2 or 3, but instead found {image_file_dim}")
@@ -190,12 +190,11 @@ class Paths:
                                 
                                 else:
                                     camera_length_location = self._find_path_in_h5(conf.possible_camera_length_paths, f) 
-                                    vsource_camera_length = h5.VirtualSource(mrm[camera_length_location])
+                                    vsource_camera_length = h5.VirtualSource(f[camera_length_location])
                                     photon_energy_location = self._find_path_in_h5(conf.possible_photon_energy_paths, f)
-                                    vsource_photon_energy = self._define_photon_energy(mrm, photon_energy_location)
+                                    vsource_photon_energy = self._define_photon_energy(f, photon_energy_location)
                                                     
-                                # Figure out where images are stored
-                                if self._path_to_geom != None:
+                                if self._path_to_geom != None: #If multipanel detector needs to be pieced together
                                     image_data_holding = self._multipanel_to_single(self._path_to_geom, image_data_holding, image_location)
                                 vsource_image = h5.VirtualSource(image_data_holding)
                                 # i = i - master_files_encountered
@@ -230,13 +229,9 @@ class Paths:
                                         vsource_image = self._crop_image(vsource_image) # Crop the image to the correct size
                                     self._image_layout[k:(k+self._dim_and_shape_array[i,0]), 0, :, :] = vsource_image
                                     # Add metadata to VDS (different with and without master file)
-                                    if most_recent_master != None:
-                                        self._camera_length_layout[k:(k+self._dim_and_shape_array[i,0]),0] = vsource_camera_length #FIXME I think this is being overwritten #!got rid of zeros
-                                        self._photon_energy_layout[k:(k+self._dim_and_shape_array[i,0]),0] = vsource_photon_energy #! got rid of zeros
-
-                                    else:
-                                        self._camera_length_layout[k:(k+self._dim_and_shape_array[i,0]),0] = vsource_camera_length
-                                        self._photon_energy_layout[k:(k+self._dim_and_shape_array[i,0]),0] = vsource_photon_energy
+                                    self._camera_length_layout[k:(k+self._dim_and_shape_array[i,0]),0] = vsource_camera_length
+                                    self._photon_energy_layout[k:(k+self._dim_and_shape_array[i,0]),0] = vsource_photon_energy
+                                    
                                     # Add hit parameter to VDS
                                     if self._executing_mode == 'training':
                                         hit_parameter_location = self._find_path_in_h5(conf.possible_hit_parameter_paths, f)        
@@ -247,7 +242,8 @@ class Paths:
                                     print("ERROR: Mapping data to VDS. Likely an issue with metadata")
 
                                 f.close()
-                                mrm.close()
+                                if most_recent_master != None:
+                                    mrm.close()
                                 num_complete_files +=1
                             k += self._dim_and_shape_array[i,0]   #keep track of number of images for mix of single/multievent
                         

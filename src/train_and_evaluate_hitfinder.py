@@ -26,7 +26,7 @@ def arguments(parser) -> argparse.ArgumentParser:
     parser.add_argument('-lr', '--learning_rate', type=float, help='Training inital learning rate.')
     
     parser.add_argument('-tl', '--transfer_learn', type=str, default=None, help='File path to state dict file for transfer learning.' )
-  
+    parser.add_argument('-g', '--geom_file', type=str, help='file path to geometry if multipanel detector, else put None')
     
     try:
         args = parser.parse_args()
@@ -73,6 +73,8 @@ def main() -> None:
     criterion = args.criterion
     learning_rate = args.learning_rate
     
+    path_to_geom = args.geom_file
+    
     transfer_learning_state_dict = args.transfer_learn
 
 
@@ -98,7 +100,7 @@ def main() -> None:
 
 
     executing_mode = 'training'
-    path_manager = load_paths.Paths(h5_file_list, executing_mode) #init Paths object
+    path_manager = load_paths.Paths(h5_file_list, executing_mode, path_to_geom) #init Paths object
     
     path_manager.run_paths() 
     
@@ -106,7 +108,6 @@ def main() -> None:
     training_manager.make_training_instances() 
     training_manager.load_model_state_dict() 
     
-    vds_dataset = path_manager.get_vds() 
     h5_file_paths = path_manager.get_file_names() 
     
     data_manager = load_data.Data(h5_file_paths, executing_mode) #init Data object
