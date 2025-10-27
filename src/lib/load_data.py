@@ -52,20 +52,9 @@ class Data(Dataset):
             self._file_index = self._file_list[idx]
 
             #if statement with return only one thing in masterfile metadata #! 
-            
-            if idx == 0 and x==0:
-                imgg = self._images[idx]
-                print("Creating a plot of one of the images that is being used")
-                self.graph_image(imgg)
-                x+=1
-                #*
+
             if self._executing_mode == "running":
                 self._hit_parameter = np.empty(self._camera_length.shape)
-            print("the index is", idx)
-            print("self._file_list[idx]", self._file_list[idx])
-            print("self._camera_length[idx]", self._camera_length[idx])
-            print("self._photon_energy[idx]", self._photon_energy[idx])
-            
             return self._images[idx], self._camera_length[idx], self._photon_energy[idx], self._hit_parameter[idx], self._file_list[idx] #change
 
                 #*

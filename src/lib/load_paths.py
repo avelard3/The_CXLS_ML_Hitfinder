@@ -10,6 +10,7 @@ from . import read_scattering_matrix
 import tempfile
 import matplotlib.pyplot as plt
 import matplotlib.colors as colors
+import os 
 
 from scipy.constants import h, c, e
 # from .The_CXLS_ML_Hitfinder.src.lib import read_scattering_matrix
@@ -80,8 +81,8 @@ class Paths:
                     num_total_files += 1    
                     if "master" in source_file.lower():
                         num_total_files -=1
-                        if self._executing_mode == 'training':
-                            raise NotImplementedError("Cannot train with master file")
+                        # if self._executing_mode == 'training':
+                        #     raise NotImplementedError("Cannot train with master file")
                         continue
                         
                     try:    
@@ -91,7 +92,6 @@ class Paths:
                             
                             dataset_shape = f[image_location].shape
                             image_file_dim = len(dataset_shape)
-                            print("The current dataset shape is", dataset_shape[0])
                             if image_file_dim == 2: #Single Event
                                 self._dim_and_shape_list.append([1, image_file_dim])
                             elif image_file_dim == 3: #Multi Event
@@ -181,8 +181,6 @@ class Paths:
                                         dset = f.create_dataset(f'{camera_length_location}', shape=goal_size, dtype='float32')
                                         dset[:] = master_camera_length
                                         vsource_camera_length = h5.VirtualSource(dset)
-                                        print(dset[1])
-                                        print("I've checked that the data is complete up to here")
                                     with h5.File(f'photon_energy{i}.h5', 'w') as f:
                                         dset = f.create_dataset(photon_energy_location, shape=goal_size, dtype='float32')                                        
                                         dset[:] = master_photon_energy
@@ -211,8 +209,15 @@ class Paths:
                                     self._photon_energy_layout[i] = vsource_photon_energy
                                     
                                     if self._executing_mode == 'training':
-                                        hit_parameter_location = self._find_path_in_h5(conf.possible_hit_parameter_paths, f)                                        
-                                        vsource_hit_parameter = h5.VirtualSource(f[hit_parameter_location])
+                                        hit_file = f
+                                        if most_recent_master != None:
+                                            og_filename = self._source_file
+                                            og_filename = og_filename.strip()
+                                            og_filename = os.path.basename(og_filename)
+                                            hit_file = f"/scratch/avelard3/NSLS-2019-August/h5_hits/{og_filename}"#FIXME needs to be input
+                                        hit_parameter_location = self._find_path_in_h5(conf.possible_hit_parameter_paths, hit_file) 
+                                        with h5.File(self._source_file, 'r') as hf:                                       
+                                            vsource_hit_parameter = h5.VirtualSource(hf[hit_parameter_location])
                                         self._hit_parameter_layout[i] = vsource_hit_parameter
                                 
                                 ## MULTI EVENT ##
@@ -234,10 +239,25 @@ class Paths:
                                     
                                     # Add hit parameter to VDS
                                     if self._executing_mode == 'training':
-                                        hit_parameter_location = self._find_path_in_h5(conf.possible_hit_parameter_paths, f)        
-                                        vsource_hit_parameter = h5.VirtualSource(f[hit_parameter_location])
+                                        hit_file = f
+                                        if most_recent_master != None:
+                                            og_filename = self._source_file
+                                            og_filename = og_filename.strip()
+                                            print("og_filename", og_filename)
+                                            og_filename = os.path.basename(og_filename)
+                                            hit_file = f"/scratch/avelard3/NSLS-2019-August/h5_hits/{og_filename}"
+                                        print("the file we're looking at is", hit_file)
+                                        hit_parameter_location = self._find_path_in_h5(conf.possible_hit_parameter_paths, hit_file)     
+                                        print("koala")   
+
+                                        with h5.File(hit_file, 'r') as hf:                           
+                                            print("b4")   
+                                            print(hf[hit_parameter_location])         
+                                            vsource_hit_parameter = h5.VirtualSource(hf[hit_parameter_location])
+                                            print("after")
+                                        print("marsupial")
                                         self._hit_parameter_layout[k:(k+self._dim_and_shape_array[i,0]),0] = vsource_hit_parameter               
-                                    print("pink")    
+                                        print("red panda")
                                 else:
                                     print("ERROR: Mapping data to VDS. Likely an issue with metadata")
 

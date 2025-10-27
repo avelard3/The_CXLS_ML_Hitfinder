@@ -37,12 +37,14 @@ def arguments(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
         print(f"An unexpected error occurred: {e}")
 
 def create_hit_dataset(image_name, user_location, num_img):
-    og_filename = os.path.basename(image_name)
+    og_filename = image_name.strip()
+    og_filename = os.path.basename(og_filename)
     clean_filename = og_filename.replace("goodEvents-advanceSort-", "")
-    full_path = f'{user_location}{clean_filename}' #FIXME image_name needs "goodEvents-advanceSort-" or whatever removed
+    clean_filename = clean_filename.replace(".list", ".h5")
+    full_path = f'{user_location}{clean_filename}' 
+
     
     hit_val_array = np.array([])
-    print("image name .strip", image_name.strip())
         
     with open(image_name.strip(), "r") as f:
         lines = f.readlines()
@@ -53,20 +55,18 @@ def create_hit_dataset(image_name, user_location, num_img):
         line = lines[j].strip()
         if re.search(rf"//\b{i}\b", line):
             hit_val_array = np.append(hit_val_array, 1.0)
-            print("hit_val_array", hit_val_array[-1])
             if j < (len(lines)-1):
-                j+=1
-            
+                j+=1            
         else:
             hit_val_array = np.append(hit_val_array, 0.0)
 
     print("hit_val_array", hit_val_array)
-    print("hit val array 33", hit_val_array[33])
-    with h5.File("rando_name8.h5", 'w') as f:
-        dset = f.create_dataset("my_dataset", data=hit_val_array)
+
+    with h5.File(full_path, 'w') as f:
+        dset = f.create_dataset("/hits", data=hit_val_array)
 
         
-    print(f"A new file was created in {user_location} called {image_name}")
+    print(f"A new file was created in {full_path}")
     
 def main():
     parser = argparse.ArgumentParser(description='Parameters for running a model.')
@@ -78,7 +78,7 @@ def main():
     with open(file_list, 'r') as lst_file:
         for i, source_file in enumerate(lst_file):
             print("THE SOURCE FILE IS", source_file)
-            create_hit_dataset(source_file, "/scratch/avelard3/ignoreeeeee_me", 500)
+            create_hit_dataset(source_file, "/scratch/avelard3/NSLS-2019-August/h5_hits/", 500)
     
 
     

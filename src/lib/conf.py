@@ -6,7 +6,7 @@ required_image_size = (512, 512)
 possible_image_paths = ['/images/', 'entry/data/data', '/entry_1/data_1/data']
 possible_camera_length_paths = ['/detector_distance', 'entry/instrument/detector/detector_distance', 'LCLS/detector_1/EncoderValue']
 possible_photon_energy_paths = ['/photon_energy_eV', 'entry/instrument/beam/incident_wavelength', 'LCLS/photon_energy_eV']
-possible_hit_parameter_paths = ['/hit/']
+possible_hit_parameter_paths = ['/hits/hits','/hits', '/hit/', '/hits/', 'hits']
 
 # Hyperparameters that were optimized by Optuna (stored as conf variables for ease of hyperparameter testing)
 lr_param_patience=47
