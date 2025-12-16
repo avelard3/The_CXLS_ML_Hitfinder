@@ -139,7 +139,6 @@ class Paths:
                 self._photon_energy_layout = h5.VirtualLayout(shape=self._attr_shape, dtype='float32')
                 if self._executing_mode == 'training':
                     self._hit_parameter_layout = h5.VirtualLayout(shape=self._attr_shape, dtype='float32')
-                
                 # Loop through each source file and map it to the virtual dataset
                 k=0
                 master_files_encountered = 0      
@@ -149,7 +148,6 @@ class Paths:
                 
                 with open(self._list_path, 'r') as lst_file: # open list file
                     most_recent_master = None
-
                     for i, source_file in enumerate(lst_file): # for each file numbered up to i in the list file (aka: for i in range(len(lst_file)): source_file = lst_file[i])
                         self._source_file = source_file.strip() 
                         num_total_files += 1
@@ -161,9 +159,8 @@ class Paths:
                             with h5.File(self._source_file, 'r') as f: #for master file, figure out where images are stored   
                                 camera_length_location = self._find_path_in_h5(conf.possible_camera_length_paths, f) 
                                 photon_energy_location = self._find_path_in_h5(conf.possible_photon_energy_paths, f) 
-                            f.close()   
+                            f.close() 
                             continue   
-                              
                         try:
                             with h5.File(self._source_file, 'r') as f: # using h5.File to read the current h5 file in the list
                                 i = i - master_files_encountered  
@@ -222,7 +219,6 @@ class Paths:
                                 
                                 ## MULTI EVENT ##
                                 elif self._dim_and_shape_array[i,1] == 3: 
-
                                     # Add files to list
                                     for j in range(self._dim_and_shape_array[i,0]):
                                         self._add_file_to_list(self._source_file, j+1)
@@ -243,21 +239,20 @@ class Paths:
                                         if most_recent_master != None:
                                             og_filename = self._source_file
                                             og_filename = og_filename.strip()
-                                            print("og_filename", og_filename)
                                             og_filename = os.path.basename(og_filename)
                                             hit_file = f"/scratch/avelard3/NSLS-2019-August/h5_hits/{og_filename}"
-                                        print("the file we're looking at is", hit_file)
-                                        hit_parameter_location = self._find_path_in_h5(conf.possible_hit_parameter_paths, hit_file)     
-                                        print("koala")   
+                                        else:
+                                            hit_file = self._source_file
+
+                                        with h5.File(hit_file, 'r') as h5_hit_file:
+                                            hit_parameter_location = self._find_path_in_h5(conf.possible_hit_parameter_paths, h5_hit_file)     
+
 
                                         with h5.File(hit_file, 'r') as hf:                           
-                                            print("b4")   
-                                            print(hf[hit_parameter_location])         
+        
                                             vsource_hit_parameter = h5.VirtualSource(hf[hit_parameter_location])
-                                            print("after")
-                                        print("marsupial")
+
                                         self._hit_parameter_layout[k:(k+self._dim_and_shape_array[i,0]),0] = vsource_hit_parameter               
-                                        print("red panda")
                                 else:
                                     print("ERROR: Mapping data to VDS. Likely an issue with metadata")
 
@@ -314,7 +309,7 @@ class Paths:
         Raises:
             KeyError: If none of the paths in the list are in the h5 file
         """
-        
+
         for path in possible_paths:
             if path in h5_file:
                 return path

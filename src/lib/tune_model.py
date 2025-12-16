@@ -18,7 +18,7 @@ from torchvision import datasets
 
 class TuneModel:
     
-    def __init__(self, cfg: dict, hpd_train: dict, hpd_model:dict, attributes: dict, transfer_learning_state_dict: str) -> None:
+    def __init__(self, cfg: dict, hpd_train: dict, hpd_model:dict, transfer_learning_state_dict: str) -> None:
         """
         This constructor breaks up the training configuration infomation dictionary and h5 metadata key dictionary.
         In addition, a logging object is created and global list are created for storing infomation about the training loss and accuracy. 
@@ -28,9 +28,6 @@ class TuneModel:
             attributes (dict): Dictionary containing the names of the metadata contained in the h5 image files. These names could change depending on whom created the metadata, so the specific names are arguments in the sbatch script. 
         """
         
-        self.camera_length = conf.camera_length_key
-        self.photon_energy = conf.photon_energy_key
-        self.peak = conf.present_peaks_key
         
         self.model_path = transfer_learning_state_dict
 

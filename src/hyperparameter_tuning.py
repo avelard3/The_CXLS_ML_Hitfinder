@@ -29,11 +29,6 @@ def arguments(parser) -> argparse.ArgumentParser:
     parser.add_argument('-s', '--scheduler', type=str, help='Training learning rate scheduler.')
     parser.add_argument('-c', '--criterion', type=str, help='Training loss function.')
     
-    parser.add_argument('-im', '--image_location', type=str, help='Attribute name for the image')
-    parser.add_argument('-cl', '--camera_length', type=str, help='Attribute name for the camera length parameter.')
-    parser.add_argument('-pe', '--photon_energy', type=str, help='Attribute name for the photon energy parameter.')
-    parser.add_argument('-pk', '--peaks', type=str, help='Attribute name for is there are peaks present.') #aka hit_parameter
-    
     parser.add_argument('-tl', '--transfer_learn', type=str, default=None, help='File path to state dict file for transfer learning.' )
     
     #FIXME: Need to add all the hyperparameters, thre are some missing rn
@@ -47,6 +42,9 @@ def arguments(parser) -> argparse.ArgumentParser:
     parser.add_argument('-ldl', '--num_linear_dropout_layers_range', type=int, nargs=2, default=[1,3], help='Lower and upper limit of number of dropout layers and linear layers') #max=3 #model    
     parser.add_argument('-lls', '--linear_layer_size_range', type=int, nargs=2, default=[2,2], help="")
     parser.add_argument('-dop', '--dropout_probability_range', type=float, nargs=2, default=[0.5,0.8], help='Lower and upper limit of dropout popularity') #model
+
+    parser.add_argument('-g', '--geom_file', type=str, help='file path to geometry if multipanel detector, else put None')
+
     # adam parameters (optimizer) 
     
     try:
@@ -86,11 +84,7 @@ def objective(trial): #learning rate is a log=true!?
     optimizer = args.optimizer
     scheduler = args.scheduler
     criterion = args.criterion
-    
-    image_location = args.image_location
-    camera_length_location = args.camera_length
-    photon_energy_location = args.photon_energy
-    peaks_location = args.peaks
+
     
     transfer_learning_state_dict = args.transfer_learn
     # FIXME: There should be a way to get bool to work for this?
@@ -109,14 +103,7 @@ def objective(trial): #learning rate is a log=true!?
     num_linear_dropout_layers_range = tuple(args.num_linear_dropout_layers_range)
     linear_layer_size_range = tuple(args.linear_layer_size_range)
     dropout_probability_range = tuple(args.dropout_probability_range)
-
-
-    h5_locations = {
-        'image': image_location,
-        'camera length': camera_length_location,
-        'photon energy': photon_energy_location,
-        'peak': peaks_location
-    }
+    path_to_geom = args.geom_file
     
     cfg = {
         'batch size': batch_size,
@@ -174,11 +161,11 @@ def objective(trial): #learning rate is a log=true!?
     
     executing_mode = 'training'
     print("Creating Paths object")
-    path_manager = load_paths.Paths(h5_file_list, h5_locations, executing_mode)
+    path_manager = load_paths.Paths(h5_file_list, executing_mode, path_to_geom)
     print("Running load paths")
     path_manager.run_paths()
     print("Creating TuneModel object")
-    tuning_manager = tune_model.TuneModel(cfg, hyperparam_dict_train, hyperparam_dict_model, h5_locations, transfer_learning_state_dict)
+    tuning_manager = tune_model.TuneModel(cfg, hyperparam_dict_train, hyperparam_dict_model, transfer_learning_state_dict)
     print("Create training instance")
     tuning_manager.make_training_instances() 
     print("Loading model state dictionary")
@@ -299,12 +286,12 @@ def create_timeline_plot(study, path:str=None) -> None:
 
 
 if __name__ == '__main__':
-    study_name = "the-cxls-ml-hitfinder-trial1_june23"  # Unique identifier of the study.
+    study_name = "the-cxls-ml-hitfinder-trial1_dec15"  # Unique identifier of the study.
     storage_name = "sqlite:///{}.db".format(study_name)
     
     study = optuna.create_study(study_name=study_name, storage=storage_name, load_if_exists=True)
 
-    study.optimize(objective, n_trials=15) #!
+    study.optimize(objective, n_trials=2) #!
 
     
     image_path_save = '/scratch/avelard3/big_files/pics_from_optuna_5_9'

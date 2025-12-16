@@ -24,12 +24,17 @@ class Data(Dataset):
         self._vds_path = f'{self._executing_mode}_vds_delete_me.h5'
         
         # add function that does this, make NONE in init
+        print("2")
         self.file = h5.File(self._vds_path, 'r')
+        print("right before here")
+        print("self.file", self.file)
         self._images = self.file['vsource_image']
+        print("i don't think this will print")
         self._camera_length = self.file['vsource_camera_length']
         self._photon_energy = self.file['vsource_photon_energy']
         if self._executing_mode == "training":
             self._hit_parameter = self.file['vsource_hit_parameter']
+        print("3")
 
     def __len__(self) -> int:
         """
