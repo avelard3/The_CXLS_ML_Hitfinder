@@ -21,6 +21,9 @@ def arguments(parser) -> argparse.ArgumentParser:
     Returns:
         argparse.ArgumentParser: The parser with the added arugments.
     """
+    print("parser arg start now")
+    parser.add_argument('-sn', '--study_name', type=str)
+    parser.add_argument('-nt', '--num_trials', type=int)
     parser.add_argument('-l', '--list', type=str, help='File path to the .lst file containing file paths to the .h5 file to run through the model.')
     parser.add_argument('-m', '--model', type=str, help='Name of the model architecture class found in models.py that corresponds to the model state dict.')
     
@@ -286,13 +289,13 @@ def create_timeline_plot(study, path:str=None) -> None:
 
 
 if __name__ == '__main__':
-    study_name = "the-cxls-ml-hitfinder-trial1_dec15"  # Unique identifier of the study.
-    storage_name = "sqlite:///{}.db".format(study_name)
-    
-    study = optuna.create_study(study_name=study_name, storage=storage_name, load_if_exists=True)
+    parser = argparse.ArgumentParser(description='Parameters for training a model.')
+    args = arguments(parser)
 
-    study.optimize(objective, n_trials=2) #!
-
+    study_name = "the-cxls-ml-hitfinder-trial1_dec19.2"   #FIXME study name and number of trials should be sbatch inputs
+    storage_name = "sqlite:///{}.db".format(args.study_name) # Unique identifier of the study.
+    study = optuna.create_study(study_name=args.study_name, storage=storage_name, load_if_exists=True)
+    study.optimize(objective, n_trials=args.num_trials) #!
     
     image_path_save = '/scratch/avelard3/big_files/pics_from_optuna_5_9'
     create_optimization_history_plot(study, image_path_save)

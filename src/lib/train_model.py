@@ -155,7 +155,6 @@ class TrainModel:
         self._model.train()
         
         try:
-            print("Train in train_model")
             for images, camera_length, photon_energy, hit_parameter, _ in self._train_loader: 
                 inputs = torch.Tensor(images).to(self._device, dtype=torch.float32)
                 cam_len = torch.Tensor(camera_length).to(self._device, dtype=torch.float32).squeeze(1)                    
@@ -210,7 +209,6 @@ class TrainModel:
         self._model.eval()
 
         try:
-            print("Test in train_model")
             with torch.no_grad():
                 
                 for images, camera_length, photon_energy, hit_parameter, _ in self._test_loader:

@@ -198,7 +198,7 @@ class Paths:
                                     print("Single event has not been tested recently")
                                     self._add_file_to_list(self._source_file, 1)
                                     
-                                    if vsource_image.shape[1] != 512:
+                                    if vsource_image.shape[1] != min(conf.required_image_size):
                                         vsource_image = self._crop_image(vsource_image) # Crop the image to the correct size
                                         
                                     self._image_layout[i, 0, :, :] = vsource_image
@@ -223,10 +223,11 @@ class Paths:
                                     for j in range(self._dim_and_shape_array[i,0]):
                                         self._add_file_to_list(self._source_file, j+1)
                                     
+                                    #TODO make sure this works. idk why its commented out
                                     # if self._path_to_geom != None:
                                     #     vsource_image = self._multipanel_to_single(self._path_to_geom, vsource_image)
-                                        
-                                    if vsource_image.shape[1] != 512:
+  
+                                    if vsource_image.shape[1] != min(conf.required_image_size):
                                         vsource_image = self._crop_image(vsource_image) # Crop the image to the correct size
                                     self._image_layout[k:(k+self._dim_and_shape_array[i,0]), 0, :, :] = vsource_image
                                     # Add metadata to VDS (different with and without master file)
@@ -243,6 +244,8 @@ class Paths:
                                             hit_file = f"/scratch/avelard3/NSLS-2019-August/h5_hits/{og_filename}"
                                         else:
                                             hit_file = self._source_file
+                                        
+                                        #TODO: can i combine these two?? with statements
 
                                         with h5.File(hit_file, 'r') as h5_hit_file:
                                             hit_parameter_location = self._find_path_in_h5(conf.possible_hit_parameter_paths, h5_hit_file)     
@@ -340,7 +343,7 @@ class Paths:
     
     def _crop_image(self, vsource_image: h5.VirtualSource) -> h5.VirtualSource: 
         """
-        Crops Virtual Source image to make sure all images are 512x512
+        Crops Virtual Source image to make sure all images are min(conf.required_image_size)xmin(conf.required_image_size)
         
         Args:
             vsource_image (h5py.VirtualSource): The VirtualSource of the image that needs to be cropped
@@ -348,13 +351,11 @@ class Paths:
         Returns:
             h5py.VirtualSource: The cropped image
         """
-        print(f"Going to crop to 512x512 from current shape {vsource_image.shape} on file {self._source_file}")
         shape_of_img = vsource_image.shape
-        print("shape_of_img", shape_of_img)
-        # self.graph_image(vsource_image, 1)
+        print(f"Going to crop to min(conf.required_image_size)xmin(conf.required_image_size) from current shape {shape_of_img} on file {self._source_file}")
         center_x = shape_of_img[1]//2
         center_y = shape_of_img[2]//2
-        vsource_image = vsource_image[:, center_x: (center_x + 512), center_y: (center_y + 512)]
+        vsource_image = vsource_image[:, center_x: (center_x + min(conf.required_image_size)), center_y: (center_y + min(conf.required_image_size))]
         # self.graph_image(vsource_image, 2)
         return vsource_image
     

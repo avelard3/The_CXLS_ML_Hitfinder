@@ -153,7 +153,7 @@ class TuneModel:
             # from optuna examples
             trial.report(train_loss_value, epoch)
             if trial.should_prune():
-                print("an exception was reached and it should be pruned")
+                print("An exception was reached and it should be pruned")
                 raise optuna.exceptions.TrialPruned()
             # end from optuna examples
             
