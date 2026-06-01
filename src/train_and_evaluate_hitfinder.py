@@ -3,17 +3,15 @@ from lib import *
 import torch
 import datetime
 from queue import Queue
+import numpy as np
+import os
+from lib import conf
 
 def arguments(parser) -> argparse.ArgumentParser:
     """
-    This function is for adding arguments to configure the parameters used for training different models.
-    These parameters are defined the the job sbatch script.
+    Adds arguments to configure the parameters used for training different models.
+    Defined for each input in sbatch script
 
-    Args:
-        parser (argparse.ArgumentParser): The argument parser to which the arguments will be added.
-        
-    Returns:
-        argparse.ArgumentParser: The parser with the added arugments.
     """
     parser.add_argument('-l', '--list', type=str, help='File path to the .lst file containing file paths to the .h5 file to run through the model.')
     parser.add_argument('-m', '--model', type=str, help='Name of the model architecture class found in models.py that corresponds to the model state dict.')
@@ -27,13 +25,10 @@ def arguments(parser) -> argparse.ArgumentParser:
     parser.add_argument('-c', '--criterion', type=str, help='Training loss function.')
     parser.add_argument('-lr', '--learning_rate', type=float, help='Training inital learning rate.')
     
-    parser.add_argument('-cl', '--camera_length', type=str, help='Attribute name for the camera length parameter.')
-    parser.add_argument('-pe', '--photon_energy', type=str, help='Attribute name for the photon energy parameter.')
-    parser.add_argument('-pk', '--peaks', type=str, help='Attribute name for is there are peaks present.')
+    parser.add_argument('-tl', '--transfer_learn', type=str, default=None, help='File path to state dict file for transfer learning.' )
+    parser.add_argument('-g', '--geom_file', type=str, help='file path to geometry if multipanel detector, else put None')
     
-    parser.add_argument('-tl', '--transfer_learn', type=str, default=None, help='Flie path to state dict file for transfer learning.' )
-
-    
+    parser.add_argument('-hfp', '--hit_file_path_name', type=str, help='Path to hit files if not written into training files')
     try:
         args = parser.parse_args()
         print("Parsed arguments:")
@@ -65,6 +60,7 @@ def main() -> None:
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(f'This model will be training on: {device}')
     
+    # Setting up variables from argument parser
     args = arguments(parser)
     h5_file_list = args.list
     model_arch = args.model
@@ -78,29 +74,16 @@ def main() -> None:
     criterion = args.criterion
     learning_rate = args.learning_rate
     
-    camera_length = args.camera_length
-    photon_energy = args.photon_energy
-    peaks = args.peaks
-    
-    #temperary holding
-    master_file = None
+    path_to_geom = args.geom_file
     
     transfer_learning_state_dict = args.transfer_learn
-    if transfer_learning_state_dict == 'None' or transfer_learning_state_dict == 'none':
+    hit_file_path_name = args.hit_file_path_name
+
+
+    # Transfer learning (yes or no)
+    if transfer_learning_state_dict.lower() == 'none':
         transfer_learning_state_dict = None
-    
-    transform = False
-    
-    attributes = {
-        'camera length': camera_length,
-        'photon energy': photon_energy,
-        'peak': peaks
-    }
-    
-    path_manager = load_data_paths.PathsSingleEvent(h5_file_list, attributes, master_file)
-    path_manager.read_file_paths()
-    h5_file_path_queue = path_manager.get_file_path_queue()
-    
+
     cfg = {
         'batch size': batch_size,
         'device': device,
@@ -109,38 +92,46 @@ def main() -> None:
         'scheduler': scheduler,
         'criterion': criterion,
         'learning rate': learning_rate,
-        'model': model_arch
+        'model': model_arch,
+        "lr_param_patience" : conf.lr_param_patience,
+        "lr_param_threshold" : conf.lr_param_threshold,
+        "adam_param_beta1" : conf.adam_param_beta1,
+        "adam_param_beta2" : conf.adam_param_beta2,
+        "adam_param_weight_decay" : conf.adam_param_weight_decay,
     }
+
+
+    executing_mode = 'training'
+    path_manager = load_paths.Paths(h5_file_list, executing_mode, path_to_geom) #init Paths object
+    path_manager.run_paths() 
+    h5_file_paths = path_manager.get_file_names() 
     
-    training_manager = train_model.TrainModel(cfg, attributes, transfer_learning_state_dict)
-    training_manager.make_training_instances()
-    training_manager.load_model_state_dict()
-
-    while not h5_file_path_queue.empty():
-        path_manager.process_files()
-
-        h5_tensor_list = path_manager.get_h5_tensor_list()
-        h5_attribute_list = path_manager.get_h5_attribute_list()
-        h5_file_paths = path_manager.get_h5_file_paths()
+    data_manager = load_data.Data(h5_file_paths, executing_mode) #init Data object
+    create_data_loader = load_data.CreateDataLoader(data_manager, batch_size) #init CreateDataLoader object that create DataLoader object
+    create_data_loader.split_training_data()   
+    train_loader, test_loader = create_data_loader.get_training_data_loaders() 
+    
+    training_manager = train_model.TrainModel(cfg, transfer_learning_state_dict) #init TrainModel object
+    training_manager.make_training_instances() 
+    training_manager.load_model_state_dict() 
+    
+    training_manager.assign_new_data(train_loader, test_loader) 
+    training_manager.epoch_loop() 
+    training_manager.plot_loss_accuracy(training_results) 
         
-        data_manager = prep_loaded_data.Data(h5_tensor_list, h5_attribute_list, h5_file_paths, transform)
-        data_manager.split_training_data(batch_size)
-        train_loader, test_loader = data_manager.get_training_data_loaders()
-        
-        training_manager.assign_new_data(train_loader, test_loader)
-
-        training_manager.epoch_loop()
-        training_manager.plot_loss_accuracy(training_results)
-        
-    training_manager.save_model(model_dict_save_path)
+    # Saving model
+    training_manager.save_model(model_dict_save_path) 
     trained_model = training_manager.get_model()
     
-    evaluation_manager = evaluate_model.ModelEvaluation(cfg, attributes, trained_model, test_loader)
-    evaluation_manager.run_testing_set()
-    evaluation_manager.make_classification_report()
-    evaluation_manager.plot_confusion_matrix(training_results)
+    # Checking and reporting accuracy of model
+    evaluation_manager = evaluate_model.EvaluateModel(device, trained_model, test_loader) #init EvaluateModel object
+    evaluation_manager.run_testing_set() 
+    evaluation_manager.make_classification_report()  
+    evaluation_manager.plot_confusion_matrix(training_results) 
+    evaluation_manager.plot_roc_curve(training_results) 
     
-    
-    
+    os.remove("training_vds_delete_me.h5")
+
+
 if __name__ == '__main__':
     main()

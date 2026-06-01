@@ -1,115 +1,114 @@
 import torch
 import torch.nn as nn
 import numpy as np
-from sklearn.metrics import confusion_matrix, classification_report
+from sklearn.metrics import confusion_matrix, classification_report, RocCurveDisplay
 import matplotlib.pyplot as plt
 from torch.cuda.amp import autocast
 import datetime
 from torch.utils.data import DataLoader
+import optuna
+from . import models as m
+
 
 from . import conf
 
-class ModelEvaluation:
+class EvaluateModel:
     
-    def __init__(self, cfg: dict, attributes: dict, trained_model: nn.Module, testing_data: DataLoader) -> None:
+    def __init__(self, device, trained_model: nn.Module, testing_data: DataLoader) -> None:
         """
-        This constructor breaks out important dictonaries, takes in the trained model, creates a logger object, and creates parameters to store evaluation metrics. 
+        Breaks out important dictonaries, takes in the trained model, creates a logger object, and creates parameters to store evaluation metrics. 
 
         Args:
-            cfg (dict): Dictionary containing important information for training including: data loaders, batch size, training device, number of epochs, the optimizer, the scheduler, the criterion, the learning rate, and the model class. 
-            Everything besides the data loaders and device are arguments in the sbatch script.
-            Not all parameters are relevant for evaluation and therefore are not given variables. 
-            attributes (dict): Dictionary containing the names of the metadata contained in the h5 image files. These names could change depending on whom created the metadata, so the specific names are arguments in the sbatch script. 
-            trained_model (nn.Module): This is a trained model taken from the training class. 
+            cfg (dict): Dictionary containing important information for training including 
+            attributes (dict): Dictionary containing the names of the metadata contained in the h5 image files
+            trained_model (nn.Module): Trained model taken from the training class. 
+            testing_data (DataLoader): Data that was set aside for testing/evaluating hitfinder
         """
         
-        self.test_loader = testing_data
-        self.batch_size = cfg['batch size']
-        self.device = cfg['device']
-        self.model = trained_model
+        self._test_loader = testing_data
+        self._device = device
+        self._model = trained_model
+
         
-        self.camera_length = conf.camera_length_key
-        self.photon_energy = conf.photon_energy_key
-        self.peak = conf.present_peaks_key
-        
-        self.cm = None
-        self.all_labels = []
-        self.all_predictions = []
-        self.classification_report_dict = {}
+        self._confusion_matrix = None
+        self._all_labels = []
+        self._all_predictions = []
+        self._classification_report_dict = {}
 
 
     def run_testing_set(self) -> None:
         """ 
-        This function runs the trained model in evaluation mode.
-        This function creates arrays of labels and predictions to compare against each other for metrics. 
+        Runs the trained model in evaluation mode, by creating arrays of labels and predictions to compare against each other for metrics. 
         """
-        print(f'Running evaluation on model: {self.model.__class__.__name__}')
-        self.model.eval()
+        print(f'Running evaluation on model: {self._model.__class__.__name__}')
+        self._model.eval()
+
         try:
             with torch.no_grad():
-                for inputs, attributes, _ in self.test_loader:
-                    
-                    # inputs = inputs.unsqueeze(1).to(self.device, dtype=torch.float32)
-                    inputs = inputs.to(self.device, dtype=torch.float32)
-                    attributes = {key: value.to(self.device, dtype=torch.float32) for key, value in attributes.items()}
+                for images, camera_length, photon_energy, hit_parameter, _ in self._test_loader:
+                    inputs = torch.Tensor(images).to(self._device, dtype=torch.float32)
+                    cam_len = torch.Tensor(camera_length).to(self._device, dtype=torch.float32).squeeze(1)                    
+                    phot_en = torch.Tensor(photon_energy).to(self._device, dtype=torch.float32).squeeze(1)                    
 
-                    with autocast(enabled=False):
-                        score = self.model(inputs, attributes[self.camera_length], attributes[self.photon_energy])
-                        truth = attributes[self.peak].reshape(-1, 1).float().to(self.device)
+                    score = self._model(inputs, cam_len, phot_en)
+                    truth = hit_parameter.reshape(-1, 1).float().to(self._device)
                                     
                     predictions = (torch.sigmoid(score) > 0.5).long()
-                    self.all_labels.extend(torch.flatten(truth.cpu()))
-                    self.all_predictions.extend(torch.flatten(predictions.cpu()))
+                    self._all_labels.extend(torch.flatten(truth.cpu()))
+                    self._all_predictions.extend(torch.flatten(predictions.cpu()))
                     
             # No need to reshape - arrays should already be flat
-            self.all_labels = np.array(self.all_labels)
-            self.all_predictions = np.array(self.all_predictions)
+            self._all_labels = np.array(self._all_labels)
+            self._all_predictions = np.array(self._all_predictions)
         except RuntimeError as e:
-            print(f"RuntimeError during training: {e}")  
+            print(f"RuntimeError during evaluation: {e}")  
         except AttributeError as e:
-            print(f"AttributeError during training: {e}")
+            print(f"AttributeError during evaluation: {e}")
         except TypeError as e:
-            print(f"TypeError during training: {e}")    
+            print(f"TypeError during evaluation: {e}")    
         except Exception as e:
             print(f"An unexpected error occurred during evaluation: {e}")
+
         
     def make_classification_report(self) -> None:
         """
-        This function creates a classification report for the model and prints it.
+        Creates a classification report for the model and prints it.
         """
         try:
             print('Creating classification report...')
-            self.classification_report_dict = classification_report(self.all_labels, self.all_predictions, output_dict=True)
+            self._classification_report_dict = classification_report(self._all_labels, self._all_predictions, output_dict=True)
             print('Classification Matrix: ')
-            [print(f"{key}: {value}") for key, value in self.classification_report_dict.items()]
+            [print(f"{key}: {value}") for key, value in self._classification_report_dict.items()]
         except Exception as e:
             print(f"An error occurred while creating the clasification report: {e}")       
         
     def get_classification_report(self) -> dict:
         """
-        This function returns the classification report for the model.
-        
-        Returns:
-            dict: The classification report in the form of a dictionary. 
+        Returns the classification report for the model.
         """
-        return self.classification_report_dict
+        return self._classification_report_dict
 
         
     def plot_confusion_matrix(self, path:str = None) -> None:
         """ 
-        This function plots the confusion matrix of the testing set.
+        Plots the confusion matrix of the testing set.
         The values in this matrix are done so that the rows total to 1. 
+        
+        Args:
+            path (str): Path to where confusion matrix should be saved
+             
         """
         
         try:
             print('Creating confusion matrix...')
-            self.cm = confusion_matrix(self.all_labels, self.all_predictions, normalize='true')
+            self._confusion_matrix = confusion_matrix(self._all_labels, self._all_predictions, normalize='true')
         except Exception as e:
-            print(f"An error occurred while creating the confusion matrix: {e}")       
+            print(f"An error occurred while creating the confusion matrix: {e}")      
+             
         # Plotting the confusion matrix
         try:
-            plt.matshow(self.cm, cmap="Blues")
-            plt.title(f'CM for {self.model.__class__.__name__}')
+            plt.matshow(self._confusion_matrix, cmap="Blues")
+            plt.title(f'CM for {self._model.__class__.__name__}')
             plt.colorbar()
             plt.ylabel('True Label')
             plt.xlabel('Predicted Label')
@@ -124,13 +123,34 @@ class ModelEvaluation:
         except Exception as e:
             print(f"An error occurred while plotting confusion matrix: {e}")
 
-
-
+    def plot_roc_curve(self, path:str=None) -> None:
+        """
+        Plots the ROC (Reciever Operating Characteristic) Curve of the testing set.
+        The x-axis is the false positive rate and the y-axis is the true positive rate
+        Args:
+            path (str): Path to where ROC curve should be saved
+        """
+        try:
+            print('Creating ROC curve...')
+            roc_display = RocCurveDisplay.from_predictions(self._all_labels, self._all_predictions)
+            _ = roc_display.ax_.set(
+                xlabel="False Positive Rate",
+                ylabel="True Positive Rate",
+                title="ROC Curve",
+            )
+            
+            if path != None:
+                now = datetime.datetime.now()
+                formatted_date_time = now.strftime("%m%d%y-%H%M")
+                path = path + '/' + formatted_date_time + '-' + 'roc_curve.png'
+                plt.savefig(path)
+                
+                print(f'ROC curve saved to: {path}')
+        except Exception as e:
+            print(f"An error occurred while creating the ROC curve: {e}")       
+        
     def get_confusion_matrix(self) -> np.ndarray:
         """ 
-        This function returns the confusion matrix of the testing set.
-        
-        Returns:
-            np.darray: The numpy array of the values in the confusion matrix.
+        Returns the confusion matrix of the testing set as a numpy array.
         """
-        return self.cm
+        return self._confusion_matrix

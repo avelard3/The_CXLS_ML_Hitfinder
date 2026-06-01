@@ -10,10 +10,12 @@ from torch.utils.data import DataLoader
 
 from . import models as m
 from . import conf
+from . import utils as u
+
 
 class TrainModel:
     
-    def __init__(self, cfg: dict, attributes: dict, transfer_learning_state_dict: str) -> None:
+    def __init__(self, cfg: dict, transfer_learning_state_dict: str) -> None:
         """
         This constructor breaks up the training configuration infomation dictionary and h5 metadata key dictionary.
         In addition, a logging object is created and global list are created for storing infomation about the training loss and accuracy. 
@@ -21,43 +23,34 @@ class TrainModel:
         Args:
             cfg (dict): Dictionary containing important information for training including: data loaders, batch size, training device, number of epochs, the optimizer, the scheduler, the criterion, the learning rate, and the model class. Everything besides the data loaders and device are arguments in the sbatch script.
             attributes (dict): Dictionary containing the names of the metadata contained in the h5 image files. These names could change depending on whom created the metadata, so the specific names are arguments in the sbatch script. 
+            transfer_learning_state_dict (str): String to location of transfer learning state dictionary
         """
 
-        self.scaler = GradScaler()
-        
-        self.camera_length = conf.camera_length_key
-        self.photon_energy = conf.photon_energy_key
-        self.peak = conf.present_peaks_key
-        
-        self.model_path = transfer_learning_state_dict
+        self._transfer_learning_path = transfer_learning_state_dict
 
-        self.train_loader = None
-        self.test_loader = None
-        self.batch_size = cfg['batch size']
-        self.device = cfg['device']
-        self.epochs = cfg['epochs']
-        self.optimizer = cfg['optimizer']
-        self.scheduler = cfg['scheduler']
-        self.criterion = cfg['criterion']
-        self.learning_rate = cfg['learning rate']
-        self.model = cfg['model']
+        self._train_loader = None
+        self._test_loader = None
+        self._device = cfg['device']
+        self._epochs = cfg['epochs']
+        self._optimizer = cfg['optimizer']
+        self._scheduler = cfg['scheduler']
+        self._criterion = cfg['criterion']
+        self._learning_rate = cfg['learning rate']
+        self._model = cfg['model']        
         
-        self.plot_train_accuracy = np.zeros(self.epochs)
-        self.plot_train_loss = np.zeros(self.epochs)
-        self.plot_test_accuracy = np.zeros(self.epochs)
-        self.plot_test_loss = np.zeros(self.epochs)
+        self._lr_param_patience = cfg["lr_param_patience"]
+        self._lr_param_threshold = cfg["lr_param_threshold"]
+        self._adam_param_beta1 = cfg["adam_param_beta1"]
+        self._adam_param_beta2 = cfg["adam_param_beta2"]
+        self._adam_param_weight_decay = cfg["adam_param_weight_decay"]
+    
+        self._plot_train_accuracy = np.zeros(self._epochs)
+        self._plot_train_loss = np.zeros(self._epochs)
+        self._plot_test_accuracy = np.zeros(self._epochs)
+        self._plot_test_loss = np.zeros(self._epochs)
         
-    def assign_new_data(self, train: DataLoader, test: DataLoader) -> None:
-        """
-        This function assigns new data loaders.
+#assign new data is down below now
 
-        Args:
-            train (DataLoader): The training data loader.
-            test (DataLoader): The testing data loader.
-
-        """
-        self.train_loader = train
-        self.test_loader = test
         
     def make_training_instances(self) -> None:
         """
@@ -67,31 +60,43 @@ class TrainModel:
         - the optimizer
         - the learning rate scheduler
         - the loss criterion
+        
+        Raises:
+            AttributeError: If variable name is not found in torch
+            TypeError: If variable is not callable
+            Exception: other
         """
         try:
-            self.model = getattr(m, self.model)().to(self.device)
-            self.optimizer = getattr(optim, self.optimizer)(self.model.parameters(), lr=self.learning_rate)
-            self.scheduler = getattr(lrs, self.scheduler)(self.optimizer, mode='min', factor=0.1, patience=3, threshold=0.1)
-            self.criterion = getattr(nn, self.criterion)()
+            #build model
+            self._model = getattr(m, self._model)().to(self._device)
+            
+            #build optimizer
+            self._optimizer = getattr(optim, self._optimizer)(self._model.parameters(), lr=self._learning_rate, betas=[self._adam_param_beta1, self._adam_param_beta2], weight_decay=self._adam_param_weight_decay)            
+            
+            #build LR scheduler
+            self._scheduler = getattr(lrs, self._scheduler)(self._optimizer, mode='min', factor=0.1, patience=self._lr_param_patience, threshold=self._lr_param_threshold) # learning rate scheduler probably specific to optimizer
+            
+            #build loss function
+            self._criterion = getattr(nn, self._criterion)()
             
             print('All training objects have been created.')
             
         except AttributeError as e:
             print(f"AttributeError: {e}")
             if 'nn' in str(e):
-                print(f"Error: '{self.model_name}', '{self.criterion_name}' not found in torch.nn")
+                print(f"Error: '{self._model_name}', '{self._criterion_name}' not found in torch.nn")
             elif 'optim' in str(e):
-                print(f"Error: '{self.optimizer_name}' not found in torch.optim")
+                print(f"Error: '{self._optimizer_name}' not found in torch.optim")
             elif 'lr_scheduler' in str(e):
-                print(f"Error: '{self.scheduler_name}' not found in torch.optim.lr_scheduler")
+                print(f"Error: '{self._scheduler_name}' not found in torch.optim.lr_scheduler")
         except TypeError as e:
             print(f"TypeError: {e}")
             if 'nn' in str(e):
-                print(f"Error: '{self.model_name}' or '{self.criterion_name}' is not callable")
+                print(f"Error: '{self._model_name}' or '{self._criterion_name}' is not callable")
             elif 'optim' in str(e):
-                print(f"Error: '{self.optimizer_name}' is not callable")
+                print(f"Error: '{self._optimizer_name}' is not callable")
             elif 'lr_scheduler' in str(e):
-                print(f"Error: '{self.scheduler_name}' is not callable")
+                print(f"Error: '{self._scheduler_name}' is not callable")
         except Exception as e:
             print(f"An unexpected error occurred: {e}")
 
@@ -99,25 +104,23 @@ class TrainModel:
         """
         This function loads in the state dict of a model if provided.
         """
-        if self.model_path != None:
-            try:
-                state_dict = torch.load(self.transfer_learning_path)
-                self.model.load_state_dict(state_dict)
-                self.model = self.model.eval() 
-                self.model.to(self.device)
-                
-                print(f'The model state dict has been loaded into: {self.model.__class__.__name__}')
-                
-            except FileNotFoundError:
-                print(f"Error: The file '{self.transfer_learning_path}' was not found.")
-            except torch.serialization.pickle.UnpicklingError:
-                print(f"Error: The file '{self.transfer_learning_path}' is not a valid PyTorch model file.")
-            except RuntimeError as e:
-                print(f"Error: There was an issue loading the state dictionary into the model: {e}")
-            except Exception as e:
-                print(f"An unexpected error occurred: {e}")
+        if self._transfer_learning_path != None:
+            print("Reading transfer learning", self._transfer_learning_path)
+            self._model = u.LoadModel.load_and_return_model(self._transfer_learning_path, self._model, self._device)
+
         else:
-            print(f'There is no model state dict to load into: {self.model.__class__.__name__}')
+            print(f'There is no model state dict to load into: {self._model.__class__.__name__}')
+            
+    def assign_new_data(self, train: DataLoader, test: DataLoader) -> None: 
+        """
+        Assigns new data loaders, after load_data.py has been run
+        
+        Args:
+            train (DataLoader): DataLoader for loading data for training only
+            test (DataLoader): DataLoader for loading data for testing only
+        """
+        self._train_loader = train
+        self._test_loader = test
     
     def epoch_loop(self) -> None: 
         """
@@ -125,59 +128,61 @@ class TrainModel:
         The train and test function are used back to back per epoch to optimize then perfom a second evalution on the perfomance of the model. 
         """
          
-        print(f'Model testing and validation: {self.model.__class__.__name__}')       
-        
-        for epoch in range(self.epochs):
+        print(f'Model testing and validation: {self._model.__class__.__name__}')       
+            
+        for epoch in range(self._epochs):
             print('-- epoch '+str(epoch)) 
             print('Training ...')
-            self.train(epoch)
+            self._train(epoch)
             print('Evaluating ...')
-            self.test(epoch)
+            self._test(epoch)
             
-            # print(f"-- learning rate : {self.scheduler.get_last_lr()}")
+            # print(f"-- learning rate : {self._scheduler.get_last_lr()}")
 
             
-    def train(self, epoch:int) -> None:
+    def _train(self, epoch:int) -> None:
         
         """
         This function trains the model and prints the loss and accuracy of the training sets per epoch.
+        
+        Args:
+            epoch (int): The current epoch number for plotting model performance over number of epochs.
+            
+        Raises:
+            RuntimeError
+            AttributeError
+            TypeError
+            Exception
         """
         
         running_loss_train, accuracy_train, predictions, total_predictions = 0.0, 0.0, 0.0, 0.0
 
-        self.model.train()
+        self._model.train()
         
         try:
-            for inputs, attributes, _ in self.train_loader:
-                # inputs = inputs.unsqueeze(1).to(self.device, dtype=torch.float32)
-                inputs = inputs.to(self.device, dtype=torch.float32)
-                attributes = {key: value.to(self.device).float() for key, value in attributes.items()}
-
-                self.optimizer.zero_grad()
+            for images, camera_length, photon_energy, hit_parameter, _ in self._train_loader: 
+                inputs = torch.Tensor(images).to(self._device, dtype=torch.float32)
+                cam_len = torch.Tensor(camera_length).to(self._device, dtype=torch.float32).squeeze(1)                    
+                phot_en = torch.Tensor(photon_energy).to(self._device, dtype=torch.float32).squeeze(1)                    
+                self._optimizer.zero_grad()
+                score = self._model(inputs, cam_len, phot_en) 
+                truth = hit_parameter.reshape(-1, 1).float().to(self._device)
                 
-                with autocast(enabled=False):
-                    score = self.model(inputs, attributes[self.camera_length], attributes[self.photon_energy])
-                    truth = attributes[self.peak].reshape(-1, 1).float().to(self.device)
-                    loss = self.criterion(score, truth)
-
-                self.scaler.scale(loss).backward()
-                self.scaler.step(self.optimizer)
-                self.scaler.update()
+                loss = self._criterion(score, truth)
+                loss.backward()
+                self._optimizer.step()
 
                 running_loss_train += loss.item()
-
+                
                 predictions = (torch.sigmoid(score) > 0.5).long()
-
                 accuracy_train += (predictions == truth).float().sum()
                 total_predictions += torch.numel(truth)
-            
-            loss_train = running_loss_train / len(self.train_loader)  
-            
-            self.plot_train_loss[epoch] = loss_train
-            print(f'Train loss: {loss_train}')
 
+            loss_train = running_loss_train / len(self._train_loader)  
+            self._plot_train_loss[epoch] = loss_train
+            print(f'Train loss: {loss_train}')
             accuracy_train /= total_predictions
-            self.plot_train_accuracy[epoch] = accuracy_train
+            self._plot_train_accuracy[epoch] = accuracy_train
             print(f'Train accuracy: {accuracy_train}')
 
         except RuntimeError as e:
@@ -189,39 +194,50 @@ class TrainModel:
         except Exception as e:
             print(f"An unexpected error occurred during training: {e}")
         
-    def test(self, epoch:int) -> None:
+    def _test(self, epoch:int) -> None: #FIXME: maybe change "testing" to validation?????
         
         """ 
         This function test the model in evaluation mode and prints the loss and accuracy of the testing sets per epoch.
+        
+        Args:
+            epoch (int): The current epoch number for plotting model performance over number of epochs.
+            
+        Raises:
+            RuntimeError
+            AttributeError
+            TypeError
+            Exception
         """
         
         running_loss_test, accuracy_test, predictions, total = 0.0, 0.0, 0.0, 0.0
-        
-        self.model.eval()
+ 
+        self._model.eval()
+
         try:
             with torch.no_grad():
-                for inputs, attributes, _ in self.test_loader:
-                    # inputs = inputs.unsqueeze(1).to(self.device, dtype=torch.float32)
-                    inputs = inputs.to(self.device, dtype=torch.float32)
-                    attributes = {key: value.to(self.device, dtype=torch.float32) for key, value in attributes.items()}
-                    
-                    with autocast(enabled=False):
-                        score = self.model(inputs, attributes[self.camera_length], attributes[self.photon_energy])
-                        truth = attributes[self.peak].reshape(-1, 1).float().to(self.device)
-                        loss = self.criterion(score, truth)
-                    
+                
+                for images, camera_length, photon_energy, hit_parameter, _ in self._test_loader:
+
+                    # inputs = inputs.unsqueeze(1).to(self._device, dtype=torch.float32)
+                    inputs = torch.Tensor(images).to(self._device, dtype=torch.float32)
+                    cam_len = torch.Tensor(camera_length).to(self._device, dtype=torch.float32).squeeze(1)                    
+                    phot_en = torch.Tensor(photon_energy).to(self._device, dtype=torch.float32).squeeze(1)      
+
+                    score = self._model(inputs, cam_len, phot_en)
+                    truth = hit_parameter.reshape(-1, 1).float().to(self._device)
+
+                    loss = self._criterion(score, truth)
                     running_loss_test += loss.item()
-                    
+
                     predictions = (torch.sigmoid(score) > 0.5).long()
                     accuracy_test += (predictions == truth).float().sum()
                     total += torch.numel(truth)
 
-            loss_test = running_loss_test / len(self.test_loader)
-            self.scheduler.step(loss_test)
-            self.plot_test_loss[epoch] = loss_test
-
+            loss_test = running_loss_test / len(self._test_loader)
+            self._scheduler.step(loss_test)
+            self._plot_test_loss[epoch] = loss_test
             accuracy_test /= total
-            self.plot_test_accuracy[epoch] = accuracy_test
+            self._plot_test_accuracy[epoch] = accuracy_test
 
             print(f'Test loss: {loss_test}')
             print(f'Test accuracy: {accuracy_test}')
@@ -238,16 +254,22 @@ class TrainModel:
     def plot_loss_accuracy(self, path:str = None) -> None:
         """ 
         This function plots the loss and accuracy of the training and testing sets per epoch.
+        
+        Args:
+            path (str): The location where the plot should be saved
+            
+        Raises:
+            Exception
         """
         try:
-            plt.plot(range(self.epochs), self.plot_train_accuracy, marker='o', color='red')
-            plt.plot(range(self.epochs), self.plot_test_accuracy, marker='o', color='orange', linestyle='dashed')
-            plt.plot(range(self.epochs), self.plot_train_loss, marker='o', color='blue')
-            plt.plot(range(self.epochs), self.plot_test_loss, marker='o', color='teal', linestyle='dashed')
+            plt.plot(range(self._epochs), self._plot_train_accuracy, marker='.', color='red')
+            plt.plot(range(self._epochs), self._plot_test_accuracy, marker='.', color='orange', linestyle='dashed')
+            plt.plot(range(self._epochs), self._plot_train_loss, marker='.', color='blue')
+            plt.plot(range(self._epochs), self._plot_test_loss, marker='.', color='teal', linestyle='dashed')
             plt.grid()
             plt.xlabel('epoch')
             plt.ylabel('loss/accuracy')
-            plt.title(f'Loss and Accuracy for {self.model.__class__.__name__}')
+            plt.title(f'Loss and Accuracy for {self._model.__class__.__name__}')
             plt.legend(['accuracy train', 'accuracy test', 'loss train', 'loss test'])
 
             if path is not None:
@@ -267,11 +289,14 @@ class TrainModel:
         Save as .pt file.
 
         Args:
-            path (str): Path to save the model's state_dict.
+            path (str): The location wherew the model's state_dict should be saved.
+        
+        Raises:
+            Exception
         """
 
         try:
-            torch.save(self.model.state_dict(), path)
+            torch.save(self._model.state_dict(), path)
             print(f"Model saved to: {path}")
 
         except Exception as e:
@@ -284,4 +309,4 @@ class TrainModel:
         Returns:
             nn.Module: The trained model object. 
         """
-        return self.model
+        return self._model

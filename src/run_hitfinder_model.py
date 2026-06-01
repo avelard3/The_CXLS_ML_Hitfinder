@@ -3,6 +3,8 @@ from lib import *
 import torch
 import datetime
 from queue import Queue
+import os
+from lib import conf
 
 
 def arguments(parser: argparse.ArgumentParser) -> argparse.ArgumentParser: 
@@ -21,11 +23,11 @@ def arguments(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
     parser.add_argument('-d', '--dict', type=str, help='File path to the model state dict .pt file.')
     parser.add_argument('-o', '--output', type=str, help='Output file path only for the .lst files after classification.')
     
+    parser.add_argument('-im', '--image_location', type=str, help='Attribute name for the image')
     parser.add_argument('-cl', '--camera_length', type=str, help='Attribute name for the camera length parameter.')
     parser.add_argument('-pe', '--photon_energy', type=str, help='Attribute name for the photon energy parameter.')
     parser.add_argument('-b', '--batch', type=int, help='Batch size for data running through the model.')
-    parser.add_argument('-me', '--multievent', type=str, help='True or false value for if the input .h5 files are multievent or not.')
-    parser.add_argument('-mf', '--master_file', type=str, default=None, help='File path to the master file containing the .lst files.')
+    parser.add_argument('-g', '--geom_file', type=str, help='file path to geometry if multipanel detector, else put None') #FIXME
     
     try:
         args = parser.parse_args()
@@ -50,6 +52,7 @@ def main():
     This main function is the flow of logic for running a trained model. Here parameter arugments are assigned to variables.
     Classes for data management and using the model are declared and the relavent functions for the process are called following declaration in blocks. 
     """
+    #tic
     now = datetime.datetime.now()
     formatted_date_time = now.strftime("%m%d%y-%H:%M")
     print(f'Starting hitfinder model: {formatted_date_time}')
@@ -63,25 +66,10 @@ def main():
     model_arch = args.model
     model_path = args.dict
     save_output_list = args.output 
-    
-    camera_length = args.camera_length
-    photon_energy = args.photon_energy
-    peaks = None
+
     batch_size = args.batch
-    multievent = args.multievent
+    path_to_geom = args.geom_file
     
-    # Temperary hold
-    transform = False
-    
-    master_file = args.master_file
-    if master_file == 'None' or master_file == 'none':
-        master_file = None
-    
-    attributes = {
-        'clen': camera_length,
-        'photon_energy': photon_energy,
-        'peak': peaks
-    } 
     
     cfg = {
         'model': model_arch,
@@ -89,39 +77,34 @@ def main():
         'save_output_list': save_output_list,
         'device': device,
     }
+
     
-    # path_manager = data_path_manager.Paths(h5_file_list, attributes, multievent, master_file)
-    if multievent == 'True' or multievent == 'true':
-        path_manager = load_data_paths.PathsMultiEvent(h5_file_list,  attributes,  master_file)
-    else:
-        path_manager = load_data_paths.PathsSingleEvent(h5_file_list, attributes, master_file)
     
-    path_manager.read_file_paths()
-    h5_file_path_queue = path_manager.get_file_path_queue()
+    executing_mode = 'running'
+    path_manager = load_paths.Paths(h5_file_list, executing_mode, path_to_geom) # init Paths object
+
+    path_manager.run_paths() 
     
-    queue_size = h5_file_path_queue.qsize()
     
-    process_data = run_model.RunModel(cfg, attributes)
-    process_data.make_model_instance()
-    process_data.load_model()
+    process_data = run_model.RunModel(cfg) # init RunModel Object
+    process_data.make_model_instance() 
+    process_data.load_model() 
+
+    vds_dataset = path_manager.get_vds() 
+    h5_file_paths = path_manager.get_file_names() 
+
+    data_manager = load_data.Data(h5_file_paths, executing_mode) #init Data object
+
+    create_data_loader = load_data.CreateDataLoader(data_manager, batch_size) #init CreateDataLoader object that creates DataLoader object
+    create_data_loader.run_data_loader() #rename the loader, but single
+
+    data_loader = create_data_loader.get_run_data_loader() 
+
+    process_data.classify_data(data_loader) 
     
-    while not h5_file_path_queue.empty():
-        path_manager.process_files()
-        
-        h5_file_paths = path_manager.get_h5_file_paths()
-        h5_tensor_list = path_manager.get_h5_tensor_list()
-        h5_attribute_list = path_manager.get_h5_attribute_list()
-        events = path_manager.get_event_count()
-        
-        data_manager = prep_loaded_data.Data(h5_tensor_list, h5_attribute_list, h5_file_paths, transform)
-        data_manager.inference_data_loader(batch_size)
-        data_loader = data_manager.get_inference_data_loader()
-        
-        process_data.classify_data(data_loader) 
-        
-        
-    process_data.create_model_output_lst_files()
-    process_data.output_verification(queue_size, events)
+    process_data.create_model_output_lst_files() 
+    
+    os.remove("running_vds_delete_me.h5")
 
 if __name__ == '__main__':
     main()
