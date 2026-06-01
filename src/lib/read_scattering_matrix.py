@@ -13,14 +13,14 @@ class ScatteringMatrix():
         Has functions to read the geometry files, calculate the q_vector, create a new array and insert the data into new matrix using that information
 
         Args:
-            file_name (str): name of file that stores geometry information
-            file_path (str): path to file that stores geometry information
-            data_file_path_name (np.array): all images in an array
+            geom_file_path (str): file with geometry information
+            data_file_path_name (np.array): numpy array containing all image data
         """
+        #FIXME this should be put through significantly more testing
         self._current_geom_file_path = geom_file_path
 
         self.read_geom_file()
-        self.calculate_q_vec()
+        self.calculate_vectors()
         self.create_new_array()
         self.insert_data_into_new_matrix(data_file_path_name)
         self.graph_first_data_piecetogether()
@@ -59,7 +59,7 @@ class ScatteringMatrix():
             # default photon_energy = 1.602e-15 according to reborn, but in example reborn used wavelength = 1.5e-10 #FIXME
             # Likely unimportant because qvec isn't used in anything currently
             self._b_vec = np.array([0.0, 0.0, 1.0]) # Default that reborn uses
-            self._wavelength = 1.5e-10 
+            self._wavelength = 1.5e-10 #FIXME wavelength is irrelevant now
             self._t_vec_arr = np.array(self._t_vec)
             self._ss_vec_arr = (np.array(self._ss_vec))
             self._fs_vec_arr = (np.array(self._fs_vec))
@@ -73,9 +73,9 @@ class ScatteringMatrix():
         
         
 
-    def calculate_q_vec(self):
+    def calculate_vectors(self):
         """
-        Calculate q_vector based on file geometry
+        Calculate vector based on file geometry
         """
                 
         # Everything that it multiplied should have the shape (num_panels, vector_length, n_fs_int, n_ss_int)
@@ -113,12 +113,12 @@ class ScatteringMatrix():
             self._q_vec = ((2*np.pi)/self._wavelength) * ((self._v_vec/npla.norm(self._v_vec)) - b_vec_expanded) 
             
         except Exception as e:
-            print(f"An unexpected error occurred while calculating the q-vector: {e}")
+            print(f"An unexpected error occurred while calculating vectors: {e}")
 
 
     def create_new_array(self):
         """
-        Create new array that's the correct size for the new image
+        Create new array that is correct size for the new image
         """
         # Calculate the dimensions in real space and pixel space to determine the necessary size array to hold all the panels from the detector
         try:
@@ -232,6 +232,7 @@ class ScatteringMatrix():
         plt.savefig(path_and_name_to_save)
 
     def graph_first_data_piecetogether(self):
+        # Create a graph of all the panels put together for the first image
         smaller_array = self._final_array[1,:,:]
         fig, ax = plt.subplots()
         heatmap = ax.imshow(smaller_array, norm=colors.SymLogNorm(linthresh=100, linscale=1, base=10), cmap='viridis', origin = 'lower')
@@ -252,6 +253,7 @@ class ScatteringMatrix():
         plt.savefig(__path__)
         
     def graph_heatmap_with_vectors(self):
+        #graph panel piece together with vectors overlayed to check how image is pieced together
         smaller_array = self._final_array[1,:,:]
         fig, ax = plt.subplots()
         heatmap = ax.imshow(smaller_array, norm=colors.SymLogNorm(linthresh=100, linscale=1, base=10), cmap='viridis', origin = 'lower')

@@ -124,12 +124,13 @@ class RunModel:
             print(f"An unexpected error occurred while creating .lst files: {e}")
         
     def output_verification(self, size: int, events: int) -> None:
+        #FIXME Delete this function? It's not used anywhere and isn't up-to-date?
         """
         Verify that the number of input file paths matches the sum of the output file paths by comparing the size of input file list to sum of two output file lists.
         
         Args:
-            size (int): #FIXME IDK
-            events (int): #FIXME IDK
+            size (int): number of input images (?)
+            events (int): number of images sorted (?)
         """
         if size == len(self._list_containing_peaks) // events + len(self._list_not_containing_peaks) // events:
             print("There is the same amount of input files as output files.")
@@ -138,16 +139,3 @@ class RunModel:
             print(f'Input H5 files: {size}\nOutput peak files: {len(self._list_containing_peaks)}\nOutput empty files: {len(self._list_not_containing_peaks)}')
 
         
-    def output_verification(self, size: int, events: int) -> None:
-        """
-        Verify that the number of input file paths matches the sum of the output file paths by comparing the size of input file list to sum of two output file lists.
-        
-        Args:
-            size (int): #FIXME IDK
-            events (int): #FIXME IDK
-        """
-        if size == len(self._list_containing_peaks) // events + len(self._list_not_containing_peaks) // events:
-            print("There is the same amount of input files as output files.")
-        else:
-            print("OUTPUT VERIFICATION FAILED: The input paths do not match the output paths.")           
-            print(f'Input H5 files: {size}\nOutput peak files: {len(self._list_containing_peaks)}\nOutput empty files: {len(self._list_not_containing_peaks)}')

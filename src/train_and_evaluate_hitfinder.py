@@ -28,6 +28,7 @@ def arguments(parser) -> argparse.ArgumentParser:
     parser.add_argument('-tl', '--transfer_learn', type=str, default=None, help='File path to state dict file for transfer learning.' )
     parser.add_argument('-g', '--geom_file', type=str, help='file path to geometry if multipanel detector, else put None')
     
+    parser.add_argument('-hfp', '--hit_file_path_name', type=str, help='Path to hit files if not written into training files')
     try:
         args = parser.parse_args()
         print("Parsed arguments:")
@@ -76,6 +77,7 @@ def main() -> None:
     path_to_geom = args.geom_file
     
     transfer_learning_state_dict = args.transfer_learn
+    hit_file_path_name = args.hit_file_path_name
 
 
     # Transfer learning (yes or no)
@@ -102,14 +104,17 @@ def main() -> None:
     executing_mode = 'training'
     path_manager = load_paths.Paths(h5_file_list, executing_mode, path_to_geom) #init Paths object
     path_manager.run_paths() 
-    training_manager = train_model.TrainModel(cfg, transfer_learning_state_dict) #init TrainModel object
-    training_manager.make_training_instances() 
-    training_manager.load_model_state_dict() 
     h5_file_paths = path_manager.get_file_names() 
+    
     data_manager = load_data.Data(h5_file_paths, executing_mode) #init Data object
     create_data_loader = load_data.CreateDataLoader(data_manager, batch_size) #init CreateDataLoader object that create DataLoader object
     create_data_loader.split_training_data()   
     train_loader, test_loader = create_data_loader.get_training_data_loaders() 
+    
+    training_manager = train_model.TrainModel(cfg, transfer_learning_state_dict) #init TrainModel object
+    training_manager.make_training_instances() 
+    training_manager.load_model_state_dict() 
+    
     training_manager.assign_new_data(train_loader, test_loader) 
     training_manager.epoch_loop() 
     training_manager.plot_loss_accuracy(training_results) 

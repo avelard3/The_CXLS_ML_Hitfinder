@@ -25,8 +25,9 @@ class Paths:
 
         Args:
             list_path (list): Path to an lst file with h5 file paths. 
-            h5_location (dict): The image or hyperparameter path name in the h5 file
             executing_mode (str): Assert whether hitfinder is in training mode or inference (running) mode
+            path_to_geom (dict): Path to geometry file for multi-panel detectors
+            
 
         """
         
@@ -45,7 +46,7 @@ class Paths:
 
         
     def run_paths(self) -> None:
-        """ FIXME Fancy Title with Better Words
+        """Wrapper function for functions for loading paths
         
         This function calls the functions that set up the files to be read and then maps the data to a virtual dataset (VDS)
         """
@@ -241,7 +242,7 @@ class Paths:
                                             og_filename = self._source_file
                                             og_filename = og_filename.strip()
                                             og_filename = os.path.basename(og_filename)
-                                            hit_file = f"/scratch/avelard3/NSLS-2019-August/h5_hits/{og_filename}"
+                                            hit_file = f"/scratch/avelard3/NSLS-2019-August/h5_hits/{og_filename}" #FIXME needs to be an input
                                         else:
                                             hit_file = self._source_file
                                         
@@ -249,11 +250,8 @@ class Paths:
 
                                         with h5.File(hit_file, 'r') as h5_hit_file:
                                             hit_parameter_location = self._find_path_in_h5(conf.possible_hit_parameter_paths, h5_hit_file)     
-
-
-                                        with h5.File(hit_file, 'r') as hf:                           
-        
-                                            vsource_hit_parameter = h5.VirtualSource(hf[hit_parameter_location])
+                                            vsource_hit_parameter = h5.VirtualSource(h5_hit_file[hit_parameter_location])        
+                                            
 
                                         self._hit_parameter_layout[k:(k+self._dim_and_shape_array[i,0]),0] = vsource_hit_parameter               
                                 else:

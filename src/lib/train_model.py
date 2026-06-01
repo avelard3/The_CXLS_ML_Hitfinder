@@ -43,26 +43,13 @@ class TrainModel:
         self._adam_param_beta1 = cfg["adam_param_beta1"]
         self._adam_param_beta2 = cfg["adam_param_beta2"]
         self._adam_param_weight_decay = cfg["adam_param_weight_decay"]
-        
-
-        
+    
         self._plot_train_accuracy = np.zeros(self._epochs)
         self._plot_train_loss = np.zeros(self._epochs)
         self._plot_test_accuracy = np.zeros(self._epochs)
         self._plot_test_loss = np.zeros(self._epochs)
         
-        
-        
-    def assign_new_data(self, train: DataLoader, test: DataLoader) -> None:
-        """
-        Assigns new data loaders. 
-        
-        Args:
-            train (DataLoader): DataLoader for loading data for training only
-            test (DataLoader): DataLoader for loading data for testing only
-        """
-        self._train_loader = train
-        self._test_loader = test
+#assign new data is down below now
 
         
     def make_training_instances(self) -> None:
@@ -80,10 +67,17 @@ class TrainModel:
             Exception: other
         """
         try:
+            #build model
             self._model = getattr(m, self._model)().to(self._device)
+            
+            #build optimizer
             self._optimizer = getattr(optim, self._optimizer)(self._model.parameters(), lr=self._learning_rate, betas=[self._adam_param_beta1, self._adam_param_beta2], weight_decay=self._adam_param_weight_decay)            
-            self._scheduler = getattr(lrs, self._scheduler)(self._optimizer, mode='min', factor=0.1, patience=self._lr_param_patience, threshold=self._lr_param_threshold) # learning rate scheduler #probably specific to optimizer
-            self._criterion = getattr(nn, self._criterion)() # loss function. should probably leave that alone for now
+            
+            #build LR scheduler
+            self._scheduler = getattr(lrs, self._scheduler)(self._optimizer, mode='min', factor=0.1, patience=self._lr_param_patience, threshold=self._lr_param_threshold) # learning rate scheduler probably specific to optimizer
+            
+            #build loss function
+            self._criterion = getattr(nn, self._criterion)()
             
             print('All training objects have been created.')
             
@@ -116,6 +110,17 @@ class TrainModel:
 
         else:
             print(f'There is no model state dict to load into: {self._model.__class__.__name__}')
+            
+    def assign_new_data(self, train: DataLoader, test: DataLoader) -> None: 
+        """
+        Assigns new data loaders, after load_data.py has been run
+        
+        Args:
+            train (DataLoader): DataLoader for loading data for training only
+            test (DataLoader): DataLoader for loading data for testing only
+        """
+        self._train_loader = train
+        self._test_loader = test
     
     def epoch_loop(self) -> None: 
         """
@@ -189,7 +194,7 @@ class TrainModel:
         except Exception as e:
             print(f"An unexpected error occurred during training: {e}")
         
-    def _test(self, epoch:int) -> None:
+    def _test(self, epoch:int) -> None: #FIXME: maybe change "testing" to validation?????
         
         """ 
         This function test the model in evaluation mode and prints the loss and accuracy of the testing sets per epoch.

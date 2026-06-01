@@ -1,6 +1,10 @@
 .vscode
 .ipynb_checkpoints
+__pycache__/
+*.py[cod]
 /sbatch_scripts/
 src/lib/__pycache__/
 /test_functions/
 /parameters.h5/
+docs/_build/
+docs/generated/

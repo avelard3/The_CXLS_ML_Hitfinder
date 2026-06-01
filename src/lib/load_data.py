@@ -15,7 +15,7 @@ class Data(Dataset):
         Initialize the Data object with classification and attribute data.
 
         Args:
-            file_list (list): list of paths to every file being run
+            file_list (list): list of paths to every data file being run
             executing mode (str): Indicates whether hitfinder is in training or running mode
         """
         self._run_loader = None
@@ -23,7 +23,8 @@ class Data(Dataset):
         self._executing_mode = executing_mode
         self._vds_path = f'{self._executing_mode}_vds_delete_me.h5'
         
-        # add function that does this, make NONE in init
+        #TODO add function that does this, make NONE in init
+        ###### But i don't think it makes sense to do this, i feel like that will just make the code harder to read
         self.file = h5.File(self._vds_path, 'r')
         self._images = self.file['vsource_image']
         self._camera_length = self.file['vsource_camera_length']
@@ -45,24 +46,31 @@ class Data(Dataset):
             idx (int): index of item that is being got
             
         Returns:
-            tuple[h5py.Dataset, h5py.Dataset, h5py.Dataset, h5py.Dataset, list[str]]: the data stored at that index for images, camera_length, photon_energy, hit_parameter and the file in the list that is currently being accessed
+            tuple[h5py.Dataset, h5py.Dataset, h5py.Dataset, h5py.Dataset, list[str]]: data stored at specific index for
+                 [image, camera_length, photon_energy, hit_parameter, file in list currently being read]
+
         """
-        x = 0 
         try:
             self._file_index = self._file_list[idx]
 
             #if statement with return only one thing in masterfile metadata #! 
 
             if self._executing_mode == "running":
+                #hit_parameter should be zero while running, but have values while training
                 self._hit_parameter = np.empty(self._camera_length.shape)
             return self._images[idx], self._camera_length[idx], self._photon_energy[idx], self._hit_parameter[idx], self._file_list[idx] #change
 
-                #*
         except Exception as e:
             print(f"An unexpected error occurred while getting item at index {idx}: {e} and this is with file {self._file_index}")
+    
 
-    def graph_image(self, array):   
-        """Plot an image to see what an example of the data looks like to check orientation"""     
+    def graph_image(self, array):  
+        #FIXME not currently in use, but seems very useful 
+        """Plot an image to see what an example of the data looks like to check orientation
+        
+        Args:
+            array(nd.array): Data that will be graphed
+        """     
         array = array[0,:,:]
         fig, ax = plt.subplots()
         heatmap = ax.imshow(array, norm=colors.SymLogNorm(linthresh=100, linscale=1, base=10), cmap='viridis', origin = 'lower')
@@ -76,6 +84,9 @@ class CreateDataLoader():
     def __init__(self, hitfinder_dataset: Data, batch_size: int) -> None:
         
         """Takes a Data object as an input and uses DataLoader to split data into training and testing, or into running. Also includes getters
+        Args:
+            hitfinder_dataset(Data): dataset to be processed
+            batch_size: batch size to split image data based on
         """
         
         # Global variables that are inputs
@@ -121,6 +132,8 @@ class CreateDataLoader():
 
     
     def run_data_loader(self) -> None: 
+        #FIXME I'm not convinced that this order of operations makes sense when you compare test/train and run
+        #FIXME at the very least the naming convention doesn't make sense with split training data
         """
         Puts the run data into a dataloader for batch processing.
         """
