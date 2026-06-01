@@ -151,7 +151,6 @@ class CNN_with_Optunas_Best(nn.Module): #
             x = F.relu(x)
             x = self._dropout(x)
         
-        x = F.relu(x) # tbh i dont think this is necessary but im not sure and i feel like it should be so here we are    
         return x
 
 #*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#

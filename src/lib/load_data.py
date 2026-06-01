@@ -61,7 +61,9 @@ class Data(Dataset):
             return self._images[idx], self._camera_length[idx], self._photon_energy[idx], self._hit_parameter[idx], self._file_list[idx] #change
 
         except Exception as e:
-            print(f"An unexpected error occurred while getting item at index {idx}: {e} and this is with file {self._file_index}")
+            # Surface the error instead of returning None which breaks the DataLoader collate
+            msg = f"Error getting item at index {idx}: {e}. file: {getattr(self, '_file_index', 'unknown')}"
+            raise RuntimeError(msg)
     
 
     def graph_image(self, array):  
