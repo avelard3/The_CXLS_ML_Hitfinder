@@ -246,8 +246,6 @@ class Paths:
                                         else:
                                             hit_file = self._source_file
                                         
-                                        #TODO: can i combine these two?? with statements
-
                                         with h5.File(hit_file, 'r') as h5_hit_file:
                                             hit_parameter_location = self._find_path_in_h5(conf.possible_hit_parameter_paths, h5_hit_file)     
                                             vsource_hit_parameter = h5.VirtualSource(h5_hit_file[hit_parameter_location])        
