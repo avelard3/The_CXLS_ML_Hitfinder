@@ -11,8 +11,8 @@ Use the project environment. If Sphinx is not already available in that
 environment, install it there:
 
 .. code-block:: bash
-   module load mamba/latest
-   source activate hitfinder_sol_env
+
+   conda activate hitfinder_sol_env
    python -m pip install sphinx
 
 Build the Docs
