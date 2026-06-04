@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>lib.load_paths &#8212; The CXLS ML Hitfinder  documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="../../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../../_static/alabaster.css?v=27fed22d" />
+    <script src="../../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for lib.load_paths</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">h5py</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">h5</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Optional</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">torch.utils.data</span><span class="w"> </span><span class="kn">import</span> <span class="n">Dataset</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">datetime</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">lib.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">SpecialCaseFunctions</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.</span><span class="w"> </span><span class="kn">import</span> <span class="n">conf</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.</span><span class="w"> </span><span class="kn">import</span> <span class="n">read_scattering_matrix</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">tempfile</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.colors</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">colors</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span> 
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">scipy.constants</span><span class="w"> </span><span class="kn">import</span> <span class="n">h</span><span class="p">,</span> <span class="n">c</span><span class="p">,</span> <span class="n">e</span>
+<span class="c1"># from .The_CXLS_ML_Hitfinder.src.lib import read_scattering_matrix</span>
+<span class="c1">#</span>
+
+
+<div class="viewcode-block" id="Paths">
+<a class="viewcode-back" href="../../generated/lib.load_paths.html#lib.load_paths.Paths">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">Paths</span><span class="p">:</span>
+<div class="viewcode-block" id="Paths.__init__">
+<a class="viewcode-back" href="../../generated/lib.load_paths.html#lib.load_paths.Paths.__init__">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">list_path</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span> <span class="n">executing_mode</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">path_to_geom</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Constructor for Paths class</span>
+
+<span class="sd">        This function instantiates all variables necessary for Paths class</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            list_path (list): Path to an lst file with h5 file paths. </span>
+<span class="sd">            executing_mode (str): Assert whether hitfinder is in training mode or inference (running) mode</span>
+<span class="sd">            path_to_geom (dict): Path to geometry file for multi-panel detectors</span>
+<span class="sd">            </span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">_list_path</span> <span class="o">=</span> <span class="n">list_path</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_h5_tensor_list</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_h5_attr_list</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_h5_file_list</span> <span class="o">=</span> <span class="p">[],</span> <span class="p">[],</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_loaded_h5_tensor</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_h5_file_path</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_open_h5_file</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_attribute_holding</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_number_of_events</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_executing_mode</span> <span class="o">=</span> <span class="n">executing_mode</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_path_to_geom</span> <span class="o">=</span> <span class="n">path_to_geom</span>
+        
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_path_to_geom</span> <span class="o">==</span> <span class="s2">&quot;None&quot;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_path_to_geom</span> <span class="o">=</span> <span class="kc">None</span></div>
+
+
+        
+<div class="viewcode-block" id="Paths.run_paths">
+<a class="viewcode-back" href="../../generated/lib.load_paths.html#lib.load_paths.Paths.run_paths">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">run_paths</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Wrapper function for functions for loading paths</span>
+<span class="sd">        </span>
+<span class="sd">        This function calls the functions that set up the files to be read and then maps the data to a virtual dataset (VDS)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_prepare_file_info</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_map_dataset_to_vds</span><span class="p">()</span></div>
+
+            
+    <span class="k">def</span><span class="w"> </span><span class="nf">_prepare_file_info</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Pre-processing file info for input into VDS.</span>
+<span class="sd">        </span>
+<span class="sd">        This function checks and stores dimensions/shape of image and metadata and storing this information in a vds file</span>
+<span class="sd">        </span>
+<span class="sd">        Raises:</span>
+<span class="sd">            OSError &amp; FileNotFoundError: If there is an issue reading a particular file</span>
+<span class="sd">            Exception: Other</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># add decorators</span>
+        
+        <span class="k">try</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">vds_name</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_executing_mode</span><span class="si">}</span><span class="s1">_vds_delete_me.h5&#39;</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Creating vds with name: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">vds_name</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+                    
+            <span class="c1"># Dynamically determine the number of images</span>
+            <span class="n">file_names_only</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="c1">#Check dimensions and shape of each h5 file &amp; store in np.array</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_list_path</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">lst_file</span><span class="p">:</span> <span class="c1"># open lst file</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_dim_and_shape_list</span> <span class="o">=</span> <span class="p">[]</span> <span class="c1">#and use list_name.append([img_shape which has num of img in h5, img_dim]) to add more data</span>
+                <span class="n">num_bad_files</span> <span class="o">=</span> <span class="mi">0</span>
+                <span class="n">num_complete_files</span> <span class="o">=</span> <span class="mi">0</span>
+                <span class="n">num_total_files</span> <span class="o">=</span> <span class="mi">0</span>
+                
+                <span class="k">for</span> <span class="n">source_file</span> <span class="ow">in</span> <span class="n">lst_file</span><span class="p">:</span> <span class="c1"># open one of h5 files in lst file</span>
+                    <span class="n">source_file</span> <span class="o">=</span> <span class="n">source_file</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+                    <span class="n">num_total_files</span> <span class="o">+=</span> <span class="mi">1</span>    
+                    <span class="k">if</span> <span class="s2">&quot;master&quot;</span> <span class="ow">in</span> <span class="n">source_file</span><span class="o">.</span><span class="n">lower</span><span class="p">():</span>
+                        <span class="n">num_total_files</span> <span class="o">-=</span><span class="mi">1</span>
+                        <span class="c1"># if self._executing_mode == &#39;training&#39;:</span>
+                        <span class="c1">#     raise NotImplementedError(&quot;Cannot train with master file&quot;)</span>
+                        <span class="k">continue</span>
+                        
+                    <span class="k">try</span><span class="p">:</span>    
+                        <span class="k">with</span> <span class="n">h5</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="n">source_file</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span> <span class="c1"># use h5.File to read the h5 file that you just opened</span>
+                            
+                            <span class="n">image_location</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_find_path_in_h5</span><span class="p">(</span><span class="n">conf</span><span class="o">.</span><span class="n">possible_image_paths</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span>
+                            
+                            <span class="n">dataset_shape</span> <span class="o">=</span> <span class="n">f</span><span class="p">[</span><span class="n">image_location</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span>
+                            <span class="n">image_file_dim</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">dataset_shape</span><span class="p">)</span>
+                            <span class="k">if</span> <span class="n">image_file_dim</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span> <span class="c1">#Single Event</span>
+                                <span class="bp">self</span><span class="o">.</span><span class="n">_dim_and_shape_list</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="n">image_file_dim</span><span class="p">])</span>
+                            <span class="k">elif</span> <span class="n">image_file_dim</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span> <span class="c1">#Multi Event</span>
+                                <span class="bp">self</span><span class="o">.</span><span class="n">_dim_and_shape_list</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">dataset_shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">image_file_dim</span><span class="p">])</span>
+                            <span class="k">else</span><span class="p">:</span>
+                                <span class="k">raise</span> <span class="ne">IndexError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;ERROR: Unexpected image file dimensions, expected shape of 2 or 3, but instead found </span><span class="si">{</span><span class="n">image_file_dim</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                                
+                        <span class="n">f</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+                        <span class="n">file_names_only</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">source_file</span><span class="p">)</span>
+                        <span class="n">num_complete_files</span> <span class="o">+=</span><span class="mi">1</span>
+                        
+                        
+                    <span class="k">except</span> <span class="p">(</span><span class="ne">OSError</span><span class="p">,</span> <span class="ne">FileNotFoundError</span><span class="p">)</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                        <span class="n">num_bad_files</span> <span class="o">+=</span> <span class="mi">1</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">_dim_and_shape_list</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">])</span>
+                        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Skipping </span><span class="si">{</span><span class="n">source_file</span><span class="si">}</span><span class="s2"> due to an error: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">num_bad_files</span><span class="si">}</span><span class="s2"> files have been skipped out of the </span><span class="si">{</span><span class="n">num_complete_files</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">num_bad_files</span><span class="si">}</span><span class="s2"> processed so far.&quot;</span><span class="p">)</span>
+                    
+            <span class="n">lst_file</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Successfully prepared </span><span class="si">{</span><span class="n">num_complete_files</span><span class="si">}</span><span class="s2"> out of the </span><span class="si">{</span><span class="n">num_total_files</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_dim_and_shape_array</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_dim_and_shape_list</span><span class="p">)</span> <span class="c1">#shape is [num_images_in_file, 2 or 3 for multievent]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_total_num_images</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_dim_and_shape_array</span><span class="p">[:,</span><span class="mi">0</span><span class="p">])</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;The total number of images that will be processed is&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_total_num_images</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_height</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_width</span> <span class="o">=</span> <span class="n">conf</span><span class="o">.</span><span class="n">required_image_size</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_image_shape</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_total_num_images</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_height</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_width</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_attr_shape</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_total_num_images</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span> 
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;An unexpected error occurred while preparing file info for loading paths: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_map_dataset_to_vds</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Create a virtual dataset to store image and metadata</span>
+<span class="sd">        </span>
+<span class="sd">        This function maps the images and metadata into a virtual dataset (with different methods depending on training/running and data format)</span>
+<span class="sd">        Creates a Virtual Layout based on dimensions from _prepare_file_info and creates a Virtual Source based on data, maps Virtual Source to Virtual Layout then creates the virtual dataset.</span>
+<span class="sd">        </span>
+<span class="sd">        Raises:</span>
+<span class="sd">            OSError &amp; FileNotFoundError: If there is an issue reading a particular file</span>
+<span class="sd">            Exception: Other</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span> 
+            <span class="k">with</span> <span class="n">h5</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">vds_name</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">vds_file</span><span class="p">:</span> <span class="c1">#start creating vds file</span>
+                <span class="c1"># Virtual layout for images   </span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_image_layout</span> <span class="o">=</span> <span class="n">h5</span><span class="o">.</span><span class="n">VirtualLayout</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_image_shape</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s1">&#39;float32&#39;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_camera_length_layout</span> <span class="o">=</span> <span class="n">h5</span><span class="o">.</span><span class="n">VirtualLayout</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_attr_shape</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s1">&#39;float32&#39;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_photon_energy_layout</span> <span class="o">=</span> <span class="n">h5</span><span class="o">.</span><span class="n">VirtualLayout</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_attr_shape</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s1">&#39;float32&#39;</span><span class="p">)</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_executing_mode</span> <span class="o">==</span> <span class="s1">&#39;training&#39;</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_hit_parameter_layout</span> <span class="o">=</span> <span class="n">h5</span><span class="o">.</span><span class="n">VirtualLayout</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_attr_shape</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s1">&#39;float32&#39;</span><span class="p">)</span>
+                <span class="c1"># Loop through each source file and map it to the virtual dataset</span>
+                <span class="n">k</span><span class="o">=</span><span class="mi">0</span>
+                <span class="n">master_files_encountered</span> <span class="o">=</span> <span class="mi">0</span>      
+                <span class="n">num_bad_files</span> <span class="o">=</span> <span class="mi">0</span>
+                <span class="n">num_complete_files</span> <span class="o">=</span> <span class="mi">0</span>
+                <span class="n">num_total_files</span> <span class="o">=</span> <span class="mi">0</span>      
+                
+                <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_list_path</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">lst_file</span><span class="p">:</span> <span class="c1"># open list file</span>
+                    <span class="n">most_recent_master</span> <span class="o">=</span> <span class="kc">None</span>
+                    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">source_file</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">lst_file</span><span class="p">):</span> <span class="c1"># for each file numbered up to i in the list file (aka: for i in range(len(lst_file)): source_file = lst_file[i])</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">_source_file</span> <span class="o">=</span> <span class="n">source_file</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> 
+                        <span class="n">num_total_files</span> <span class="o">+=</span> <span class="mi">1</span>
+                         <span class="c1"># add the current file name &amp; number to a list to keep track of images</span>
+                        <span class="k">if</span> <span class="s2">&quot;master&quot;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_source_file</span><span class="o">.</span><span class="n">lower</span><span class="p">():</span>
+                            <span class="n">most_recent_master</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_source_file</span>
+                            <span class="n">num_total_files</span> <span class="o">-=</span><span class="mi">1</span>
+                            <span class="n">master_files_encountered</span> <span class="o">+=</span> <span class="mi">1</span>
+                            <span class="k">with</span> <span class="n">h5</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_source_file</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span> <span class="c1">#for master file, figure out where images are stored   </span>
+                                <span class="n">camera_length_location</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_find_path_in_h5</span><span class="p">(</span><span class="n">conf</span><span class="o">.</span><span class="n">possible_camera_length_paths</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span> 
+                                <span class="n">photon_energy_location</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_find_path_in_h5</span><span class="p">(</span><span class="n">conf</span><span class="o">.</span><span class="n">possible_photon_energy_paths</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span> 
+                            <span class="n">f</span><span class="o">.</span><span class="n">close</span><span class="p">()</span> 
+                            <span class="k">continue</span>   
+                        <span class="k">try</span><span class="p">:</span>
+                            <span class="k">with</span> <span class="n">h5</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_source_file</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span> <span class="c1"># using h5.File to read the current h5 file in the list</span>
+                                <span class="n">i</span> <span class="o">=</span> <span class="n">i</span> <span class="o">-</span> <span class="n">master_files_encountered</span>  
+                                <span class="n">image_location</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_find_path_in_h5</span><span class="p">(</span><span class="n">conf</span><span class="o">.</span><span class="n">possible_image_paths</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span> 
+                                <span class="n">image_data_holding</span> <span class="o">=</span> <span class="n">f</span><span class="p">[</span><span class="n">image_location</span><span class="p">]</span>
+                                <span class="k">if</span> <span class="n">most_recent_master</span> <span class="o">!=</span> <span class="kc">None</span><span class="p">:</span>
+                                    <span class="n">mrm</span> <span class="o">=</span> <span class="n">h5</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="n">most_recent_master</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span>
+                                    <span class="n">goal_size</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_dim_and_shape_array</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="mi">0</span><span class="p">],</span> <span class="mi">1</span><span class="p">)</span> <span class="c1">## I think i might not be updating correctly because of the master files #############</span>
+                                    <span class="n">current_master_camera_length</span> <span class="o">=</span> <span class="n">mrm</span><span class="p">[</span><span class="n">camera_length_location</span><span class="p">][()]</span>
+                                    <span class="n">master_camera_length</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">(</span><span class="n">goal_size</span><span class="p">,</span> <span class="n">current_master_camera_length</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s1">&#39;float32&#39;</span><span class="p">)</span>
+                                    <span class="n">current_master_photon_energy</span> <span class="o">=</span> <span class="n">mrm</span><span class="p">[</span><span class="n">photon_energy_location</span><span class="p">][()]</span>
+                                    <span class="n">master_photon_energy</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">(</span><span class="n">goal_size</span><span class="p">,</span> <span class="n">current_master_photon_energy</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s1">&#39;float32&#39;</span><span class="p">)</span>
+                                    
+                                    <span class="k">with</span> <span class="n">h5</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;camera_length</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s1">.h5&#39;</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                                        <span class="n">dset</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">camera_length_location</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="n">goal_size</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s1">&#39;float32&#39;</span><span class="p">)</span>
+                                        <span class="n">dset</span><span class="p">[:]</span> <span class="o">=</span> <span class="n">master_camera_length</span>
+                                        <span class="n">vsource_camera_length</span> <span class="o">=</span> <span class="n">h5</span><span class="o">.</span><span class="n">VirtualSource</span><span class="p">(</span><span class="n">dset</span><span class="p">)</span>
+                                    <span class="k">with</span> <span class="n">h5</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;photon_energy</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s1">.h5&#39;</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                                        <span class="n">dset</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="n">photon_energy_location</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="n">goal_size</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s1">&#39;float32&#39;</span><span class="p">)</span>                                        
+                                        <span class="n">dset</span><span class="p">[:]</span> <span class="o">=</span> <span class="n">master_photon_energy</span>
+                                        <span class="n">vsource_photon_energy</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_define_photon_energy</span><span class="p">(</span><span class="n">dset</span><span class="p">,</span> <span class="n">photon_energy_location</span><span class="p">)</span> <span class="c1"># Check if it&#39;s photon_energy or wavelength and create a Virtual Source out of it</span>
+                                
+                                <span class="k">else</span><span class="p">:</span>
+                                    <span class="n">camera_length_location</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_find_path_in_h5</span><span class="p">(</span><span class="n">conf</span><span class="o">.</span><span class="n">possible_camera_length_paths</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span> 
+                                    <span class="n">vsource_camera_length</span> <span class="o">=</span> <span class="n">h5</span><span class="o">.</span><span class="n">VirtualSource</span><span class="p">(</span><span class="n">f</span><span class="p">[</span><span class="n">camera_length_location</span><span class="p">])</span>
+                                    <span class="n">photon_energy_location</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_find_path_in_h5</span><span class="p">(</span><span class="n">conf</span><span class="o">.</span><span class="n">possible_photon_energy_paths</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span>
+                                    <span class="n">vsource_photon_energy</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_define_photon_energy</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">photon_energy_location</span><span class="p">)</span>
+                                                    
+                                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_path_to_geom</span> <span class="o">!=</span> <span class="kc">None</span><span class="p">:</span> <span class="c1">#If multipanel detector needs to be pieced together</span>
+                                    <span class="n">image_data_holding</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_multipanel_to_single</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_path_to_geom</span><span class="p">,</span> <span class="n">image_data_holding</span><span class="p">,</span> <span class="n">image_location</span><span class="p">)</span>
+                                <span class="n">vsource_image</span> <span class="o">=</span> <span class="n">h5</span><span class="o">.</span><span class="n">VirtualSource</span><span class="p">(</span><span class="n">image_data_holding</span><span class="p">)</span>
+                                <span class="c1"># i = i - master_files_encountered</span>
+                                <span class="c1">## SINGLE EVENT ##</span>
+                                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dim_and_shape_array</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span> 
+                                    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Single event has not been tested recently&quot;</span><span class="p">)</span>
+                                    <span class="bp">self</span><span class="o">.</span><span class="n">_add_file_to_list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_source_file</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+                                    
+                                    <span class="k">if</span> <span class="n">vsource_image</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">!=</span> <span class="nb">min</span><span class="p">(</span><span class="n">conf</span><span class="o">.</span><span class="n">required_image_size</span><span class="p">):</span>
+                                        <span class="n">vsource_image</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_crop_image</span><span class="p">(</span><span class="n">vsource_image</span><span class="p">)</span> <span class="c1"># Crop the image to the correct size</span>
+                                        
+                                    <span class="bp">self</span><span class="o">.</span><span class="n">_image_layout</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">vsource_image</span>
+                                    <span class="bp">self</span><span class="o">.</span><span class="n">_camera_length_layout</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">vsource_camera_length</span>
+                                    <span class="bp">self</span><span class="o">.</span><span class="n">_photon_energy_layout</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">vsource_photon_energy</span>
+                                    
+                                    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_executing_mode</span> <span class="o">==</span> <span class="s1">&#39;training&#39;</span><span class="p">:</span>
+                                        <span class="n">hit_file</span> <span class="o">=</span> <span class="n">f</span>
+                                        <span class="k">if</span> <span class="n">most_recent_master</span> <span class="o">!=</span> <span class="kc">None</span><span class="p">:</span>
+                                            <span class="n">og_filename</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_source_file</span>
+                                            <span class="n">og_filename</span> <span class="o">=</span> <span class="n">og_filename</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+                                            <span class="n">og_filename</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">og_filename</span><span class="p">)</span>
+                                            <span class="n">hit_file</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;/scratch/avelard3/NSLS-2019-August/h5_hits/</span><span class="si">{</span><span class="n">og_filename</span><span class="si">}</span><span class="s2">&quot;</span><span class="c1">#FIXME needs to be input</span>
+                                        <span class="n">hit_parameter_location</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_find_path_in_h5</span><span class="p">(</span><span class="n">conf</span><span class="o">.</span><span class="n">possible_hit_parameter_paths</span><span class="p">,</span> <span class="n">hit_file</span><span class="p">)</span> 
+                                        <span class="k">with</span> <span class="n">h5</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_source_file</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">hf</span><span class="p">:</span>                                       
+                                            <span class="n">vsource_hit_parameter</span> <span class="o">=</span> <span class="n">h5</span><span class="o">.</span><span class="n">VirtualSource</span><span class="p">(</span><span class="n">hf</span><span class="p">[</span><span class="n">hit_parameter_location</span><span class="p">])</span>
+                                        <span class="bp">self</span><span class="o">.</span><span class="n">_hit_parameter_layout</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">vsource_hit_parameter</span>
+                                
+                                <span class="c1">## MULTI EVENT ##</span>
+                                <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dim_and_shape_array</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span> 
+                                    <span class="c1"># Add files to list</span>
+                                    <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_dim_and_shape_array</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="mi">0</span><span class="p">]):</span>
+                                        <span class="bp">self</span><span class="o">.</span><span class="n">_add_file_to_list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_source_file</span><span class="p">,</span> <span class="n">j</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span>
+                                    
+                                    <span class="c1">#TODO make sure this works. idk why its commented out</span>
+                                    <span class="c1"># if self._path_to_geom != None:</span>
+                                    <span class="c1">#     vsource_image = self._multipanel_to_single(self._path_to_geom, vsource_image)</span>
+  
+                                    <span class="k">if</span> <span class="n">vsource_image</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">!=</span> <span class="nb">min</span><span class="p">(</span><span class="n">conf</span><span class="o">.</span><span class="n">required_image_size</span><span class="p">):</span>
+                                        <span class="n">vsource_image</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_crop_image</span><span class="p">(</span><span class="n">vsource_image</span><span class="p">)</span> <span class="c1"># Crop the image to the correct size</span>
+                                    <span class="bp">self</span><span class="o">.</span><span class="n">_image_layout</span><span class="p">[</span><span class="n">k</span><span class="p">:(</span><span class="n">k</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">_dim_and_shape_array</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="mi">0</span><span class="p">]),</span> <span class="mi">0</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">vsource_image</span>
+                                    <span class="c1"># Add metadata to VDS (different with and without master file)</span>
+                                    <span class="bp">self</span><span class="o">.</span><span class="n">_camera_length_layout</span><span class="p">[</span><span class="n">k</span><span class="p">:(</span><span class="n">k</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">_dim_and_shape_array</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="mi">0</span><span class="p">]),</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">vsource_camera_length</span>
+                                    <span class="bp">self</span><span class="o">.</span><span class="n">_photon_energy_layout</span><span class="p">[</span><span class="n">k</span><span class="p">:(</span><span class="n">k</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">_dim_and_shape_array</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="mi">0</span><span class="p">]),</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">vsource_photon_energy</span>
+                                    
+                                    <span class="c1"># Add hit parameter to VDS</span>
+                                    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_executing_mode</span> <span class="o">==</span> <span class="s1">&#39;training&#39;</span><span class="p">:</span>
+                                        <span class="n">hit_file</span> <span class="o">=</span> <span class="n">f</span>
+                                        <span class="k">if</span> <span class="n">most_recent_master</span> <span class="o">!=</span> <span class="kc">None</span><span class="p">:</span>
+                                            <span class="n">og_filename</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_source_file</span>
+                                            <span class="n">og_filename</span> <span class="o">=</span> <span class="n">og_filename</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+                                            <span class="n">og_filename</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">og_filename</span><span class="p">)</span>
+                                            <span class="n">hit_file</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;/scratch/avelard3/NSLS-2019-August/h5_hits/</span><span class="si">{</span><span class="n">og_filename</span><span class="si">}</span><span class="s2">&quot;</span> <span class="c1">#FIXME needs to be an input</span>
+                                        <span class="k">else</span><span class="p">:</span>
+                                            <span class="n">hit_file</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_source_file</span>
+                                        
+                                        <span class="k">with</span> <span class="n">h5</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="n">hit_file</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">h5_hit_file</span><span class="p">:</span>
+                                            <span class="n">hit_parameter_location</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_find_path_in_h5</span><span class="p">(</span><span class="n">conf</span><span class="o">.</span><span class="n">possible_hit_parameter_paths</span><span class="p">,</span> <span class="n">h5_hit_file</span><span class="p">)</span>     
+                                            <span class="n">vsource_hit_parameter</span> <span class="o">=</span> <span class="n">h5</span><span class="o">.</span><span class="n">VirtualSource</span><span class="p">(</span><span class="n">h5_hit_file</span><span class="p">[</span><span class="n">hit_parameter_location</span><span class="p">])</span>        
+                                            
+
+                                        <span class="bp">self</span><span class="o">.</span><span class="n">_hit_parameter_layout</span><span class="p">[</span><span class="n">k</span><span class="p">:(</span><span class="n">k</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">_dim_and_shape_array</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="mi">0</span><span class="p">]),</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">vsource_hit_parameter</span>               
+                                <span class="k">else</span><span class="p">:</span>
+                                    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;ERROR: Mapping data to VDS. Likely an issue with metadata&quot;</span><span class="p">)</span>
+
+                                <span class="n">f</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+                                <span class="k">if</span> <span class="n">most_recent_master</span> <span class="o">!=</span> <span class="kc">None</span><span class="p">:</span>
+                                    <span class="n">mrm</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+                                <span class="n">num_complete_files</span> <span class="o">+=</span><span class="mi">1</span>
+                            <span class="n">k</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dim_and_shape_array</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span>   <span class="c1">#keep track of number of images for mix of single/multievent</span>
+                        
+                        <span class="k">except</span> <span class="p">(</span><span class="ne">OSError</span><span class="p">,</span> <span class="ne">FileNotFoundError</span><span class="p">)</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                            <span class="n">num_bad_files</span> <span class="o">+=</span> <span class="mi">1</span>
+                            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Skipping </span><span class="si">{</span><span class="n">source_file</span><span class="si">}</span><span class="s2"> due to an error: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">num_bad_files</span><span class="si">}</span><span class="s2"> files have been skipped out of the </span><span class="si">{</span><span class="n">num_complete_files</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">num_bad_files</span><span class="si">}</span><span class="s2"> processed so far.&quot;</span><span class="p">)</span>
+                    
+                    <span class="n">lst_file</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Successfully read </span><span class="si">{</span><span class="n">num_complete_files</span><span class="si">}</span><span class="s2"> out of the </span><span class="si">{</span><span class="n">num_total_files</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                    
+                <span class="c1"># Create the VDS for images and metadata in the virtual HDF5 file</span>
+                <span class="n">vds_file</span><span class="o">.</span><span class="n">create_virtual_dataset</span><span class="p">(</span><span class="s1">&#39;vsource_image&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_image_layout</span><span class="p">)</span>
+                <span class="n">vds_file</span><span class="o">.</span><span class="n">create_virtual_dataset</span><span class="p">(</span><span class="s1">&#39;vsource_camera_length&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_camera_length_layout</span><span class="p">)</span>
+                <span class="n">vds_file</span><span class="o">.</span><span class="n">create_virtual_dataset</span><span class="p">(</span><span class="s1">&#39;vsource_photon_energy&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_photon_energy_layout</span><span class="p">)</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_executing_mode</span> <span class="o">==</span> <span class="s1">&#39;training&#39;</span><span class="p">:</span>
+                    <span class="n">vds_file</span><span class="o">.</span><span class="n">create_virtual_dataset</span><span class="p">(</span><span class="s1">&#39;vsource_hit_parameter&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_hit_parameter_layout</span><span class="p">)</span>
+                    
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;An unexpected error occurred while mapping the dataset to VDS: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_add_file_to_list</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">numbered_file</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">pic_num</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Add h5 file name to list</span>
+<span class="sd">        </span>
+<span class="sd">        This function adds h5 file name into list of images for use in output file later, </span>
+<span class="sd">        and it includes number at the end to show which image in file is viewed for multievent files</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            numbered_file (str): The current file being added.</span>
+<span class="sd">            pic_num (int): The image number that is currently being added</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        
+        <span class="n">numbered_file</span> <span class="o">=</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">numbered_file</span><span class="si">}</span><span class="s1">_</span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">pic_num</span><span class="p">)</span><span class="si">}</span><span class="s1">&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_h5_file_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">numbered_file</span><span class="p">)</span>
+
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_find_path_in_h5</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">possible_paths</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">h5_file</span><span class="p">:</span> <span class="n">h5</span><span class="o">.</span><span class="n">File</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span> 
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        This function looks for path in h5 file by iterating through a list of possible paths</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            possible_paths (list[str]): List of strings of file paths where data is normally stored in h5 file</span>
+<span class="sd">            h5_file (h5.File): h5 file that is currently being read</span>
+<span class="sd">            </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            path (str): The path to where the metadata is found in the h5 file</span>
+<span class="sd">            </span>
+<span class="sd">        Raises:</span>
+<span class="sd">            KeyError: If none of the paths in the list are in the h5 file</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">for</span> <span class="n">path</span> <span class="ow">in</span> <span class="n">possible_paths</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">path</span> <span class="ow">in</span> <span class="n">h5_file</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">path</span>
+        <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;None of these paths found in file: </span><span class="si">{</span><span class="n">possible_paths</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            
+    <span class="k">def</span><span class="w"> </span><span class="nf">_define_photon_energy</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">current_file</span><span class="p">,</span> <span class="n">photon_energy_location</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">h5</span><span class="o">.</span><span class="n">VirtualSource</span><span class="p">:</span> 
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        This function checks if given wavelength to change to photon energy, and creates Virtual Source from photon energy </span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            current_file (h5.File): The h5 file that is currently being read</span>
+<span class="sd">            photon_energy_location (str): Place in h5 file where photon energy or wavelength is stored</span>
+<span class="sd">            </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            h5py.VirtualSource: A virtual source of the photon energy of the current file</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="s2">&quot;wavelength&quot;</span> <span class="ow">in</span> <span class="n">photon_energy_location</span><span class="o">.</span><span class="n">lower</span><span class="p">():</span>
+            
+            <span class="c1">#scaled_value = SpecialCaseFunctions.incident_photon_wavelength_to_energy(current_file)</span>
+            <span class="n">dset</span> <span class="o">=</span> <span class="n">current_file</span><span class="p">[:]</span>
+            <span class="n">energy_J</span> <span class="o">=</span> <span class="n">h</span> <span class="o">*</span> <span class="n">c</span> <span class="o">/</span> <span class="n">dset</span>
+            <span class="n">energy_eV</span> <span class="o">=</span> <span class="n">energy_J</span> <span class="o">/</span> <span class="n">e</span>
+            
+            <span class="k">with</span> <span class="n">h5</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="s2">&quot;scaled_photon_energy.h5&quot;</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                <span class="n">f</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;photon_energy&#39;</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">energy_eV</span><span class="p">)</span>
+                <span class="k">return</span> <span class="n">h5</span><span class="o">.</span><span class="n">VirtualSource</span><span class="p">(</span><span class="n">f</span><span class="p">[</span><span class="s1">&#39;photon_energy&#39;</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">h5</span><span class="o">.</span><span class="n">VirtualSource</span><span class="p">(</span><span class="n">current_file</span><span class="p">[</span><span class="n">photon_energy_location</span><span class="p">])</span>
+    
+    <span class="k">def</span><span class="w"> </span><span class="nf">_crop_image</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">vsource_image</span><span class="p">:</span> <span class="n">h5</span><span class="o">.</span><span class="n">VirtualSource</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">h5</span><span class="o">.</span><span class="n">VirtualSource</span><span class="p">:</span> 
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Crops Virtual Source image to make sure all images are min(conf.required_image_size)xmin(conf.required_image_size)</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            vsource_image (h5py.VirtualSource): The VirtualSource of the image that needs to be cropped</span>
+<span class="sd">            </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            h5py.VirtualSource: The cropped image</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">shape_of_img</span> <span class="o">=</span> <span class="n">vsource_image</span><span class="o">.</span><span class="n">shape</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Going to crop to min(conf.required_image_size)xmin(conf.required_image_size) from current shape </span><span class="si">{</span><span class="n">shape_of_img</span><span class="si">}</span><span class="s2"> on file </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_source_file</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">center_x</span> <span class="o">=</span> <span class="n">shape_of_img</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">//</span><span class="mi">2</span>
+        <span class="n">center_y</span> <span class="o">=</span> <span class="n">shape_of_img</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">//</span><span class="mi">2</span>
+        <span class="n">vsource_image</span> <span class="o">=</span> <span class="n">vsource_image</span><span class="p">[:,</span> <span class="n">center_x</span><span class="p">:</span> <span class="p">(</span><span class="n">center_x</span> <span class="o">+</span> <span class="nb">min</span><span class="p">(</span><span class="n">conf</span><span class="o">.</span><span class="n">required_image_size</span><span class="p">)),</span> <span class="n">center_y</span><span class="p">:</span> <span class="p">(</span><span class="n">center_y</span> <span class="o">+</span> <span class="nb">min</span><span class="p">(</span><span class="n">conf</span><span class="o">.</span><span class="n">required_image_size</span><span class="p">))]</span>
+        <span class="c1"># self.graph_image(vsource_image, 2)</span>
+        <span class="k">return</span> <span class="n">vsource_image</span>
+    
+    <span class="k">def</span><span class="w"> </span><span class="nf">_multipanel_to_single</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">geom_path</span><span class="p">:</span><span class="nb">str</span><span class="p">,</span> <span class="n">image_data</span><span class="p">,</span> <span class="n">image_location</span><span class="p">):</span>
+        <span class="n">scattering_matrix_manager</span> <span class="o">=</span> <span class="n">read_scattering_matrix</span><span class="o">.</span><span class="n">ScatteringMatrix</span><span class="p">(</span><span class="n">geom_path</span><span class="p">,</span> <span class="n">image_data</span><span class="p">)</span>
+        <span class="n">scattering_matrix_manager</span><span class="o">.</span><span class="n">read_geom_file</span><span class="p">()</span>
+        <span class="n">scattering_matrix_manager</span><span class="o">.</span><span class="n">calculate_q_vec</span><span class="p">()</span>
+        <span class="n">scattering_matrix_manager</span><span class="o">.</span><span class="n">create_new_array</span><span class="p">()</span>
+        
+        <span class="n">image_data</span> <span class="o">=</span> <span class="n">scattering_matrix_manager</span><span class="o">.</span><span class="n">insert_data_into_new_matrix</span><span class="p">(</span><span class="n">image_data</span><span class="p">)</span>
+        <span class="n">scattering_matrix_manager</span><span class="o">.</span><span class="n">graph_first_data_piecetogether</span><span class="p">()</span>
+        
+        <span class="n">temp_data_file</span> <span class="o">=</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">NamedTemporaryFile</span><span class="p">(</span><span class="n">delete</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">suffix</span><span class="o">=</span><span class="s1">&#39;.h5&#39;</span><span class="p">)</span>
+        <span class="n">temp_data_file</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">_temp_h5_data_file</span> <span class="o">=</span> <span class="n">h5</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="n">temp_data_file</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span>
+        <span class="n">image_dataset</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_temp_h5_data_file</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="n">image_location</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">image_data</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">image_dataset</span>
+        
+        
+    
+<div class="viewcode-block" id="Paths.get_vds">
+<a class="viewcode-back" href="../../generated/lib.load_paths.html#lib.load_paths.Paths.get_vds">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_vds</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns vds</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">vds_name</span></div>
+
+    
+    
+<div class="viewcode-block" id="Paths.get_file_names">
+<a class="viewcode-back" href="../../generated/lib.load_paths.html#lib.load_paths.Paths.get_file_names">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_file_names</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">:</span> 
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns list of file names put into h5 file</span>
+<span class="sd">        &quot;&quot;&quot;</span> 
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_h5_file_list</span></div>
+
+    
+<div class="viewcode-block" id="Paths.graph_image">
+<a class="viewcode-back" href="../../generated/lib.load_paths.html#lib.load_paths.Paths.graph_image">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">graph_image</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">array</span><span class="p">,</span> <span class="n">number</span><span class="p">):</span>   
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Plot an image to see what an example of the data looks like to check orientation&quot;&quot;&quot;</span>     
+        <span class="n">array</span> <span class="o">=</span> <span class="n">array</span><span class="p">[</span><span class="mi">0</span><span class="p">,:,:]</span>
+        <span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">()</span>
+        <span class="n">heatmap</span> <span class="o">=</span> <span class="n">ax</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">array</span><span class="p">,</span> <span class="n">norm</span><span class="o">=</span><span class="n">colors</span><span class="o">.</span><span class="n">SymLogNorm</span><span class="p">(</span><span class="n">linthresh</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">linscale</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">base</span><span class="o">=</span><span class="mi">10</span><span class="p">),</span> <span class="n">cmap</span><span class="o">=</span><span class="s1">&#39;viridis&#39;</span><span class="p">,</span> <span class="n">origin</span> <span class="o">=</span> <span class="s1">&#39;lower&#39;</span><span class="p">)</span>
+
+        <span class="n">cbar</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">colorbar</span><span class="p">(</span><span class="n">heatmap</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;/scratch/avelard3/test_scattering_yr_later_try1/graph_during_load_paths</span><span class="si">{</span><span class="n">number</span><span class="si">}</span><span class="s2">.png&quot;</span><span class="p">)</span> <span class="c1">#FIXME: Delete or make path a variable</span></div>
+</div>
+
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">The CXLS ML Hitfinder</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../getting_started.html">Getting Started with Documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../developer_notes.html">Developer Notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api.html">API Reference</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2026, The CXLS ML Hitfinder contributors.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 9.0.4</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

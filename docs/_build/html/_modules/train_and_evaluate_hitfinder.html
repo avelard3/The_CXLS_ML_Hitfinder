@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>train_and_evaluate_hitfinder &#8212; The CXLS ML Hitfinder  documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=27fed22d" />
+    <script src="../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for train_and_evaluate_hitfinder</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">argparse</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">lib</span><span class="w"> </span><span class="kn">import</span> <span class="o">*</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">datetime</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">queue</span><span class="w"> </span><span class="kn">import</span> <span class="n">Queue</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">lib</span><span class="w"> </span><span class="kn">import</span> <span class="n">conf</span>
+
+<div class="viewcode-block" id="arguments">
+<a class="viewcode-back" href="../generated/train_and_evaluate_hitfinder.html#train_and_evaluate_hitfinder.arguments">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">arguments</span><span class="p">(</span><span class="n">parser</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Adds arguments to configure the parameters used for training different models.</span>
+<span class="sd">    Defined for each input in sbatch script</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;-l&#39;</span><span class="p">,</span> <span class="s1">&#39;--list&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s1">&#39;File path to the .lst file containing file paths to the .h5 file to run through the model.&#39;</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;-m&#39;</span><span class="p">,</span> <span class="s1">&#39;--model&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Name of the model architecture class found in models.py that corresponds to the model state dict.&#39;</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;-o&#39;</span><span class="p">,</span> <span class="s1">&#39;--output&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Output file path only for training confusion matrix and results.&#39;</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;-d&#39;</span><span class="p">,</span> <span class="s1">&#39;--dict&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Output state dict for the trained model that can be used to load the trained model later.&#39;</span><span class="p">)</span>
+    
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;-e&#39;</span><span class="p">,</span> <span class="s1">&#39;--epoch&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Number of training epochs.&#39;</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;-b&#39;</span><span class="p">,</span> <span class="s1">&#39;--batch&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Batch size per epoch for training.&#39;</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;-op&#39;</span><span class="p">,</span> <span class="s1">&#39;--optimizer&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Training optimizer function.&#39;</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;-s&#39;</span><span class="p">,</span> <span class="s1">&#39;--scheduler&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Training learning rate scheduler.&#39;</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;-c&#39;</span><span class="p">,</span> <span class="s1">&#39;--criterion&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Training loss function.&#39;</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;-lr&#39;</span><span class="p">,</span> <span class="s1">&#39;--learning_rate&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Training inital learning rate.&#39;</span><span class="p">)</span>
+    
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;-tl&#39;</span><span class="p">,</span> <span class="s1">&#39;--transfer_learn&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s1">&#39;File path to state dict file for transfer learning.&#39;</span> <span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;-g&#39;</span><span class="p">,</span> <span class="s1">&#39;--geom_file&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s1">&#39;file path to geometry if multipanel detector, else put None&#39;</span><span class="p">)</span>
+    
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;-hfp&#39;</span><span class="p">,</span> <span class="s1">&#39;--hit_file_path_name&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Path to hit files if not written into training files&#39;</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">args</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Parsed arguments:&quot;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">arg</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="nb">vars</span><span class="p">(</span><span class="n">args</span><span class="p">)</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">arg</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">value</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            
+        <span class="k">return</span> <span class="n">args</span>
+    
+    <span class="k">except</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Argument error: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    
+    <span class="k">except</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentTypeError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Argument type error: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;An unexpected error occurred: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="main">
+<a class="viewcode-back" href="../generated/train_and_evaluate_hitfinder.html#train_and_evaluate_hitfinder.main">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    This main function is the flow of logic for the training and evaluation of a given model. Here parameter arugments are assigned to variables.</span>
+<span class="sd">    Classes for data management, training, and evaluation are declared and the relavent functions for the process are called following declaration in blocks. </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">now</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span>
+    <span class="n">formatted_date_time</span> <span class="o">=</span> <span class="n">now</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;%m</span><span class="si">%d</span><span class="s2">%y-%H:%M&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Training hitfinder model: </span><span class="si">{</span><span class="n">formatted_date_time</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+    
+    <span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="s1">&#39;Parameters for training a model.&#39;</span><span class="p">)</span>
+    <span class="n">device</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="s1">&#39;cuda&#39;</span> <span class="k">if</span> <span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">is_available</span><span class="p">()</span> <span class="k">else</span> <span class="s1">&#39;cpu&#39;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;This model will be training on: </span><span class="si">{</span><span class="n">device</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+    
+    <span class="c1"># Setting up variables from argument parser</span>
+    <span class="n">args</span> <span class="o">=</span> <span class="n">arguments</span><span class="p">(</span><span class="n">parser</span><span class="p">)</span>
+    <span class="n">h5_file_list</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">list</span>
+    <span class="n">model_arch</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">model</span>
+    <span class="n">training_results</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">output</span>
+    <span class="n">model_dict_save_path</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">dict</span>
+    
+    <span class="n">num_epoch</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">epoch</span>
+    <span class="n">batch_size</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">batch</span>
+    <span class="n">optimizer</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">optimizer</span>
+    <span class="n">scheduler</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">scheduler</span>
+    <span class="n">criterion</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">criterion</span>
+    <span class="n">learning_rate</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">learning_rate</span>
+    
+    <span class="n">path_to_geom</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">geom_file</span>
+    
+    <span class="n">transfer_learning_state_dict</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">transfer_learn</span>
+    <span class="n">hit_file_path_name</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">hit_file_path_name</span>
+
+
+    <span class="c1"># Transfer learning (yes or no)</span>
+    <span class="k">if</span> <span class="n">transfer_learning_state_dict</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s1">&#39;none&#39;</span><span class="p">:</span>
+        <span class="n">transfer_learning_state_dict</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="n">cfg</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s1">&#39;batch size&#39;</span><span class="p">:</span> <span class="n">batch_size</span><span class="p">,</span>
+        <span class="s1">&#39;device&#39;</span><span class="p">:</span> <span class="n">device</span><span class="p">,</span>
+        <span class="s1">&#39;epochs&#39;</span><span class="p">:</span> <span class="n">num_epoch</span><span class="p">,</span>
+        <span class="s1">&#39;optimizer&#39;</span><span class="p">:</span> <span class="n">optimizer</span><span class="p">,</span>
+        <span class="s1">&#39;scheduler&#39;</span><span class="p">:</span> <span class="n">scheduler</span><span class="p">,</span>
+        <span class="s1">&#39;criterion&#39;</span><span class="p">:</span> <span class="n">criterion</span><span class="p">,</span>
+        <span class="s1">&#39;learning rate&#39;</span><span class="p">:</span> <span class="n">learning_rate</span><span class="p">,</span>
+        <span class="s1">&#39;model&#39;</span><span class="p">:</span> <span class="n">model_arch</span><span class="p">,</span>
+        <span class="s2">&quot;lr_param_patience&quot;</span> <span class="p">:</span> <span class="n">conf</span><span class="o">.</span><span class="n">lr_param_patience</span><span class="p">,</span>
+        <span class="s2">&quot;lr_param_threshold&quot;</span> <span class="p">:</span> <span class="n">conf</span><span class="o">.</span><span class="n">lr_param_threshold</span><span class="p">,</span>
+        <span class="s2">&quot;adam_param_beta1&quot;</span> <span class="p">:</span> <span class="n">conf</span><span class="o">.</span><span class="n">adam_param_beta1</span><span class="p">,</span>
+        <span class="s2">&quot;adam_param_beta2&quot;</span> <span class="p">:</span> <span class="n">conf</span><span class="o">.</span><span class="n">adam_param_beta2</span><span class="p">,</span>
+        <span class="s2">&quot;adam_param_weight_decay&quot;</span> <span class="p">:</span> <span class="n">conf</span><span class="o">.</span><span class="n">adam_param_weight_decay</span><span class="p">,</span>
+    <span class="p">}</span>
+
+
+    <span class="n">executing_mode</span> <span class="o">=</span> <span class="s1">&#39;training&#39;</span>
+    <span class="n">path_manager</span> <span class="o">=</span> <span class="n">load_paths</span><span class="o">.</span><span class="n">Paths</span><span class="p">(</span><span class="n">h5_file_list</span><span class="p">,</span> <span class="n">executing_mode</span><span class="p">,</span> <span class="n">path_to_geom</span><span class="p">)</span> <span class="c1">#init Paths object</span>
+    <span class="n">path_manager</span><span class="o">.</span><span class="n">run_paths</span><span class="p">()</span> 
+    <span class="n">h5_file_paths</span> <span class="o">=</span> <span class="n">path_manager</span><span class="o">.</span><span class="n">get_file_names</span><span class="p">()</span> 
+    
+    <span class="n">data_manager</span> <span class="o">=</span> <span class="n">load_data</span><span class="o">.</span><span class="n">Data</span><span class="p">(</span><span class="n">h5_file_paths</span><span class="p">,</span> <span class="n">executing_mode</span><span class="p">)</span> <span class="c1">#init Data object</span>
+    <span class="n">create_data_loader</span> <span class="o">=</span> <span class="n">load_data</span><span class="o">.</span><span class="n">CreateDataLoader</span><span class="p">(</span><span class="n">data_manager</span><span class="p">,</span> <span class="n">batch_size</span><span class="p">)</span> <span class="c1">#init CreateDataLoader object that create DataLoader object</span>
+    <span class="n">create_data_loader</span><span class="o">.</span><span class="n">split_training_data</span><span class="p">()</span>   
+    <span class="n">train_loader</span><span class="p">,</span> <span class="n">test_loader</span> <span class="o">=</span> <span class="n">create_data_loader</span><span class="o">.</span><span class="n">get_training_data_loaders</span><span class="p">()</span> 
+    
+    <span class="n">training_manager</span> <span class="o">=</span> <span class="n">train_model</span><span class="o">.</span><span class="n">TrainModel</span><span class="p">(</span><span class="n">cfg</span><span class="p">,</span> <span class="n">transfer_learning_state_dict</span><span class="p">)</span> <span class="c1">#init TrainModel object</span>
+    <span class="n">training_manager</span><span class="o">.</span><span class="n">make_training_instances</span><span class="p">()</span> 
+    <span class="n">training_manager</span><span class="o">.</span><span class="n">load_model_state_dict</span><span class="p">()</span> 
+    
+    <span class="n">training_manager</span><span class="o">.</span><span class="n">assign_new_data</span><span class="p">(</span><span class="n">train_loader</span><span class="p">,</span> <span class="n">test_loader</span><span class="p">)</span> 
+    <span class="n">training_manager</span><span class="o">.</span><span class="n">epoch_loop</span><span class="p">()</span> 
+    <span class="n">training_manager</span><span class="o">.</span><span class="n">plot_loss_accuracy</span><span class="p">(</span><span class="n">training_results</span><span class="p">)</span> 
+        
+    <span class="c1"># Saving model</span>
+    <span class="n">training_manager</span><span class="o">.</span><span class="n">save_model</span><span class="p">(</span><span class="n">model_dict_save_path</span><span class="p">)</span> 
+    <span class="n">trained_model</span> <span class="o">=</span> <span class="n">training_manager</span><span class="o">.</span><span class="n">get_model</span><span class="p">()</span>
+    
+    <span class="c1"># Checking and reporting accuracy of model</span>
+    <span class="n">evaluation_manager</span> <span class="o">=</span> <span class="n">evaluate_model</span><span class="o">.</span><span class="n">EvaluateModel</span><span class="p">(</span><span class="n">device</span><span class="p">,</span> <span class="n">trained_model</span><span class="p">,</span> <span class="n">test_loader</span><span class="p">)</span> <span class="c1">#init EvaluateModel object</span>
+    <span class="n">evaluation_manager</span><span class="o">.</span><span class="n">run_testing_set</span><span class="p">()</span> 
+    <span class="n">evaluation_manager</span><span class="o">.</span><span class="n">make_classification_report</span><span class="p">()</span>  
+    <span class="n">evaluation_manager</span><span class="o">.</span><span class="n">plot_confusion_matrix</span><span class="p">(</span><span class="n">training_results</span><span class="p">)</span> 
+    <span class="n">evaluation_manager</span><span class="o">.</span><span class="n">plot_roc_curve</span><span class="p">(</span><span class="n">training_results</span><span class="p">)</span> 
+    
+    <span class="n">os</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="s2">&quot;training_vds_delete_me.h5&quot;</span><span class="p">)</span></div>
+
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="n">main</span><span class="p">()</span>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">The CXLS ML Hitfinder</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting Started with Documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../developer_notes.html">Developer Notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../api.html">API Reference</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2026, The CXLS ML Hitfinder contributors.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 9.0.4</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>
