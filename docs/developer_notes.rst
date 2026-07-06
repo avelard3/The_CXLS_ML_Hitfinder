@@ -1,10 +1,13 @@
-Developer Notes
-===============
+How the hitfinder works
+=======================
 
-This page is for people maintaining the code. The public API pages focus on
-the methods that a user is expected to call directly. These notes describe the
-internal flow, including private helper methods whose names start with
-``_``.
+This page describes the internal workflow and design of the hitfinder. It is
+intended for developers who need to understand how data moves through the
+pipeline, which modules own which responsibilities, and where to make
+modifications when extending or debugging the system.
+
+The sections below cover path and virtual dataset preparation, data loading,
+the training loop, and evaluation.
 
 Training and Evaluation Flow
 ----------------------------

@@ -63,34 +63,37 @@ class Paths:
             Exception: Other
         """
         # add decorators
-        
+        print("before try")
         try:
+            print("beginning try")
             self.vds_name = f'{self._executing_mode}_vds_delete_me.h5'
             print(f'Creating vds with name: {self.vds_name}')
                     
             # Dynamically determine the number of images
             file_names_only = []
             #Check dimensions and shape of each h5 file & store in np.array
+            print("before with open")
             with open(self._list_path, 'r') as lst_file: # open lst file
+                print("inside with open")
                 self._dim_and_shape_list = [] #and use list_name.append([img_shape which has num of img in h5, img_dim]) to add more data
                 num_bad_files = 0
                 num_complete_files = 0
                 num_total_files = 0
-                
+                print("before source file")
                 for source_file in lst_file: # open one of h5 files in lst file
+                    print("inside source file", source_file)
                     source_file = source_file.strip()
                     num_total_files += 1    
+                    print("num_total_files",num_total_files)
                     if "master" in source_file.lower():
+                        print("inside master if",num_total_files)
                         num_total_files -=1
                         # if self._executing_mode == 'training':
                         #     raise NotImplementedError("Cannot train with master file")
                         continue
-                        
                     try:    
                         with h5.File(source_file, 'r') as f: # use h5.File to read the h5 file that you just opened
-                            
                             image_location = self._find_path_in_h5(conf.possible_image_paths, f)
-                            
                             dataset_shape = f[image_location].shape
                             image_file_dim = len(dataset_shape)
                             if image_file_dim == 2: #Single Event
@@ -223,18 +226,15 @@ class Paths:
                                     # Add files to list
                                     for j in range(self._dim_and_shape_array[i,0]):
                                         self._add_file_to_list(self._source_file, j+1)
-                                    
-                                    #TODO make sure this works. idk why its commented out
-                                    # if self._path_to_geom != None:
-                                    #     vsource_image = self._multipanel_to_single(self._path_to_geom, vsource_image)
-  
+
                                     if vsource_image.shape[1] != min(conf.required_image_size):
                                         vsource_image = self._crop_image(vsource_image) # Crop the image to the correct size
+
                                     self._image_layout[k:(k+self._dim_and_shape_array[i,0]), 0, :, :] = vsource_image
+
                                     # Add metadata to VDS (different with and without master file)
                                     self._camera_length_layout[k:(k+self._dim_and_shape_array[i,0]),0] = vsource_camera_length
                                     self._photon_energy_layout[k:(k+self._dim_and_shape_array[i,0]),0] = vsource_photon_energy
-                                    
                                     # Add hit parameter to VDS
                                     if self._executing_mode == 'training':
                                         hit_file = f
@@ -245,12 +245,9 @@ class Paths:
                                             hit_file = f"/scratch/avelard3/NSLS-2019-August/h5_hits/{og_filename}" #FIXME needs to be an input
                                         else:
                                             hit_file = self._source_file
-                                        
                                         with h5.File(hit_file, 'r') as h5_hit_file:
                                             hit_parameter_location = self._find_path_in_h5(conf.possible_hit_parameter_paths, h5_hit_file)     
                                             vsource_hit_parameter = h5.VirtualSource(h5_hit_file[hit_parameter_location])        
-                                            
-
                                         self._hit_parameter_layout[k:(k+self._dim_and_shape_array[i,0]),0] = vsource_hit_parameter               
                                 else:
                                     print("ERROR: Mapping data to VDS. Likely an issue with metadata")
@@ -354,6 +351,9 @@ class Paths:
         vsource_image = vsource_image[:, center_x: (center_x + min(conf.required_image_size)), center_y: (center_y + min(conf.required_image_size))]
         # self.graph_image(vsource_image, 2)
         return vsource_image
+    
+    def _max_pool(self, vsource_image: h5.VirtualSource) -> h5.VirtualSource:
+        print("gonna try max pooling image")
     
     def _multipanel_to_single(self, geom_path:str, image_data, image_location):
         scattering_matrix_manager = read_scattering_matrix.ScatteringMatrix(geom_path, image_data)

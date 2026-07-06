@@ -28,7 +28,7 @@ class Simple_3_Layer_CNN(nn.Module):
         self._fc_size_1 = out_height2 * out_width2 #fully connected layer
         self._fc1 = nn.Linear(self._fc_size_1, output_channels)
         
-    def calculate_output_dimension(self, input_dim, kernel_size, stride, padding):
+    def _calculate_output_dimension(self, input_dim, kernel_size, stride, padding):
         return ((input_dim + 2 * padding - kernel_size) // stride) + 1
     
     def forward(self, x, camera_length, photon_energy):
@@ -93,7 +93,7 @@ class CNN_with_Optunas_Best(nn.Module): #
         if conf.num_linear_dropout_layers == 1:
             print("Setting variables with 1 linear & dropout layer")
             self._fc1 = nn.Linear(self._first_fc_size_input, self._output_channels) 
-            
+             
         if conf.num_linear_dropout_layers == 2:
             print("Setting variables with 2 linear & dropout layer")
             self._fc1 = nn.Linear(self._first_fc_size_input, self._last_fc_size_input) 
@@ -136,20 +136,20 @@ class CNN_with_Optunas_Best(nn.Module): #
         
         #always at least one fc
         x = self._fc1(x) 
-        x = F.relu(x)
-        x = self._dropout(x)
+        # x = F.relu(x)
+        # x = self._dropout(x)
 
-        if (conf.num_linear_dropout_layers - 1) != 0: # if the number of layers is 2 or 3, it will not be zero
-            x = self._bn1d_1(x)
-            x = self._fc2(x) 
-            x = F.relu(x)
-            x = self._dropout(x)
+        # if (conf.num_linear_dropout_layers - 1) != 0: # if the number of layers is 2 or 3, it will not be zero
+        #     x = self._bn1d_1(x)
+        #     x = self._fc2(x) 
+        #     x = F.relu(x)
+        #     x = self._dropout(x)
             
-        if conf.num_linear_dropout_layers == 3: # if the number of layers is 3, it will not be zero
-            x = self._bn1d_2(x)
-            x = self._fc3(x)
-            x = F.relu(x)
-            x = self._dropout(x)
+        # if conf.num_linear_dropout_layers == 3: # if the number of layers is 3, it will not be zero
+        #     x = self._bn1d_2(x)
+        #     x = self._fc3(x)
+        #     x = F.relu(x)
+        #     x = self._dropout(x)
         
         return x
 

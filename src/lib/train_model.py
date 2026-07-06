@@ -129,14 +129,15 @@ class TrainModel:
         """
          
         print(f'Model testing and validation: {self._model.__class__.__name__}')       
-            
+        total_pos = 0
+        total = 0
+
         for epoch in range(self._epochs):
             print('-- epoch '+str(epoch)) 
             print('Training ...')
             self._train(epoch)
             print('Evaluating ...')
             self._test(epoch)
-            
             # print(f"-- learning rate : {self._scheduler.get_last_lr()}")
 
             
