@@ -58,6 +58,7 @@ class Data(Dataset):
             if self._executing_mode == "running":
                 #hit_parameter should be zero while running, but have values while training
                 self._hit_parameter = np.empty(self._camera_length.shape)
+
             return self._images[idx], self._camera_length[idx], self._photon_energy[idx], self._hit_parameter[idx], self._file_list[idx] #change
 
         except Exception as e:

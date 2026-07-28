@@ -22,12 +22,9 @@ def arguments(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
     parser.add_argument('-m', '--model', type=str, help='Name of the model architecture class found in models.py that corresponds to the model state dict.')
     parser.add_argument('-d', '--dict', type=str, help='File path to the model state dict .pt file.')
     parser.add_argument('-o', '--output', type=str, help='Output file path only for the .lst files after classification.')
-    
-    parser.add_argument('-im', '--image_location', type=str, help='Attribute name for the image')
-    parser.add_argument('-cl', '--camera_length', type=str, help='Attribute name for the camera length parameter.')
-    parser.add_argument('-pe', '--photon_energy', type=str, help='Attribute name for the photon energy parameter.')
+
     parser.add_argument('-b', '--batch', type=int, help='Batch size for data running through the model.')
-    parser.add_argument('-g', '--geom_file', type=str, help='file path to geometry if multipanel detector, else put None') #FIXME
+    parser.add_argument('-g', '--geom_file', type=str, help='File path to geometry if multipanel detector, else put None') #FIXME
     
     try:
         args = parser.parse_args()
@@ -78,17 +75,13 @@ def main():
         'device': device,
     }
 
-    
-    
     executing_mode = 'running'
     path_manager = load_paths.Paths(h5_file_list, executing_mode, path_to_geom) # init Paths object
 
     path_manager.run_paths() 
     
     
-    process_data = run_model.RunModel(cfg) # init RunModel Object
-    process_data.make_model_instance() 
-    process_data.load_model() 
+    
 
     vds_dataset = path_manager.get_vds() 
     h5_file_paths = path_manager.get_file_names() 
@@ -99,7 +92,9 @@ def main():
     create_data_loader.run_data_loader() #rename the loader, but single
 
     data_loader = create_data_loader.get_run_data_loader() 
-
+    process_data = run_model.RunModel(cfg) # init RunModel Object
+    process_data.make_model_instance() 
+    process_data.load_model() 
     process_data.classify_data(data_loader) 
     
     process_data.create_model_output_lst_files() 

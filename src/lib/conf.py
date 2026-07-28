@@ -10,15 +10,29 @@ possible_photon_energy_paths = ['/photon_energy_eV', 'entry/instrument/beam/inci
 possible_hit_parameter_paths = ['/hit','/hits/hits','/hits','hits']
 
 # Hyperparameters that were optimized by Optuna (stored as conf variables for ease of hyperparameter testing)
-lr_param_patience=10
-lr_param_threshold=1e-3   
-conv_channel_size=2
+# lr_param_patience=10
+# lr_param_threshold=1e-3   
+# conv_channel_size=2
+# conv_kernel_size=3
+# num_linear_dropout_layers=1
+# linear_layer_size=2
+# dropout_probability=0.3
+# adam_param_beta1=0.9
+# adam_param_beta2=0.999
+# adam_param_weight_decay=1e-4
+# batch_norm_2d_momentum=0.1
+# batch_norm_1d_momentum=0.1
+
+
+lr_param_patience=3
+lr_param_threshold=0.0001   
+conv_channel_size=32
 conv_kernel_size=3
-num_linear_dropout_layers=1
-linear_layer_size=2
+num_linear_dropout_layers=2
+linear_layer_size=256
 dropout_probability=0.3
 adam_param_beta1=0.9
 adam_param_beta2=0.999
-adam_param_weight_decay=1e-4
+adam_param_weight_decay=0.0001
 batch_norm_2d_momentum=0.1
 batch_norm_1d_momentum=0.1

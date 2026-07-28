@@ -54,12 +54,14 @@ class TrainModel:
         
     def make_training_instances(self) -> None:
         """
-        This function takes the strings from the sbatch script and makes them objects.
-        These strings are objects that are needed for the training. Objects declared here are :
-        - the model
-        - the optimizer
-        - the learning rate scheduler
-        - the loss criterion
+        This function initializes all of the components required for neural network training. 
+        It dynamically instantiates the: 
+        - selected model architecture
+        - optimizer
+        - learning rate scheduler
+        - loss function 
+        based on configuration parameters, then configures each with the appropriate hyperparameters
+        and moves the model to the designated compute device.
         
         Raises:
             AttributeError: If variable name is not found in torch
@@ -67,16 +69,16 @@ class TrainModel:
             Exception: other
         """
         try:
-            #build model
+            #create selected neural network model
             self._model = getattr(m, self._model)().to(self._device)
             
-            #build optimizer
+            #instantiates optimizer (eg. Adam)
             self._optimizer = getattr(optim, self._optimizer)(self._model.parameters(), lr=self._learning_rate, betas=[self._adam_param_beta1, self._adam_param_beta2], weight_decay=self._adam_param_weight_decay)            
             
-            #build LR scheduler
+            #instantiates learning rate scheduler (eg. ReduceLROnPlateau)
             self._scheduler = getattr(lrs, self._scheduler)(self._optimizer, mode='min', factor=0.1, patience=self._lr_param_patience, threshold=self._lr_param_threshold) # learning rate scheduler probably specific to optimizer
             
-            #build loss function
+            #instantiates loss function (eg. BCEWithLogitsLoss)
             self._criterion = getattr(nn, self._criterion)()
             
             print('All training objects have been created.')
@@ -158,22 +160,26 @@ class TrainModel:
         
         running_loss_train, accuracy_train, predictions, total_predictions = 0.0, 0.0, 0.0, 0.0
 
-        self._model.train()
+        self._model.train() # Set model to training mode
         
         try:
+            # Loop through training data
             for images, camera_length, photon_energy, hit_parameter, _ in self._train_loader: 
+                # Move data to selected device
                 inputs = torch.Tensor(images).to(self._device, dtype=torch.float32)
                 cam_len = torch.Tensor(camera_length).to(self._device, dtype=torch.float32).squeeze(1)                    
-                phot_en = torch.Tensor(photon_energy).to(self._device, dtype=torch.float32).squeeze(1)                    
-                self._optimizer.zero_grad()
-                score = self._model(inputs, cam_len, phot_en) 
-                truth = hit_parameter.reshape(-1, 1).float().to(self._device)
+                phot_en = torch.Tensor(photon_energy).to(self._device, dtype=torch.float32).squeeze(1)     
+                               
+                self._optimizer.zero_grad() # Clear previous gradients
                 
-                loss = self._criterion(score, truth)
-                loss.backward()
-                self._optimizer.step()
+                score = self._model(inputs, cam_len, phot_en) # Perform forward pass
+                truth = hit_parameter.reshape(-1, 1).float().to(self._device)
+                loss = self._criterion(score, truth) # Computes loss
+                
+                loss.backward() #Performs backpropogation
+                self._optimizer.step() # Update model parameters
 
-                running_loss_train += loss.item()
+                running_loss_train += loss.item() # Accumulate training loss
                 
                 predictions = (torch.sigmoid(score) > 0.5).long()
                 accuracy_train += (predictions == truth).float().sum()
@@ -212,23 +218,24 @@ class TrainModel:
         
         running_loss_test, accuracy_test, predictions, total = 0.0, 0.0, 0.0, 0.0
  
-        self._model.eval()
+        self._model.eval() # Set model to eval mode
 
         try:
-            with torch.no_grad():
+            with torch.no_grad(): # Disable gradient Computation
                 
                 for images, camera_length, photon_energy, hit_parameter, _ in self._test_loader:
 
                     # inputs = inputs.unsqueeze(1).to(self._device, dtype=torch.float32)
+                    # Move data to selected device
                     inputs = torch.Tensor(images).to(self._device, dtype=torch.float32)
                     cam_len = torch.Tensor(camera_length).to(self._device, dtype=torch.float32).squeeze(1)                    
                     phot_en = torch.Tensor(photon_energy).to(self._device, dtype=torch.float32).squeeze(1)      
 
-                    score = self._model(inputs, cam_len, phot_en)
+                    score = self._model(inputs, cam_len, phot_en) # Perform forward pass
                     truth = hit_parameter.reshape(-1, 1).float().to(self._device)
 
-                    loss = self._criterion(score, truth)
-                    running_loss_test += loss.item()
+                    loss = self._criterion(score, truth) # Compute the loss
+                    running_loss_test += loss.item() # Accumulates test loss
 
                     predictions = (torch.sigmoid(score) > 0.5).long()
                     accuracy_test += (predictions == truth).float().sum()

@@ -63,30 +63,23 @@ class Paths:
             Exception: Other
         """
         # add decorators
-        print("before try")
         try:
-            print("beginning try")
             self.vds_name = f'{self._executing_mode}_vds_delete_me.h5'
             print(f'Creating vds with name: {self.vds_name}')
                     
             # Dynamically determine the number of images
             file_names_only = []
             #Check dimensions and shape of each h5 file & store in np.array
-            print("before with open")
             with open(self._list_path, 'r') as lst_file: # open lst file
-                print("inside with open")
                 self._dim_and_shape_list = [] #and use list_name.append([img_shape which has num of img in h5, img_dim]) to add more data
                 num_bad_files = 0
                 num_complete_files = 0
                 num_total_files = 0
-                print("before source file")
+
                 for source_file in lst_file: # open one of h5 files in lst file
-                    print("inside source file", source_file)
                     source_file = source_file.strip()
                     num_total_files += 1    
-                    print("num_total_files",num_total_files)
                     if "master" in source_file.lower():
-                        print("inside master if",num_total_files)
                         num_total_files -=1
                         # if self._executing_mode == 'training':
                         #     raise NotImplementedError("Cannot train with master file")
@@ -97,9 +90,14 @@ class Paths:
                             dataset_shape = f[image_location].shape
                             image_file_dim = len(dataset_shape)
                             if image_file_dim == 2: #Single Event
+                                print("WARNING SINGLE EVENT DOES NOT WORK")
                                 self._dim_and_shape_list.append([1, image_file_dim])
+                                for j in range(dataset_shape[0]):
+                                    self._add_file_to_list(source_file, j+1)
                             elif image_file_dim == 3: #Multi Event
                                 self._dim_and_shape_list.append([dataset_shape[0], image_file_dim])
+                                for j in range(dataset_shape[0]):
+                                    self._add_file_to_list(source_file, j+1)
                             else:
                                 raise IndexError(f"ERROR: Unexpected image file dimensions, expected shape of 2 or 3, but instead found {image_file_dim}")
                                 
@@ -122,6 +120,7 @@ class Paths:
             self._height, self._width = conf.required_image_size
             self._image_shape = (self._total_num_images, 1, self._height, self._width)
             self._attr_shape = (self._total_num_images, 1) 
+            assert len(self._h5_file_list) == self._total_num_images
         except Exception as e:
             print(f"An unexpected error occurred while preparing file info for loading paths: {e}")
 
@@ -200,7 +199,6 @@ class Paths:
                                 ## SINGLE EVENT ##
                                 if self._dim_and_shape_array[i,1] == 2: 
                                     print("Single event has not been tested recently")
-                                    self._add_file_to_list(self._source_file, 1)
                                     
                                     if vsource_image.shape[1] != min(conf.required_image_size):
                                         vsource_image = self._crop_image(vsource_image) # Crop the image to the correct size
@@ -213,9 +211,11 @@ class Paths:
                                         hit_file = f
                                         if most_recent_master != None:
                                             og_filename = self._source_file
-                                            og_filename = og_filename.strip()
-                                            og_filename = os.path.basename(og_filename)
-                                            hit_file = f"/scratch/avelard3/NSLS-2019-August/h5_hits/{og_filename}"#FIXME needs to be input
+                                            # More universal way of managing hit files since it's always so convoluted
+                                            hit_file = og_filename.replace("/data/bioxfel/data", "/scratch/avelard3/h5_hits")
+                                            # og_filename = og_filename.strip()
+                                            # og_filename = os.path.basename(og_filename)
+                                            # hit_file = f"/scratch/avelard3/NSLS-2019-August/h5_hits/{og_filename}"#FIXME needs to be input
                                         hit_parameter_location = self._find_path_in_h5(conf.possible_hit_parameter_paths, hit_file) 
                                         with h5.File(self._source_file, 'r') as hf:                                       
                                             vsource_hit_parameter = h5.VirtualSource(hf[hit_parameter_location])
@@ -223,9 +223,6 @@ class Paths:
                                 
                                 ## MULTI EVENT ##
                                 elif self._dim_and_shape_array[i,1] == 3: 
-                                    # Add files to list
-                                    for j in range(self._dim_and_shape_array[i,0]):
-                                        self._add_file_to_list(self._source_file, j+1)
 
                                     if vsource_image.shape[1] != min(conf.required_image_size):
                                         vsource_image = self._crop_image(vsource_image) # Crop the image to the correct size

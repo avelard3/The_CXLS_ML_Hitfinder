@@ -41,19 +41,20 @@ class EvaluateModel:
         Runs the trained model in evaluation mode, by creating arrays of labels and predictions to compare against each other for metrics. 
         """
         print(f'Running evaluation on model: {self._model.__class__.__name__}')
-        self._model.eval()
+        self._model.eval() # Set model to eval mode
 
         try:
-            with torch.no_grad():
-                for images, camera_length, photon_energy, hit_parameter, _ in self._test_loader:
+            with torch.no_grad(): # Disable graient computation
+                for images, camera_length, photon_energy, hit_parameter, _ in self._test_loader: # Loop through test data
+                    # Move data to selected device
                     inputs = torch.Tensor(images).to(self._device, dtype=torch.float32)
                     cam_len = torch.Tensor(camera_length).to(self._device, dtype=torch.float32).squeeze(1)                    
                     phot_en = torch.Tensor(photon_energy).to(self._device, dtype=torch.float32).squeeze(1)                    
 
-                    score = self._model(inputs, cam_len, phot_en)
+                    score = self._model(inputs, cam_len, phot_en) # Perform forward pass
                     truth = hit_parameter.reshape(-1, 1).float().to(self._device)
                                     
-                    predictions = (torch.sigmoid(score) > 0.5).long()
+                    predictions = (torch.sigmoid(score) > 0.5).long() # Calculate predictions
                     self._all_labels.extend(torch.flatten(truth.cpu()))
                     self._all_predictions.extend(torch.flatten(predictions.cpu()))
                     

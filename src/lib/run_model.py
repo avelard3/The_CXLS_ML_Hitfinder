@@ -55,24 +55,25 @@ class RunModel:
         self._model.eval()
         
         try:
-            with torch.no_grad(): #? what does this mean
-                for images, camera_length, photon_energy, _, paths in data_loader:
+            with torch.no_grad(): # Disable gradient computation
+                for images, camera_length, photon_energy, _, paths in data_loader: # Loop through data
+                    # Move data to selected device
                     inputs = torch.Tensor(images).to(self._device, dtype=torch.float32)
                     cam_len = torch.Tensor(camera_length).to(self._device, dtype=torch.float32).squeeze(1)                    
                     phot_en = torch.Tensor(photon_energy).to(self._device, dtype=torch.float32).squeeze(1)                    
 
-                    score = self._model(inputs, cam_len, phot_en)
-                    prediction = (torch.sigmoid(score) > 0.5).long()
+                    score = self._model(inputs, cam_len, phot_en) # Perform forward pass
+                    prediction = (torch.sigmoid(score) > 0.5).long() # Convert model output to 1 or 0
                     
                     assert len(prediction) == len(paths), "Prediction and paths length mismatch."
 
                     # Segregate data based on prediction
                     for pred, path in zip(prediction, paths):
-                        if pred.item() == 1:
-                            self._list_containing_peaks.append(path)
+                        if pred.item() == 1: # If the image does contain peaks 
+                            self._list_containing_peaks.append(path) # Add path name to list
                             print(f'Classified as containing peaks: {path}')
-                        elif pred.item() == 0:
-                            self._list_not_containing_peaks.append(path)
+                        elif pred.item() == 0: # If the image does not contain peaks
+                            self._list_not_containing_peaks.append(path) # Add path name to list
                             print(f'Classified as not containing peaks: {path}')
 
         except Exception as e:

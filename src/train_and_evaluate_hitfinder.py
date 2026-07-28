@@ -28,7 +28,6 @@ def arguments(parser) -> argparse.ArgumentParser:
     parser.add_argument('-tl', '--transfer_learn', type=str, default=None, help='File path to state dict file for transfer learning.' )
     parser.add_argument('-g', '--geom_file', type=str, help='file path to geometry if multipanel detector, else put None')
     
-    parser.add_argument('-hfp', '--hit_file_path_name', type=str, help='Path to hit files if not written into training files')
     try:
         args = parser.parse_args()
         print("Parsed arguments:")
@@ -77,7 +76,6 @@ def main() -> None:
     path_to_geom = args.geom_file
     
     transfer_learning_state_dict = args.transfer_learn
-    hit_file_path_name = args.hit_file_path_name
 
 
     # Transfer learning (yes or no)

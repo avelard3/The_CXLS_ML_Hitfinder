@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 from torch.cuda.amp import GradScaler, autocast
 import datetime
 from torch.utils.data import DataLoader
-
+import math
 from . import models as m
 from . import conf
 
@@ -149,7 +149,6 @@ class TuneModel:
             print('-- epoch '+str(epoch)) 
             print('Training ...')
             train_loss_value = self.train(epoch)
-            
             # from optuna examples
             trial.report(train_loss_value, epoch)
             if trial.should_prune():
@@ -157,52 +156,58 @@ class TuneModel:
                 raise optuna.exceptions.TrialPruned()
             # end from optuna examples
             
-            
         return train_loss_value
             # print(f"-- learning rate : {self.scheduler.get_last_lr()}")
 
             
-    def train(self, epoch:int) :
-        
-        """
-        This function trains the model and prints the loss and accuracy of the training sets per epoch.
-        """
-        
-        running_loss_train, accuracy_train, predictions, total_predictions = 0.0, 0.0, 0.0, 0.0
 
+    def train(self, epoch: int):
+        """Train the model for one epoch and return its mean training loss."""
+        running_loss_train = 0.0
         self.model.train()
-        
+
+        if len(self.train_loader) == 0:
+            raise ValueError("train_loader is empty.")
+
         try:
-            for images, camera_length, photon_energy, hit_parameter, _ in self.train_loader: 
+            for images, camera_length, photon_energy, hit_parameter, _ in self.train_loader:
                 inputs = torch.Tensor(images).to(self.device, dtype=torch.float32)
-                cam_len = torch.Tensor(camera_length).to(self.device, dtype=torch.float32).squeeze(1)
-                phot_en = torch.Tensor(photon_energy).to(self.device, dtype=torch.float32).squeeze(1)           
+                cam_len = torch.Tensor(camera_length).to(
+                    self.device, dtype=torch.float32
+                ).squeeze(1)
+                phot_en = torch.Tensor(photon_energy).to(
+                    self.device, dtype=torch.float32
+                ).squeeze(1)
+
                 self.optimizer.zero_grad()
-                
-                score = self.model(inputs, cam_len, phot_en) 
+                score = self.model(inputs, cam_len, phot_en)
                 truth = hit_parameter.reshape(-1, 1).float().to(self.device)
-                
+
                 loss = self.criterion(score, truth)
+
+                if not torch.isfinite(loss):
+                    raise FloatingPointError(
+                        f"Non-finite loss at epoch {epoch}: {loss.item()}"
+                    )
+
                 loss.backward()
                 self.optimizer.step()
-                
                 running_loss_train += loss.item()
 
+            loss_train = running_loss_train / len(self.train_loader)
 
-            loss_train = running_loss_train / len(self.train_loader)  
+            if not math.isfinite(loss_train):
+                raise FloatingPointError(
+                    f"Non-finite mean training loss at epoch {epoch}: {loss_train}"
+                )
+
             self.plot_train_loss[epoch] = loss_train
-            print(f'Train loss: {loss_train}')
+            print(f"Train loss: {loss_train}")
+            return float(loss_train)
 
-            return loss_train
-
-        except RuntimeError as e:
-            print(f"RuntimeError during training: {e}")  
-        except AttributeError as e:
-            print(f"AttributeError during training: {e}")
-        except TypeError as e:
-            print(f"TypeError during training: {e}")    
         except Exception as e:
-            print(f"An unexpected error occurred during training: {e}")
+            print(f"Training failed at epoch {epoch}: {e}")
+            raise
         
         
     def plot_loss_accuracy(self, path:str = None) -> None:
