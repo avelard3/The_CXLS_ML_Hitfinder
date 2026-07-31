@@ -163,7 +163,116 @@ class CNN_with_Optunas_Best_No_Pool(nn.Module): #
         
 
 #*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#
+##########################################################################################
+class CNN_with_Optunas_Best_With_Pool(nn.Module): #
+    def __init__(self, input_channels=1, output_channels=1, input_size=conf.required_image_size):
+        super(CNN_with_Optunas_Best_With_Pool, self).__init__()
+        self._output_channels = output_channels
+        
+        self._conv1 = nn.Conv2d(input_channels, conf.conv_channel_size, kernel_size=conf.conv_kernel_size, stride=1, padding=1)
+        self._bn2d_1 = nn.BatchNorm2d(conf.conv_channel_size, momentum = conf.batch_norm_2d_momentum)
+        self._conv2 = nn.Conv2d(conf.conv_channel_size, 2*conf.conv_channel_size, kernel_size=conf.conv_kernel_size, stride=1, padding=1)
+        self._bn2d_2 = nn.BatchNorm2d(2*conf.conv_channel_size, momentum = conf.batch_norm_2d_momentum)
+        self._conv3 = nn.Conv2d(2*conf.conv_channel_size, 4*conf.conv_channel_size, kernel_size=conf.conv_kernel_size, stride=1, padding=1)        
+        self._bn2d_3 = nn.BatchNorm2d(4*conf.conv_channel_size, momentum = conf.batch_norm_2d_momentum)
+        
+        self._pool = nn.MaxPool2d(2, 2)
+         
+        #after first conv and pool        
+        out_height_conv1 = self._calculate_output_dimension_after_conv(input_size[0], conf.conv_kernel_size, 1, 1)
+        out_width_conv1 = self._calculate_output_dimension_after_conv(input_size[1], conf.conv_kernel_size, 1, 1)
+        
+        out_height_pool1 = self._calculate_output_dimension_after_pool(out_height_conv1, 2, 2)
+        out_width_pool1 = self._calculate_output_dimension_after_pool(out_width_conv1, 2, 2)
 
+        #after second conv and pool
+        out_height_conv2 = self._calculate_output_dimension_after_conv(out_height_pool1, conf.conv_kernel_size, 1, 1)
+        out_width_conv2 = self._calculate_output_dimension_after_conv(out_width_pool1, conf.conv_kernel_size, 1, 1)
+        
+        out_height_pool2 = self._calculate_output_dimension_after_pool(out_height_conv2, 2, 2)
+        out_width_pool2 = self._calculate_output_dimension_after_pool(out_width_conv2, 2, 2)
+        
+        #after thrid conv and pool
+        out_height_conv3 = self._calculate_output_dimension_after_conv(out_height_pool2, conf.conv_kernel_size, 1, 1)
+        out_width_conv3 = self._calculate_output_dimension_after_conv(out_width_pool2, conf.conv_kernel_size, 1, 1)
+        
+        out_height_pool3 = self._calculate_output_dimension_after_pool(out_height_conv3, 2, 2)
+        out_width_pool3 = self._calculate_output_dimension_after_pool(out_width_conv3, 2, 2)
+        
+        self._first_fc_size_input = out_height_pool3 * out_width_pool3 * conf.conv_channel_size *4 #fully connected layer # times 4 because of the output of self._conv3
+        self._last_fc_size_input = conf.linear_layer_size
+        self._mid_fc_size_input = 4 * conf.linear_layer_size
+        
+        self._dropout = nn.Dropout(conf.dropout_probability)
+        
+        
+        if conf.num_linear_dropout_layers == 1:
+            print("Setting variables with 1 linear & dropout layer")
+            self._fc1 = nn.Linear(self._first_fc_size_input, self._output_channels) 
+             
+        if conf.num_linear_dropout_layers == 2:
+            print("Setting variables with 2 linear & dropout layer")
+            self._fc1 = nn.Linear(self._first_fc_size_input, self._last_fc_size_input) 
+            self._bn1d_1 = nn.BatchNorm1d(self._last_fc_size_input, momentum = conf.batch_norm_1d_momentum)
+            self._fc2 = nn.Linear(self._last_fc_size_input, self._output_channels)
+            
+        if conf.num_linear_dropout_layers == 3:
+            print("Setting variables with 3 linear & dropout layer")
+            self._fc1 = nn.Linear(self._first_fc_size_input, self._mid_fc_size_input) 
+            self._bn1d_1 = nn.BatchNorm1d(self._mid_fc_size_input, momentum = conf.batch_norm_1d_momentum)
+            self._fc2 = nn.Linear(self._mid_fc_size_input, self._last_fc_size_input)
+            self._bn1d_2 = nn.BatchNorm1d(self._last_fc_size_input, momentum = conf.batch_norm_1d_momentum)
+            self._fc3 = nn.Linear(self._last_fc_size_input, self._output_channels)
+            
+
+    def _calculate_output_dimension_after_conv(self, input_dim, kernel_size, stride, padding):
+        return ((input_dim - kernel_size + padding*2) // stride) + 1 
+
+    def _calculate_output_dimension_after_pool(self, input_dim, kernel_size, stride):
+        return ((input_dim - kernel_size) // stride) + 1
+
+    def forward(self, x, camera_length, photon_energy): #FIXME camera_length and photon_energy ARE NOT USED
+        x = self._conv1(x)
+        x = self._bn2d_1(x)
+        x = F.relu(x)
+        x = self._pool(x)
+        
+        x = self._conv2(x)
+        x = self._bn2d_2(x)
+        x = F.relu(x)
+        x = self._pool(x)
+        
+        x = self._conv3(x)
+        x = self._bn2d_3(x)
+        x = F.relu(x)
+        x = self._pool(x)
+        
+        x = x.view(x.size(0), -1) #reshaping it to a vector
+        if conf.num_linear_dropout_layers == 1: 
+            x = self._fc1(x)
+            return x
+                
+        if conf.num_linear_dropout_layers == 2:
+            x = self._fc1(x)
+            x = self._bn1d_1(x) # Order corrected: Linear -> BatchNorm -> ReLU -> Dropout
+            x = F.relu(x)
+            x = self._dropout(x)
+            x = self._fc2(x)
+            return x
+        
+        if conf.num_linear_dropout_layers == 3:
+            x = self._fc1(x)
+            x = self._bn1d_1(x)
+            x = F.relu(x)
+            x = self._dropout(x)
+            
+            x = self._fc2(x)
+            x = self._bn1d_2(x)
+            x = F.relu(x)
+            x = self._dropout(x)
+            x = self._fc3(x)
+            return x
+############################################################################################
 
 #?#?#?#?#?#?#?#?#?#?#?#?#?#?#?#?#?#?#?#?#?#?#?#?#
 class Optuna_Simple_CNN(nn.Module): #

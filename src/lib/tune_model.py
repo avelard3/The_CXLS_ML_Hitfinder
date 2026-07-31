@@ -10,6 +10,8 @@ from torch.utils.data import DataLoader
 import math
 from . import models as m
 from . import conf
+from . import utils as u
+
 
 
 import optuna
@@ -33,13 +35,13 @@ class TuneModel:
 
         self.train_loader = None
         self.test_loader = None
-        self.batch_size = cfg['batch size']
         self.device = cfg['device']
         self.optimizer = cfg['optimizer']
         self.scheduler = cfg['scheduler']
         self.criterion = cfg['criterion']
         self.model = cfg['model']
         
+        self.batch_size = hpd_train['batch_size']
         self.epochs = hpd_train['epoch']
         self.learning_rate = hpd_train['learning_rate']
         self.lr_param_patience = hpd_train['lr_param_patience']
@@ -87,7 +89,7 @@ class TuneModel:
             # Now actually instantiate the model
             self.model = getattr(m, self.model)(hpd=self.model_hpd).to(self.device) #*
             
-            self.optimizer = getattr(optim, self.optimizer)(self.model.parameters(), lr=self.learning_rate, betas=[self.beta1,self.beta2], weight_decay=self.weight_decay) #arguments of adam (optim.adam(arguments,arguments))
+            self.optimizer = getattr(optim, self.optimizer)(self.model.parameters(), lr=self.learning_rate, weight_decay=self.weight_decay) #arguments of adam (optim.adam(arguments,arguments))
             
             self.scheduler = getattr(lrs, self.scheduler)(self.optimizer, mode='min', factor=0.1, patience=self.lr_param_patience, threshold=self.lr_param_threshold) # learning rate scheduler #probably specific to optimizer
             self.criterion = getattr(nn, self.criterion)() # loss function. should probably leave that alone for now
@@ -121,7 +123,6 @@ class TuneModel:
             try:
                 state_dict = torch.load(self.transfer_learning_path)
                 self.model.load_state_dict(state_dict)
-                self.model = self.model.eval() 
                 self.model.to(self.device)
                 
                 print(f'The model state dict has been loaded into: {self.model.__class__.__name__}')
@@ -172,12 +173,8 @@ class TuneModel:
         try:
             for images, camera_length, photon_energy, hit_parameter, _ in self.train_loader:
                 inputs = torch.Tensor(images).to(self.device, dtype=torch.float32)
-                cam_len = torch.Tensor(camera_length).to(
-                    self.device, dtype=torch.float32
-                ).squeeze(1)
-                phot_en = torch.Tensor(photon_energy).to(
-                    self.device, dtype=torch.float32
-                ).squeeze(1)
+                cam_len = torch.Tensor(camera_length).to(self.device, dtype=torch.float32).squeeze(1)
+                phot_en = torch.Tensor(photon_energy).to(self.device, dtype=torch.float32).squeeze(1)
 
                 self.optimizer.zero_grad()
                 score = self.model(inputs, cam_len, phot_en)

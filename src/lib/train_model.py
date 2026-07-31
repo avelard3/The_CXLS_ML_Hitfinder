@@ -73,7 +73,7 @@ class TrainModel:
             self._model = getattr(m, self._model)().to(self._device)
             
             #instantiates optimizer (eg. Adam)
-            self._optimizer = getattr(optim, self._optimizer)(self._model.parameters(), lr=self._learning_rate, betas=[self._adam_param_beta1, self._adam_param_beta2], weight_decay=self._adam_param_weight_decay)            
+            self._optimizer = getattr(optim, self._optimizer)(self._model.parameters(), lr=self._learning_rate, weight_decay=self._adam_param_weight_decay)            
             
             #instantiates learning rate scheduler (eg. ReduceLROnPlateau)
             self._scheduler = getattr(lrs, self._scheduler)(self._optimizer, mode='min', factor=0.1, patience=self._lr_param_patience, threshold=self._lr_param_threshold) # learning rate scheduler probably specific to optimizer

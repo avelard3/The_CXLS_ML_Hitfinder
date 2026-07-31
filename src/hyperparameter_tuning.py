@@ -27,7 +27,6 @@ def arguments(parser) -> argparse.ArgumentParser:
     parser.add_argument('-l', '--list', type=str, help='File path to the .lst file containing file paths to the .h5 file to run through the model.')
     parser.add_argument('-m', '--model', type=str, help='Name of the model architecture class found in models.py that corresponds to the model state dict.')
     
-    parser.add_argument('-b', '--batch', type=int, help='Batch size per epoch for training.')
     parser.add_argument('-op', '--optimizer', type=str, help='Training optimizer function.')
     parser.add_argument('-s', '--scheduler', type=str, help='Training learning rate scheduler.')
     parser.add_argument('-c', '--criterion', type=str, help='Training loss function.')
@@ -35,6 +34,7 @@ def arguments(parser) -> argparse.ArgumentParser:
     parser.add_argument('-tl', '--transfer_learn', type=str, default=None, help='File path to state dict file for transfer learning.' )
     
     #FIXME: Need to add all the hyperparameters, thre are some missing rn
+    parser.add_argument('-bs', '--batch_size_range', type=int, nargs=2, default=[10,100]) 
     parser.add_argument('-er', '--epoch_range', type=int, nargs=2, default=[5,100], help='Lower and upper limit of number of epochs') #optimizer
     parser.add_argument('-lrr', '--learning_rate_range', type=float, nargs=2, default=[0.0001,0.001], help='Lower and upper limit of learning rate') #optimizer
     parser.add_argument('-lrpp', '--lr_param_patience_range', type=int, nargs=2, default=[3,100], help="")
@@ -45,7 +45,9 @@ def arguments(parser) -> argparse.ArgumentParser:
     parser.add_argument('-ldl', '--num_linear_dropout_layers_range', type=int, nargs=2, default=[1,3], help='Lower and upper limit of number of dropout layers and linear layers') #max=3 #model    
     parser.add_argument('-lls', '--linear_layer_size_range', type=int, nargs=2, default=[2,2], help="")
     parser.add_argument('-dop', '--dropout_probability_range', type=float, nargs=2, default=[0.5,0.8], help='Lower and upper limit of dropout popularity') #model
-
+    parser.add_argument('-wd', '--weight_decay_range', type=float, nargs=2, default=[0,0.000001])
+    parser.add_argument('-bn2d', '--batch_norm_2d_momentum_range', type=float, nargs=2, default=[0.001,0.99])
+    parser.add_argument('-bn1d', '--batch_norm_1d_momentum_range', type=float, nargs=2, default=[0.001,0.99])
     parser.add_argument('-g', '--geom_file', type=str, help='file path to geometry if multipanel detector, else put None')
 
     # adam parameters (optimizer) 
@@ -83,7 +85,6 @@ def objective(trial): #learning rate is a log=true!?
     h5_file_list = args.list
     model_arch = args.model
     
-    batch_size = args.batch
     optimizer = args.optimizer
     scheduler = args.scheduler
     criterion = args.criterion
@@ -96,6 +97,7 @@ def objective(trial): #learning rate is a log=true!?
 
         
     # hyperparameter tuning #? maybe add them all to a dictionary here
+    batch_size_range = tuple(args.batch_size_range)
     epoch_range = tuple(args.epoch_range)
     learning_rate_range = tuple(args.learning_rate_range)
     lr_param_patience_range = tuple(args.lr_param_patience_range)
@@ -106,10 +108,12 @@ def objective(trial): #learning rate is a log=true!?
     num_linear_dropout_layers_range = tuple(args.num_linear_dropout_layers_range)
     linear_layer_size_range = tuple(args.linear_layer_size_range)
     dropout_probability_range = tuple(args.dropout_probability_range)
+    weight_decay_range = tuple(args.weight_decay_range)
+    batch_norm_2d_momentum_range = tuple(args.batch_norm_2d_momentum_range)
+    batch_norm_1d_momentum_range = tuple(args.batch_norm_1d_momentum_range)
     path_to_geom = args.geom_file
     
     cfg = {
-        'batch size': batch_size,
         'device': device,
         'optimizer': optimizer,
         'scheduler': scheduler,
@@ -119,10 +123,13 @@ def objective(trial): #learning rate is a log=true!?
 
     
     # needed in train_model.py
-    epoch = trial.suggest_int('epoch', epoch_range[0], epoch_range[1]) #not model
+    batch_size = trial.suggest_int('batch_size', batch_size_range[0], batch_size_range[1])
+    # epoch = trial.suggest_int('epoch', epoch_range[0], epoch_range[1]) #not model
+    epoch = 100
     learning_rate = trial.suggest_float('learning_rate', learning_rate_range[0], learning_rate_range[1], log=True) #not model
     lr_param_patience = trial.suggest_int('lr_param_patience', lr_param_patience_range[0], lr_param_patience_range[1]) #not model
     lr_param_threshold = trial.suggest_float('lr_param_threshold', lr_param_threshold_range[0], lr_param_threshold_range[1]) #not model
+    weight_decay = trial.suggest_float('weight_decay', weight_decay_range[0], weight_decay_range[1], log=True)
     
     # needed in models.py
     conv_channel_size = trial.suggest_int('conv_channel_size', conv_channel_size_range[0], conv_channel_size_range[1]) 
@@ -130,17 +137,17 @@ def objective(trial): #learning rate is a log=true!?
     num_linear_dropout_layers = trial.suggest_int('num_linear_dropout_layers', num_linear_dropout_layers_range[0], num_linear_dropout_layers_range[1])
     linear_layer_size = trial.suggest_int('linear_layer_size', linear_layer_size_range[0], linear_layer_size_range[1])
     dropout_probability = trial.suggest_float('dropout_probability', dropout_probability_range[0], dropout_probability_range[1]) 
-    beta1 = trial.suggest_float('beta1', 0.1000, 1.0000)
-    beta2 = trial.suggest_float('beta2', 0.1000, 1.0000)
-    weight_decay = trial.suggest_categorical("weight_decay", [0, 1e-6, 1e-5, 1e-4, 1e-3, 1e-2])
-    momentum_2d = trial.suggest_float('momentum_2d', 0.001, 0.99)
-    momentum_1d = trial.suggest_float('momentum_1d', 0.001, 0.99)
-
-     #FIXME Tehcnically this should be in the sbatch script but I'm just trying to get it done at this point and i dont anticipate it needing to be any different because i'm researching this so much
-    
+    # batch_norm_2d_momentum = trial.suggest_float('momentum_2d', batch_norm_2d_momentum_range[0], batch_norm_2d_momentum_range[1])
+    # batch_norm_1d_momentum = trial.suggest_float('momentum_1d', batch_norm_1d_momentum_range[0], batch_norm_1d_momentum_range[1])
+    batch_norm_2d_momentum = 0.1
+    batch_norm_1d_momentum = 0.1
+    beta1 = 0
+    beta2 = 0
+        
     
     
     hyperparam_dict_train = {
+        "batch_size" : batch_size,
         "epoch" : epoch,
         "learning_rate" : learning_rate,
         "lr_param_patience" : lr_param_patience,
@@ -158,8 +165,8 @@ def objective(trial): #learning rate is a log=true!?
         "num_linear_dropout_layers" : num_linear_dropout_layers,
         "linear_layer_size" : linear_layer_size,
         "dropout_probability" : dropout_probability,
-        "momentum_2d" : momentum_2d,
-        "momentum_1d" : momentum_1d
+        "momentum_2d" : batch_norm_2d_momentum,
+        "momentum_1d" : batch_norm_1d_momentum
     }
     
     executing_mode = 'training'

@@ -224,7 +224,7 @@ class Paths:
                                 ## MULTI EVENT ##
                                 elif self._dim_and_shape_array[i,1] == 3: 
 
-                                    if vsource_image.shape[1] != min(conf.required_image_size):
+                                    if vsource_image.shape[1] != min(conf.required_image_size): #FIXME is this in the right place?
                                         vsource_image = self._crop_image(vsource_image) # Crop the image to the correct size
 
                                     self._image_layout[k:(k+self._dim_and_shape_array[i,0]), 0, :, :] = vsource_image
@@ -237,9 +237,11 @@ class Paths:
                                         hit_file = f
                                         if most_recent_master != None:
                                             og_filename = self._source_file
-                                            og_filename = og_filename.strip()
-                                            og_filename = os.path.basename(og_filename)
-                                            hit_file = f"/scratch/avelard3/NSLS-2019-August/h5_hits/{og_filename}" #FIXME needs to be an input
+                                            # More universal way of managing hit files since it's always so convoluted
+                                            hit_file = og_filename.replace("/data/bioxfel/data", "/scratch/avelard3/h5_hits")
+                                            # og_filename = og_filename.strip()
+                                            # og_filename = os.path.basename(og_filename)
+                                            # hit_file = f"/scratch/avelard3/NSLS-2019-August/h5_hits/{og_filename}"#FIXME needs to be input
                                         else:
                                             hit_file = self._source_file
                                         with h5.File(hit_file, 'r') as h5_hit_file:
