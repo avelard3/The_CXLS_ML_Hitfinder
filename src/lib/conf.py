@@ -24,13 +24,13 @@ possible_hit_parameter_paths = ['/hit','/hits/hits','/hits','hits']
 # batch_norm_1d_momentum=0.1
 
 
-lr_param_patience=3
-lr_param_threshold=0.0001   
-conv_channel_size=32
-conv_kernel_size=3
-num_linear_dropout_layers=2
-linear_layer_size=256
-dropout_probability=0.3
+lr_param_patience=4
+lr_param_threshold=0.09357623445595754 
+conv_channel_size=2
+conv_kernel_size=7
+num_linear_dropout_layers=1
+linear_layer_size=4
+dropout_probability=0.3579985790028309
 adam_param_beta1=0
 adam_param_beta2=0
 adam_param_weight_decay=0.0001

@@ -26,7 +26,7 @@ def arguments(parser) -> argparse.ArgumentParser:
     parser.add_argument('-d', '--dict', type=str, help='Output state dict for the trained model that can be used to load the trained model later.')
     
     parser.add_argument('-b', '--batch', type=int, help='Batch size per epoch for training.')  
-    
+    parser.add_argument('-g', '--geom_file', type=str, help='File path to geometry if multipanel detector, else put None')
     try:
         args = parser.parse_args()
         print("Parsed arguments:")
@@ -63,30 +63,25 @@ def main() -> None:
     h5_file_list = args.list
     model_arch = args.model
     training_results = args.output
-
-
     
     h5_file_list = args.list
     model_arch = args.model
     model_path = args.dict
-
     batch_size = args.batch
+    path_to_geom = args.geom_file
+    
     
     executing_mode = 'training'
-    path_manager = load_paths.Paths(h5_file_list, executing_mode) #init Paths object
+    path_manager = load_paths.Paths(h5_file_list, executing_mode, path_to_geom) #init Paths object
     path_manager.run_paths() 
-    
-    vds_dataset = path_manager.get_vds() 
+    vds_dataset = path_manager.get_vds()  #FIXME: Why is this here
     h5_file_paths = path_manager.get_file_names() 
     
     data_manager = load_data.Data(h5_file_paths, executing_mode) #init Data object
-
     create_data_loader = load_data.CreateDataLoader(data_manager, batch_size) #init CreateDataLoader object that creates DataLoader object
     create_data_loader.run_data_loader() #rename the loader, but single
-
     data_loader = create_data_loader.get_run_data_loader() 
 
-    
     # Checking and reporting accuracy of model
     
     model = u.LoadModel.make_model_instance(model_arch)

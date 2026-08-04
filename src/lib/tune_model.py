@@ -121,9 +121,7 @@ class TuneModel:
         """
         if self.model_path != None:
             try:
-                state_dict = torch.load(self.transfer_learning_path)
-                self.model.load_state_dict(state_dict)
-                self.model.to(self.device)
+                torch.load(self.model_path)
                 
                 print(f'The model state dict has been loaded into: {self.model.__class__.__name__}')
                 

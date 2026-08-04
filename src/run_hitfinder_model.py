@@ -77,26 +77,20 @@ def main():
 
     executing_mode = 'running'
     path_manager = load_paths.Paths(h5_file_list, executing_mode, path_to_geom) # init Paths object
-
     path_manager.run_paths() 
-    
-    
-    
-
-    vds_dataset = path_manager.get_vds() 
+    vds_dataset = path_manager.get_vds() #FIXME: why is this here?
     h5_file_paths = path_manager.get_file_names() 
 
     data_manager = load_data.Data(h5_file_paths, executing_mode) #init Data object
-
     create_data_loader = load_data.CreateDataLoader(data_manager, batch_size) #init CreateDataLoader object that creates DataLoader object
     create_data_loader.run_data_loader() #rename the loader, but single
-
     data_loader = create_data_loader.get_run_data_loader() 
+    
     process_data = run_model.RunModel(cfg) # init RunModel Object
     process_data.make_model_instance() 
     process_data.load_model() 
-    process_data.classify_data(data_loader) 
     
+    process_data.classify_data(data_loader) 
     process_data.create_model_output_lst_files() 
     
     os.remove("running_vds_delete_me.h5")
